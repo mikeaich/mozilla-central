@@ -13,12 +13,17 @@
 class AccEvent;
 class Accessible;
 class DocAccessible;
+
 class nsIDocument;
+class nsINode;
 class nsIRequest;
 class nsIWebProgress;
 
 namespace mozilla {
 namespace a11y {
+
+class OuterDocAccessible;
+
 namespace logging {
 
 enum EModules {
@@ -26,13 +31,16 @@ enum EModules {
   eDocCreate = 1 << 1,
   eDocDestroy = 1 << 2,
   eDocLifeCycle = eDocLoad | eDocCreate | eDocDestroy,
-  ePlatforms = 1 << 3
+  ePlatforms = 1 << 3,
+  eStack = 1 << 4,
+  eText = 1 << 5,
+  eTree = 1 << 6
 };
 
 /**
- * Return true if the given module is logged.
+ * Return true if any of the given modules is logged.
  */
-bool IsEnabled(PRUint32 aModule);
+bool IsEnabled(PRUint32 aModules);
 
 /**
  * Log the document loading progress.
@@ -64,9 +72,22 @@ void DocDestroy(const char* aMsg, nsIDocument* aDocumentNode,
                 DocAccessible* aDocument = nsnull);
 
 /**
- * Log the message, a piece of text on own line, no offset.
+ * Log the outer document was destroyed.
  */
-void Msg(const char* aMsg);
+void OuterDocDestroy(OuterDocAccessible* OuterDoc);
+
+/**
+ * Log the message ('title: text' format) on new line. Print the start and end
+ * boundaries of the message body designated by '{' and '}' (2 spaces indent for
+ * body).
+ */
+void MsgBegin(const char* aTitle, const char* aMsgText, ...);
+void MsgEnd();
+
+/**
+ * Log the entry into message body (4 spaces offset).
+ */
+void MsgEntry(const char* aEntryText, ...);
 
 /**
  * Log the text, two spaces offset is used.
@@ -74,9 +95,14 @@ void Msg(const char* aMsg);
 void Text(const char* aText);
 
 /**
- * Log the accesisble object address, two spaces offset is used.
+ * Log the accesisble object address (4 spaces indent).
  */
 void Address(const char* aDescr, Accessible* aAcc);
+
+/**
+ * Log the DOM node info.
+ */
+void Node(const char* aDescr, nsINode* aNode);
 
 /**
  * Log the call stack, two spaces offset is used.
