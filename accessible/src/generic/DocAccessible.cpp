@@ -285,7 +285,7 @@ DocAccessible::NativeState()
     0 : states::STALE;
 
   // Document is always focusable.
-  state |= states::FOCUSABLE;
+  state |= states::FOCUSABLE; // keep in sync with NativeIteractiveState() impl
   if (FocusMgr()->IsFocused(this))
     state |= states::FOCUSED;
 
@@ -309,6 +309,19 @@ DocAccessible::NativeState()
   state |= editor ? states::EDITABLE : states::READONLY;
 
   return state;
+}
+
+PRUint64
+DocAccessible::NativeInteractiveState() const
+{
+  // Document is always focusable.
+  return states::FOCUSABLE;
+}
+
+bool
+DocAccessible::NativelyUnavailable() const
+{
+  return false;
 }
 
 // Accessible public method
@@ -631,7 +644,9 @@ DocAccessible::Shutdown()
   RemoveEventListeners();
 
   // Mark the document as shutdown before AT is notified about the document
-  // removal from its container (valid for root documents on ATK).
+  // removal from its container (valid for root documents on ATK and due to
+  // some reason for MSAA, refer to bug 757392 for details).
+  mFlags |= eIsDefunct;
   nsCOMPtr<nsIDocument> kungFuDeathGripDoc = mDocument;
   mDocument = nsnull;
 
@@ -2043,8 +2058,12 @@ DocAccessible::IsLoadEventTarget() const
 
   // Return true if it's not a root document (either tab document or
   // frame/iframe document) and its parent document is not in loading state.
-  if (parentTreeItem)
-    return ParentDocument()->HasLoadState(eCompletelyLoaded);
+  // Note: we can get notifications while document is loading (and thus
+  // while there's no parent document yet).
+  if (parentTreeItem) {
+    DocAccessible* parentDoc = ParentDocument();
+    return parentDoc && parentDoc->HasLoadState(eCompletelyLoaded);
+  }
 
   // It's content (not chrome) root document.
   PRInt32 contentType;

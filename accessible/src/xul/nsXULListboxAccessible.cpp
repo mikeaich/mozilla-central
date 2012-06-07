@@ -52,7 +52,7 @@ nsXULColumAccessible::NativeState()
 
 nsXULColumnItemAccessible::
   nsXULColumnItemAccessible(nsIContent* aContent, DocAccessible* aDoc) :
-  nsLeafAccessible(aContent, aDoc)
+  LeafAccessible(aContent, aDoc)
 {
 }
 
@@ -869,7 +869,7 @@ nsXULListitemAccessible::NativeState()
   if (mIsCheckbox)
     return nsXULMenuitemAccessible::NativeState();
 
-  PRUint64 states = states::FOCUSABLE | states::SELECTABLE;
+  PRUint64 states = NativeInteractiveState();
 
   nsCOMPtr<nsIDOMXULSelectControlItemElement> listItem =
     do_QueryInterface(mContent);
@@ -885,6 +885,13 @@ nsXULListitemAccessible::NativeState()
   }
 
   return states;
+}
+
+PRUint64
+nsXULListitemAccessible::NativeInteractiveState() const
+{
+  return NativelyUnavailable() || mParent->NativelyUnavailable() ?
+    states::UNAVAILABLE : states::FOCUSABLE | states::SELECTABLE;
 }
 
 NS_IMETHODIMP nsXULListitemAccessible::GetActionName(PRUint8 aIndex, nsAString& aName)

@@ -4,7 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/Hal.h"
-#include "nsILocalFile.h"
+#include "nsIFile.h"
 #include "nsString.h"
 
 #include "AndroidBridge.h"
@@ -1013,6 +1013,8 @@ Java_org_mozilla_gecko_GeckoAppShell_getNextMessageFromQueue(JNIEnv* jenv, jclas
         jMessagesField = jenv->GetFieldID(jMessageQueueCls, "mMessages", "Landroid/os/Message;");
         jNextMethod = jenv->GetMethodID(jMessageQueueCls, "next", "()Landroid/os/Message;");
     }
+    if (!jMessageQueueCls || !jMessagesField || !jNextMethod)
+        return NULL;
     jobject msg = jenv->GetObjectField(queue, jMessagesField);
     // if queue.mMessages is null, queue.next() will block, which we don't want
     if (!msg)

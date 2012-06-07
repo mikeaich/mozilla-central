@@ -237,6 +237,7 @@ pref("gfx.textures.poweroftwo.force-enabled", false);
 #endif
 
 pref("gfx.work-around-driver-bugs", true);
+pref("gfx.prefer-mesa-llvmpipe", false);
 
 pref("accessibility.browsewithcaret", false);
 pref("accessibility.warn_on_browsewithcaret", true);
@@ -3449,14 +3450,6 @@ pref("layers.acceleration.disabled", false);
 pref("layers.acceleration.force-enabled", false);
 
 pref("layers.acceleration.draw-fps", false);
-
-// An environment variable (MOZ_USE_OMTC)is used instead of a pref on X11 
-// platforms because we start having access to prefs long after the first 
-// call to XOpenDisplay which is hard to change due to interdependencies 
-// in the initialization (see bug 722012 for more details).
-#ifndef MOZ_X11
-pref("layers.offmainthreadcomposition.enabled", false);
-#endif
 
 #ifdef MOZ_X11
 #ifdef MOZ_WIDGET_GTK2

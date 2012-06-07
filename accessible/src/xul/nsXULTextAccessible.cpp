@@ -7,8 +7,8 @@
 #include "nsXULTextAccessible.h"
 
 #include "Accessible-inl.h"
+#include "BaseAccessibles.h"
 #include "nsAccUtils.h"
-#include "nsBaseWidgetAccessible.h"
 #include "nsCoreUtils.h"
 #include "nsTextEquivUtils.h"
 #include "Relation.h"
@@ -80,18 +80,14 @@ nsXULTextAccessible::RelationByType(PRUint32 aType)
 
 nsXULTooltipAccessible::
   nsXULTooltipAccessible(nsIContent* aContent, DocAccessible* aDoc) :
-  nsLeafAccessible(aContent, aDoc)
+  LeafAccessible(aContent, aDoc)
 {
 }
 
 PRUint64
 nsXULTooltipAccessible::NativeState()
 {
-  PRUint64 states = nsLeafAccessible::NativeState();
-
-  states &= ~states::FOCUSABLE;
-  states |= states::READONLY;
-  return states;
+  return LeafAccessible::NativeState() | states::READONLY;
 }
 
 role

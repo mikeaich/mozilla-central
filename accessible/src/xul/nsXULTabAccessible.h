@@ -7,7 +7,6 @@
 #define _nsXULTabAccessible_H_
 
 // NOTE: alphabetically ordered
-#include "nsBaseWidgetAccessible.h"
 #include "nsXULMenuAccessible.h"
 #include "XULSelectControlAccessible.h"
 
@@ -28,6 +27,7 @@ public:
   // Accessible
   virtual mozilla::a11y::role NativeRole();
   virtual PRUint64 NativeState();
+  virtual PRUint64 NativeInteractiveState() const;
   virtual Relation RelationByType(PRUint32 aType);
 
   // ActionAccessible
