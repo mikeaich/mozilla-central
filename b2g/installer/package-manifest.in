@@ -644,6 +644,7 @@ bin/components/@DLL_PREFIX@nkgnomevfs@DLL_SUFFIX@
 @BINPATH@/chrome/chrome.manifest
 @BINPATH@/components/B2GComponents.manifest
 @BINPATH@/components/B2GComponents.xpt
+@BINPATH@/components/B2GMedia.xpt
 @BINPATH@/components/CameraContent.js
 @BINPATH@/@DLL_PREFIX@omxplugin@DLL_SUFFIX@
 @BINPATH@/chrome/marionette@JAREXT@

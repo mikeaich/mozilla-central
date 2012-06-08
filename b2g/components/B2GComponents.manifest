@@ -29,3 +29,6 @@ category JavaScript-navigator-property mozKeyboard @mozilla.org/b2g-keyboard;1
 component {9181eb7c-6f87-11e1-90b1-4f59d80dd2e5} DirectoryProvider.js
 contract @mozilla.org/browser/directory-provider;1 {9181eb7c-6f87-11e1-90b1-4f59d80dd2e5}
 category xpcom-directory-providers browser-directory-provider @mozilla.org/browser/directory-provider;1
+
+# Registers the nsIB2GMediaSupport component in a category
+category JavaScript-navigator-property mozMedia @mozilla.org/b2g/media-support;1

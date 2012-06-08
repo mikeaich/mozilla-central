@@ -13,3 +13,9 @@ b2g/installer/Makefile
 b2g/locales/Makefile
 b2g/Makefile
 "
+
+if [ ! "$LIBXUL_SDK" ]; then
+  add_makefiles "
+    b2g/components/build/Makefile
+  "
+fi
