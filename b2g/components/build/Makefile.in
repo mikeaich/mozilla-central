@@ -14,7 +14,7 @@ MODULE          = b2gmodule
 LIBRARY_NAME    = b2gmodule
 LIBXUL_LIBRARY  = 1
 
-XPIDL_MODULE    = B2GMedia
+XPIDL_MODULE    = B2GCamera
 
 IS_COMPONENT	= 1
 EXPORT_LIBRARY  = 1
@@ -22,11 +22,11 @@ EXPORT_LIBRARY  = 1
 EXPORTS = B2GModule.h
 
 XPIDLSRCS = \
-  b2gmedia.idl \
+  cameracontrol.idl \
   $(NULL)
 
 CPPSRCS = \
-  MediaSupport.cpp \
+  CameraSupport.cpp \
   B2GModule.cpp \
   $(NULL)
 

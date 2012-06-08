@@ -4,8 +4,8 @@
 
 #include "nsCOMPtr.h"
 #include "nsDOMMediaStream.h"
-#include "b2gmedia.h"
-#include "MediaImpl.h"
+#include "cameracontrol.h"
+#include "CameraImpl.h"
 #include "nsITimer.h"
 #include "MediaStreamGraph.h"
 #include "BaseCameraStream.h"
@@ -18,7 +18,7 @@ using namespace mozilla::layers;
 static const TrackID TRACK_AUDIO = 1;
 static const TrackID TRACK_VIDEO = 2;
 
-class FallbackCamera : public nsIB2GCameraControl
+class FallbackCamera : public nsICameraControl
                      , public nsDOMMediaStream
                      , public nsITimerCallback
                      , public BaseCameraStream
@@ -84,10 +84,14 @@ public:
                                 const MediaSegment& aQueuedMedia) {
     printf_stderr("XxXxX NotifyQueuedTrackChanges rate=%d offset=%d event=%d\n", aTrackRate, aTrackOffset, aTrackEvents);
   }
+  
+  void NotifyConsumptionChanged(MediaStreamGraph* aGraph, Comsumption aConsumption) {
+    printf_stderr("XxXxX NotifyConsumptionChanged consumption=%d\n", aConsumption);
+  }
 
-  /* nsIDOMDOMRequest autofocus (); */
+  /* nsIDOMDOMRequest autoFocus (); */
   NS_IMETHODIMP
-  Autofocus(nsIDOMDOMRequest * *_retval NS_OUTPARAM)
+  AutoFocus(nsIDOMDOMRequest * *_retval NS_OUTPARAM)
   {
     return NS_ERROR_NOT_IMPLEMENTED;
   }
@@ -95,20 +99,6 @@ public:
   /* nsIDOMDOMRequest takePicture (); */
   NS_IMETHODIMP
   TakePicture(nsIDOMDOMRequest * *_retval NS_OUTPARAM)
-  {
-    return NS_ERROR_NOT_IMPLEMENTED;
-  }
-
-  /* jsval getParameter (in DOMString name); */
-  NS_IMETHODIMP
-  GetParameter(const nsAString & name, JS::Value *_retval NS_OUTPARAM)
-  {
-    return NS_ERROR_NOT_IMPLEMENTED;
-  }
-
-  /* void setParameter (in DOMString name, in jsval value); */
-  NS_IMETHODIMP
-  SetParameter(const nsAString & name, const JS::Value & value)
   {
     return NS_ERROR_NOT_IMPLEMENTED;
   }
@@ -173,18 +163,19 @@ protected:
   PRUint32 mNumFrames;
 };
 
-NS_IMPL_THREADSAFE_ISUPPORTS4(FallbackCamera, nsIDOMMediaStream, nsIB2GCameraControl, nsITimerCallback, nsIClassInfo)
+NS_IMPL_THREADSAFE_ISUPPORTS4(FallbackCamera, nsIDOMMediaStream, nsICameraControl, nsITimerCallback, nsIClassInfo)
 
 PRInt32
-MediaImpl::getNumberOfCameras()
+CameraImpl::getNumberOfCameras()
 {
   return 1;
 }
 
 NS_IMETHODIMP
-MediaImpl::GetCameraStream(const JS::Value & aOptions, JSContext* cx, nsIDOMMediaStream * *_retval NS_OUTPARAM)
+CameraImpl::GetCamera(const JS::Value & aOptions, JSContext* cx, nsIDOMMediaStream * *_retval NS_OUTPARAM)
 {
-  printf_stderr("XxXxX MediaImpl::getCameraStream()\n");
+  printf_stderr("XxXxX CameraImpl::GetCamera()\n");
+/*
   PRUint32 width = 480;
   PRUint32 height = 320;
   PRUint32 fps = 10;
@@ -218,5 +209,6 @@ MediaImpl::GetCameraStream(const JS::Value & aOptions, JSContext* cx, nsIDOMMedi
   nsCOMPtr<nsIDOMMediaStream> stream = new FallbackCamera(width, height, fps);
   *_retval = stream.get();
   NS_ADDREF(stream);
+*/
   return NS_OK;
 }

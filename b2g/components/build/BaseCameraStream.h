@@ -17,7 +17,7 @@ static NS_DEFINE_CID(kBaseCameraStreamCID, BaseCameraStream_CID);
 
 #define BaseCameraStream_ContractID "@mozilla.org/b2g/camera;1"
 
-NS_IMPL_CI_INTERFACE_GETTER2(BaseCameraStream, nsIDOMMediaStream, nsIB2GCameraControl)
+NS_IMPL_CI_INTERFACE_GETTER2(BaseCameraStream, nsIDOMMediaStream, nsICameraControl)
 
 class BaseCameraStream : public nsIClassInfo
 {

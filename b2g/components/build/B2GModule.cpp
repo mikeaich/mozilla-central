@@ -4,18 +4,18 @@
 
 #include "mozilla/ModuleUtils.h"
 
-#include "MediaSupport.h"
+#include "CameraSupport.h"
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(MediaSupport)
-NS_DEFINE_NAMED_CID(MediaSupport_CID);
+NS_GENERIC_FACTORY_CONSTRUCTOR(CameraSupport)
+NS_DEFINE_NAMED_CID(CameraSupport_CID);
 
 static const mozilla::Module::CIDEntry kB2GCIDs[] = {
-  { &kMediaSupport_CID, false, NULL, MediaSupportConstructor },
+  { &kCameraSupport_CID, false, NULL, CameraSupportConstructor },
   { NULL }
 };
 
 static const mozilla::Module::ContractIDEntry kB2GContracts[] = {
-  { MediaSupport_ContractID, &kMediaSupport_CID },
+  { CameraSupport_ContractID, &kCameraSupport_CID },
   { NULL }
 };
 

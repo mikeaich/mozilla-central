@@ -5,8 +5,8 @@
 
 #include "nsCOMPtr.h"
 #include "nsDOMMediaStream.h"
-#include "b2gmedia.h"
-#include "MediaImpl.h"
+#include "cameracontrol.h"
+#include "CameraImpl.h"
 #include "MediaStreamGraph.h"
 #include "BaseCameraStream.h"
 #include "VideoUtils.h"
@@ -17,7 +17,7 @@
 #include "GonkImpl.h"
 
 
-#define GONKIMPL_LOG_LEVEL      2
+#define GONKIMPL_LOG_LEVEL      3
 
 #define GONKIMPL_LOG( l, ... )       \
   do {                                  \
@@ -73,71 +73,148 @@ static const TrackID TRACK_AUDIO = 1;
 static const TrackID TRACK_VIDEO = 2;
 
 
-class CameraAFResultTask : public nsRunnable
+class CameraAutoFocusResultTask : public nsRunnable
 {
-  public:
-    CameraAFResultTask(bool result,
-                     nsIB2GAutofocusCallback *onsuccess,
-                     nsIB2GAutofocusCallback *onerror
-                     )
-      : mResult(result),
-        mOnSuccessCB(onsuccess),
-        mOnErrorCB(onerror)
-    {
+public:
+  CameraAutoFocusResultTask(nsICameraAutoFocusCallback *onSuccess)
+    : mOnSuccessCb(onSuccess)
+  {
+  }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    if (mOnSuccessCb) {
+      mOnSuccessCb->HandleEvent();
     }
+    return NS_OK;
+  }
 
-    NS_IMETHOD Run()
-    {
-      MOZ_ASSERT(NS_IsMainThread());
-
-      if (mResult) {
-        if (mOnSuccessCB) {
-          mOnSuccessCB->HandleEvent();
-        }
-      }
-      else {
-        if (mOnErrorCB) {
-          mOnErrorCB->HandleEvent();
-        }
-      }
-      return NS_OK;
-    }
-
-    bool mResult;
-    nsIB2GAutofocusCallback *mOnSuccessCB;
-    nsIB2GAutofocusCallback *mOnErrorCB;
+  nsICameraAutoFocusCallback *mOnSuccessCb;
 };
 
-class CameraTPResultTask : public nsRunnable
+class CameraTakePictureResultTask : public nsRunnable
 {
-  public:
-    CameraTPResultTask(nsIDOMBlob *pic,
-                     nsIB2GPictureCallback *onsuccess,
-                     nsIB2GPictureCallback *onerror
-                     )
-      : mDOMBlob(pic),
-        mOnSuccessCB(onsuccess),
-        mOnErrorCB(onerror)
-    {
+public:
+  CameraTakePictureResultTask(nsIDOMBlob *pic, nsICameraTakePictureCallback *onSuccess)
+    : mDOMBlob(pic), mOnSuccessCb(onSuccess)
+  {
+  }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    if (mOnSuccessCb) {
+      mOnSuccessCb->HandleEvent(mDOMBlob);
     }
 
-    NS_IMETHOD Run()
-    {
-      MOZ_ASSERT(NS_IsMainThread());
+    return NS_OK;
+  }
 
-      if (mOnSuccessCB) {
-        mOnSuccessCB->HandleEvent(mDOMBlob);
-      }
-
-      return NS_OK;
-    }
-
-    nsIDOMBlob *mDOMBlob;
-    nsIB2GPictureCallback *mOnSuccessCB;
-    nsIB2GPictureCallback *mOnErrorCB;
+  nsIDOMBlob *mDOMBlob;
+  nsICameraTakePictureCallback *mOnSuccessCb;
 };
 
-class GonkCamera : public nsIB2GCameraControl
+class CameraPreviewStreamResultTask : public nsRunnable
+{
+public:
+  CameraPreviewStreamResultTask(nsIDOMMediaStream *stream, nsICameraPreviewStreamCallback *onSuccess)
+    : mStream(stream), mOnSuccessCb(onSuccess)
+  {
+  }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    if (mOnSuccessCb) {
+      mOnSuccessCb->HandleEvent(mStream);
+    }
+
+    return NS_OK;
+  }
+
+  nsIDOMMediaStream *mStream;
+  nsICameraPreviewStreamCallback *mOnSuccessCb;
+};
+
+class CameraStartRecordingResultTask : public nsRunnable
+{
+public:
+  CameraStartRecordingResultTask(nsIDOMMediaStream *stream, nsICameraStartRecordingCallback *onSuccess)
+    : mStream(stream), mOnSuccessCb(onSuccess)
+  {
+  }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    if (mOnSuccessCb) {
+      mOnSuccessCb->HandleEvent(mStream);
+    }
+
+    return NS_OK;
+  }
+
+  nsIDOMMediaStream *mStream;
+  nsICameraStartRecordingCallback *mOnSuccessCb;
+};
+
+class CameraShutterCallbackTask : public nsRunnable
+{
+public:
+  CameraShutterCallbackTask(nsICameraShutterCallback *onShutter)
+    : mOnShutterCb(onShutter)
+  {
+  }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    if (mOnShutterCb) {
+      mOnShutterCb->HandleEvent();
+    }
+
+    return NS_OK;
+  }
+
+  nsICameraShutterCallback *mOnShutterCb;
+};
+
+class CameraErrorResultTask : public nsRunnable
+{
+public:
+  CameraErrorResultTask(nsICameraErrorCallback *onError, nsAString & error)
+    : mOnErrorCb(onError), mError(error)
+  {
+  }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    if (mOnErrorCb) {
+      mOnErrorCb->HandleEvent(mError);
+    }
+
+    return NS_OK;
+  }
+
+  nsICameraErrorCallback *mOnErrorCb;
+  nsAString & mError;
+};
+
+class GonkCameraCapabilities : public nsICameraCapabilities
+{
+public:
+  
+};
+
+class GonkCamera : public nsICameraControl
                  , public nsDOMMediaStream
                  , public BaseCameraStream
                  , public MediaStreamListener
@@ -148,18 +225,19 @@ public:
   GonkCamera(PRUint32 aCamera, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFps);
   ~GonkCamera();
 
-  /* nsIDOMDOMRequest autofocus (); */
+  /* nsIDOMDOMRequest autoFocus (); */
   NS_IMETHODIMP
-  Autofocus(nsIB2GAutofocusCallback *onsuccess, nsIB2GAutofocusCallback *onerror);
+  AutoFocus(nsICameraAutoFocusCallback *onSuccess, nsICameraErrorCallback *onError);
 
   /* nsIDOMDOMRequest takePicture (); */
   NS_IMETHODIMP
-  TakePicture(nsIB2GPictureCallback *onsuccess, nsIB2GPictureCallback *onerror);
+  TakePicture(nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError);
 
   /* [implicit_jscontext] jsval getParameter (in DOMString name); */
   NS_IMETHODIMP
   GetParameter(const nsAString & name, JSContext* cx, JS::Value *_retval NS_OUTPARAM);
 
+#if 0
   /* [implicit_jscontext] void setParameter (in DOMString name, in jsval value); */
   NS_IMETHODIMP
   SetParameter(const nsAString & name, const JS::Value & value, JSContext* cx);
@@ -168,6 +246,7 @@ public:
   GetCurrentTime(double* aCurrentTime) {
     return nsDOMMediaStream::GetCurrentTime(aCurrentTime);
   }
+#endif
 
   /* camera driver callbacks */
   void
@@ -184,10 +263,12 @@ public:
   NotifyConsumptionChanged(MediaStreamGraph* aGraph, Consumption aConsuming);
   
 public:
-  nsCOMPtr<nsIB2GAutofocusCallback> mAFOnSuccessCB;
-  nsCOMPtr<nsIB2GAutofocusCallback> mAFOnErrorCB;
-  nsCOMPtr<nsIB2GPictureCallback>   mTPOnSuccessCB;
-  nsCOMPtr<nsIB2GPictureCallback>   mTPOnErrorCB;
+  nsCOMPtr<nsICameraAutoFocusCallback>      mAutoFocusOnSuccessCb;
+  nsCOMPtr<nsICameraTakePictureCallback>    mTakePictureOnSuccessCb;
+  nsCOMPtr<nsICameraPreviewStreamCallback>  mPreviewStreamOnSuccessCb;
+  nsCOMPtr<nsICameraStartRecordingCallback> mStartRecordingOnSuccessCb;
+  nsCOMPtr<nsICameraShutterCallback>        mOnShutterCb;
+  nsCOMPtr<nsICameraErrorCallback>          mOnErrorCb;
 
 protected:
   enum State {
@@ -295,13 +376,18 @@ GonkCamera::NotifyConsumptionChanged(MediaStreamGraph* aGraph, Consumption aCons
 
 /* nsIDOMDOMRequest autofocus (); */
 NS_IMETHODIMP
-GonkCamera::Autofocus(nsIB2GAutofocusCallback *onsuccess, nsIB2GAutofocusCallback *onerror)
+GonkCamera::AutoFocus(nsICameraAutoFocusCallback *onSuccess, nsICameraErrorCallback *onError)
 {
 #if GONKIMPL_TIMING_OVERALL
   clock_gettime(CLOCK_MONOTONIC, &mAutoFocusStart);
 #endif
 
   ReentrantMonitorAutoEnter enter(mMonitor);
+/*
+  Will probably need to build the response runnable here, populate it
+  with pointers to the callback functions, then attach it to the
+  autofocus request--if possible.
+  
   LOG_REFCNT(this);
 
   mAFOnSuccessCB = onsuccess;
@@ -312,16 +398,21 @@ GonkCamera::Autofocus(nsIB2GAutofocusCallback *onsuccess, nsIB2GAutofocusCallbac
   }
 
   LOG_REFCNT(this);
-
+*/
   return NS_OK;
 }
 
 /* nsIDOMDOMRequest takePicture (); */
 NS_IMETHODIMP
-GonkCamera::TakePicture(nsIB2GPictureCallback *onsuccess, nsIB2GPictureCallback *onerror)
+GonkCamera::TakePicture(nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError)
 {
   mState = HW_STATE_TAKING_PICTURE;
   ReentrantMonitorAutoEnter enter(mMonitor);
+/*
+  Will probably need to build the response runnable here, populate it
+  with pointers to the callback functions, then attach it to the
+  take picture request--if possible.
+  
   LOG_REFCNT(this);
 
   mTPOnSuccessCB = onsuccess;
@@ -332,10 +423,11 @@ GonkCamera::TakePicture(nsIB2GPictureCallback *onsuccess, nsIB2GPictureCallback 
   }
 
   LOG_REFCNT(this);
-
+*/
   return NS_OK;
 }
 
+#if 0
 /* [implicit_jscontext] jsval getParameter (in DOMString name); */
 NS_IMETHODIMP
 GonkCamera::GetParameter(const nsAString & name, JSContext* cx, JS::Value *_retval NS_OUTPARAM)
@@ -400,29 +492,37 @@ GonkCamera::SetParameter(const nsAString & name, const JS::Value & value, JSCont
 
   return NS_OK;
 }
+#endif
 
 void
 GonkCamera::ReceiveImage(PRUint8* aData, PRUint32 aLength)
 {
   ReentrantMonitorAutoEnter enter(mMonitor);
+/*
+  Rewrite the callback code
+
   LOG_REFCNT(this);
 
   PRUint8* data = new PRUint8[aLength];
   memcpy(data, aData, aLength);
   nsIDOMBlob *blob = new nsDOMMemoryFile((void*)data, (PRUint64)aLength, NS_LITERAL_STRING("image/jpeg"));
-  nsCOMPtr<nsIRunnable> resultRunnable = new CameraTPResultTask( blob, mTPOnSuccessCB, mTPOnErrorCB );
+  nsCOMPtr<nsIRunnable> resultRunnable = new CameraTakePictureResultTask( blob, mTPOnSuccessCB, mTPOnErrorCB );
   if (NS_FAILED(NS_DispatchToMainThread(resultRunnable))) {
     NS_WARNING("Failed to dispatch to main thread!");
   }
 
   mState = HW_STATE_PREVIEW_PAUSED;
   LOG_REFCNT(this);
+*/
 }
 
 void
 GonkCamera::AutoFocusComplete(bool success)
 {
   ReentrantMonitorAutoEnter enter(mMonitor);
+/*
+  Rewrite the callback code
+
   LOG_REFCNT(this);
 
 #if GONKIMPL_TIMING_OVERALL
@@ -436,12 +536,13 @@ GonkCamera::AutoFocusComplete(bool success)
   printf_stderr("Autofocus took %f seconds\n", seconds);
 #endif
 
-  nsCOMPtr<nsIRunnable> resultRunnable = new CameraAFResultTask( success, mAFOnSuccessCB, mAFOnErrorCB );
+  nsCOMPtr<nsIRunnable> resultRunnable = new CameraAutoFocusResultTask( success, mAFOnSuccessCB, mAFOnErrorCB );
   if (NS_FAILED(NS_DispatchToMainThread(resultRunnable))) {
     NS_WARNING("Failed to dispatch to main thread!");
   }
 
   LOG_REFCNT(this);
+*/
 }
 
 void
@@ -634,57 +735,61 @@ GonkCamera::ReceiveFrame(PRUint8* aData, PRUint32 aLength)
 #endif
 }
 
-NS_IMPL_ISUPPORTS3(GonkCamera, nsIDOMMediaStream, nsIB2GCameraControl, nsIClassInfo)
+NS_IMPL_ISUPPORTS3(GonkCamera, nsIDOMMediaStream, nsICameraControl, nsIClassInfo)
 
-PRUint32
-MediaImpl::getNumberOfCameras()
+NS_IMETHODIMP
+CameraImpl::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPARAM)
 {
+  /*
   camera_module_t* module;
+
   if (hw_get_module(CAMERA_HARDWARE_MODULE_ID,
             (const hw_module_t **)&module) < 0) {
     GONKIMPL_LOGE("getNumberOfCameras : Could not load camera HAL module");
     return 0;
   }
   return module->get_number_of_cameras();
+  */
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP
-MediaImpl::GetCameraStream(const JS::Value & aOptions, JSContext* cx, nsIDOMMediaStream * *_retval NS_OUTPARAM)
+CameraImpl::GetCamera(const JS::Value & aOptions, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError, JSContext* cx)
 {
-  GONKIMPL_LOGI("XxXxX MediaImpl::getCameraStream()\n");
-  PRUint32 width = 480;
-  PRUint32 height = 320;
-  PRUint32 fps = 30;
-  PRUint32 camera = 0;
+  GONKIMPL_LOGI("XxXxX CameraImpl::GetCamera()\n");
+  const char* camera = "front";
+  bool freeCamera = false;
 
   if (aOptions.isObject()) {
     // extract values from aOptions
     JSObject *options = JSVAL_TO_OBJECT(aOptions);
     jsval v;
+
     if (JS_GetProperty(cx, options, "camera", &v)) {
-      if (JSVAL_IS_INT(v)) {
-        camera = JSVAL_TO_INT(v);
+      if (JSVAL_IS_STRING(v)) {
+        camera = JS_EncodeString(cx, JSVAL_TO_STRING(v));
+        if (camera) {
+          freeCamera = true;
+        }
       }
-      if (camera >= getNumberOfCameras())
-        return NS_ERROR_FAILURE;
-    }
-    if (JS_GetProperty(cx, options, "width", &v)) {
-      if (JSVAL_IS_INT(v))
-        width = JSVAL_TO_INT(v);
-    }
-    if (JS_GetProperty(cx, options, "height", &v)) {
-      if (JSVAL_IS_INT(v))
-        height = JSVAL_TO_INT(v);
-    }
-    if (JS_GetProperty(cx, options, "fps", &v)) {
-      if (JSVAL_IS_INT(v))
-        fps = JSVAL_TO_INT(v);
     }
   }
-  GONKIMPL_LOGA("XxXxX Settings: camera #%d %dx%d @ %d fps\n", camera, width, height, fps);
+
+  GONKIMPL_LOGA("requested camera '%s'\n", camera);
+
+/*
+  TODO: create and dispatch runnable, to get camera, replacing
+    the code below.
+
   nsCOMPtr<nsIDOMMediaStream> stream = new GonkCamera(camera, width, height, fps);
   *_retval = stream.get();
   NS_ADDREF(stream);
+*/
+
+  if (freeCamera) {
+    JS_free(cx, const_cast<char*>(camera));
+  }  
   return NS_OK;
 }
 
