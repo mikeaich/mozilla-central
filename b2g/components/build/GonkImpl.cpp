@@ -740,16 +740,47 @@ NS_IMPL_ISUPPORTS3(GonkCamera, nsIDOMMediaStream, nsICameraControl, nsIClassInfo
 NS_IMETHODIMP
 CameraImpl::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPARAM)
 {
-  /*
+  JSObject* a = JS_NewArrayObject(cx, 0, nsnull);
   camera_module_t* module;
-
+  PRUint32 index = 0;
+  PRUint32 count;
+  
+  if (!a) {
+    GONKIMPL_LOGE("getNumberOfCameras : Could not create array object");
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
   if (hw_get_module(CAMERA_HARDWARE_MODULE_ID,
             (const hw_module_t **)&module) < 0) {
     GONKIMPL_LOGE("getNumberOfCameras : Could not load camera HAL module");
-    return 0;
+    return NS_ERROR_NOT_AVAILABLE;
   }
-  return module->get_number_of_cameras();
-  */
+
+  count = module->get_number_of_cameras();
+  while (count) {
+    JSString* v;
+
+    switch (count) {
+      case 0:
+        v = JS_NewStringCopyZ(cx, "back");
+        break;
+      
+      case 1:
+        v = JS_NewStringCopyZ(cx, "front");
+        break;
+      
+      default:
+        // TODO: add a unique identifier for each one...
+        v = JS_NewStringCopyZ(cx, "extra-camera");
+        break;
+    }
+    if (!v) {
+      GONKIMPL_LOGE("getNumberOfCameras : out of memory populating camera list");
+      // TODO: clean up any partial objects?
+      return NS_ERROR_NOT_AVAILABLE;
+    }
+    JS_SetElement(cx, a, index++, &STRING_TO_JSVAL(v));
+    count -= 1;
+  }
   
   return NS_OK;
 }
