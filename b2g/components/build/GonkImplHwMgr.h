@@ -39,6 +39,7 @@ public:
   static int                    doCameraHardwareAutofocus(PRUint32 aHwHandle);
   static int                    doCameraHardwareTakePicture(PRUint32 aHwHandle);
   static int                    doCameraHardwareStartPreview(PRUint32 aHwHandle);
+  static void                   doCameraHardwareStopPreview(PRUint32 aHwHandle);
   static const char*            getCameraHardwareParameter(PRUint32 aHwHandle, const char* key);
   static void                   setCameraHardwareParameter(PRUint32 aHwHandle, const char* key, const char* value);
 

@@ -140,6 +140,7 @@ class CameraTPResultTask : public nsRunnable
 class GonkCamera : public nsIB2GCameraControl
                  , public nsDOMMediaStream
                  , public BaseCameraStream
+                 , public MediaStreamListener
 {
 public:
   NS_DECL_ISUPPORTS
@@ -177,7 +178,11 @@ public:
 
   void
   ReceiveFrame(PRUint8* aData, PRUint32 aLength);
-
+  
+  /* MediaStreamListener callbacks */
+  void
+  NotifyConsumptionChanged(MediaStreamGraph* aGraph, Consumption aConsuming);
+  
 public:
   nsCOMPtr<nsIB2GAutofocusCallback> mAFOnSuccessCB;
   nsCOMPtr<nsIB2GAutofocusCallback> mAFOnErrorCB;
@@ -219,17 +224,9 @@ GonkCamera::GonkCamera(PRUint32 aCamera, PRUint32 aWidth, PRUint32 aHeight, PRUi
   MediaStreamGraph* gm = MediaStreamGraph::GetInstance();
   mStream = gm->CreateInputStream(this);
   mInput = GetStream()->AsSourceStream();
-
-  mHwHandle = GonkCameraHardware::getCameraHardwareHandle(this, aCamera, aWidth, aHeight, aFps);
-  if (GonkCameraHardware::doCameraHardwareStartPreview(mHwHandle) == OK) {
-    mState = HW_STATE_PREVIEW;
-    mFps = GonkCameraHardware::getCameraHardwareFps(mHwHandle);
-    GonkCameraHardware::getCameraHardwareSize(mHwHandle, &mWidth, &mHeight);
-    mInput->AddTrack(TRACK_VIDEO, mFps, 0, new VideoSegment());
-    mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
-  } else {
-    GONKIMPL_LOGE("%s: failed to start preview\n", __func__);
-  }
+  mInput->AddListener(this);
+  
+  mHwHandle = GonkCameraHardware::getCameraHardwareHandle(this, mCamera, mWidth, mHeight, mFps);
 }
 
 GonkCamera::~GonkCamera()
@@ -252,6 +249,48 @@ GonkCamera::~GonkCamera()
 
   mState = HW_STATE_CLOSING;
   GonkCameraHardware::releaseCameraHardwareHandle(mHwHandle);
+  
+  mInput->RemoveListener(this);
+}
+
+void
+GonkCamera::NotifyConsumptionChanged(MediaStreamGraph* aGraph, Consumption aConsuming)
+{
+  const char* state;
+  
+  switch (aConsuming) {
+    case NOT_CONSUMED:
+      state = "not consuming";
+      break;
+    
+    case CONSUMED:
+      state = "consuming";
+      break;
+    
+    default:
+      state = "unknown";
+      break;
+  }
+  
+  printf_stderr("camera viewfinder is %s\n", state);
+  
+  switch (aConsuming) {
+    case NOT_CONSUMED:
+      GonkCameraHardware::doCameraHardwareStopPreview(mHwHandle);
+      break;
+    
+    case CONSUMED:
+      if (GonkCameraHardware::doCameraHardwareStartPreview(mHwHandle) == OK) {
+        mState = HW_STATE_PREVIEW;
+        mFps = GonkCameraHardware::getCameraHardwareFps(mHwHandle);
+        GonkCameraHardware::getCameraHardwareSize(mHwHandle, &mWidth, &mHeight);
+        mInput->AddTrack(TRACK_VIDEO, mFps, 0, new VideoSegment());
+        mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
+      } else {
+        GONKIMPL_LOGE("%s: failed to start preview\n", __func__);
+      }
+      break;
+  }
 }
 
 /* nsIDOMDOMRequest autofocus (); */

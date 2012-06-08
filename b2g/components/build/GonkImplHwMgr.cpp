@@ -380,3 +380,12 @@ GonkCameraHardware::doCameraHardwareStartPreview(PRUint32 aHwHandle)
     return !OK;
   }
 }
+
+void
+GonkCameraHardware::GonkCameraHardware::doCameraHardwareStopPreview(PRUint32 aHwHandle)
+{
+  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  if (hw) {
+    hw->mHardware->stopPreview();
+  }
+}
