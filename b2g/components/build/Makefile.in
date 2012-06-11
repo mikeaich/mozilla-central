@@ -14,7 +14,7 @@ MODULE          = b2gmodule
 LIBRARY_NAME    = b2gmodule
 LIBXUL_LIBRARY  = 1
 
-XPIDL_MODULE    = B2GCamera
+XPIDL_MODULE    = B2GMedia
 
 IS_COMPONENT	= 1
 EXPORT_LIBRARY  = 1

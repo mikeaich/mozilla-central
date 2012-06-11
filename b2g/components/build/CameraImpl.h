@@ -12,7 +12,7 @@
 
 class CameraImpl {
 public:
-  static NS_IMETHODIMP GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPARAM);
+  static NS_IMETHODIMP getListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPARAM);
   static NS_IMETHODIMP GetCamera(const JS::Value & aOptions, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError, JSContext* cx);
 };
 

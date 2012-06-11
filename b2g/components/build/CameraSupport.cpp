@@ -32,7 +32,7 @@ NS_IMETHODIMP CameraSupport::GetCamera(const JS::Value & aOptions, nsICameraGetC
 /* [implicit_jscontext] jsval getListOfCameras (); */
 NS_IMETHODIMP CameraSupport::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPARAM)
 {
-  return CameraImpl::GetListOfCameras(cx, _retval);
+  return CameraImpl::getListOfCameras(cx, _retval);
 }
 
 // nsIClassInfo implementation
