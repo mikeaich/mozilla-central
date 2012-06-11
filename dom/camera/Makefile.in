@@ -2,32 +2,23 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
-DEPTH		= ../../..
-topsrcdir	= @top_srcdir@
-srcdir		= @srcdir@
-VPATH		= @srcdir@
+DEPTH		     = ../../..
+topsrcdir	     = @top_srcdir@
+srcdir		     = @srcdir@
+VPATH		     = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE_NAME     = b2gmodule
-MODULE          = b2gmodule
-LIBRARY_NAME    = b2gmodule
-LIBXUL_LIBRARY  = 1
+MODULE           = dom
+LIBRARY_NAME     = domcamera_s
+XPIDL_MODULE     = dom_camera
+LIBXUL_LIBRARY   = 1
+FORCE_STATIC_LIB = 1
 
-XPIDL_MODULE    = B2GMedia
-
-IS_COMPONENT	= 1
-EXPORT_LIBRARY  = 1
-
-EXPORTS = B2GModule.h
-
-XPIDLSRCS = \
-  cameracontrol.idl \
-  $(NULL)
+include $(topsrcdir)/dom/dom-config.mk
 
 CPPSRCS = \
   CameraSupport.cpp \
-  B2GModule.cpp \
   $(NULL)
 
 ifeq (gonk,$(MOZ_WIDGET_TOOLKIT))
@@ -41,5 +32,9 @@ CPPSRCS += \
   FallbackImpl.cpp \
   $(NULL)
 endif
+
+XPIDLSRCS = \
+  nsIDOMNavigatorCameraSupport.idl \
+  $(NULL)
 
 include $(topsrcdir)/config/rules.mk

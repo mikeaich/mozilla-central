@@ -37,7 +37,3 @@ fi
 MOZ_APP_ID={3c2e2abc-06d4-11e1-ac3b-374f68613e61}
 MOZ_EXTENSION_MANAGER=1
 ENABLE_MARIONETTE=1
-
-# Needed for building our components as part of libxul
-MOZ_APP_COMPONENT_LIBS="b2gmodule"
-MOZ_APP_COMPONENT_INCLUDE=B2GModule.h

@@ -265,8 +265,8 @@ interface nsICameraGetCameraCallback : nsISupports
     void handleEvent(in nsICameraControl camera);
 };
 
-[scriptable, uuid(671ee624-0336-441a-a24e-26b5319f14ff)]
-interface nsICameraSupport : nsISupports
+[scriptable, uuid(671ee624-0336-441a-a24e-26b5319f14fe)]
+interface nsICameraManager : nsISupports
 {
     /* get a camera instance; options will be used to specify which
        camera to get from the list returned by getListOfCameras(), e.g.:
@@ -277,9 +277,15 @@ interface nsICameraSupport : nsISupports
     [implicit_jscontext]
     void getCamera([optional] in jsval aOptions, in nsICameraGetCameraCallback onSuccess, [optional] in nsICameraErrorCallback onError);
     
-    /* return a JSON array of camera identifiers, e.g.
+    /* return a JSON array of camera   identifiers, e.g.
         [ "front", "back" ]
     */
     [implicit_jscontext]
     jsval getListOfCameras();
 };
+
+[scriptable, uuid(bbb2456a-a6c8-42c8-8f52-6de071097e4b)]
+interface nsIDOMNavigatorCamera : nsISupports
+{
+    readonly attribute nsICameraManager mozCameras;
+}

@@ -3,9 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 ifndef LIBXUL_SDK
-# Needed for building our components as part of libxul
-APP_LIBXUL_DIRS += b2g/components/build
-
 include $(topsrcdir)/toolkit/toolkit-tiers.mk
 else
 ifdef ENABLE_TESTS
