@@ -1232,6 +1232,7 @@ NS_IMETHODIMP
 Navigator::GetMozCameras(nsIDOMCameraManager** aCameraManager)
 {
   nsRefPtr<nsDOMCameraManager> cameraManager = mCameraManager;
+  printf_stderr("mikeh: Navigator::GetMozCameras()\n");
 
   if (!cameraManager) {
     nsCOMPtr<nsPIDOMWindow> win = do_QueryReferent(mWindow);
@@ -1243,12 +1244,15 @@ Navigator::GetMozCameras(nsIDOMCameraManager** aCameraManager)
     }
 
     nsresult rv = nsDOMCameraManager::Create(win->WindowID(), getter_AddRefs(mCameraManager));
+    printf_stderr("mikeh: rv = %d\n", rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
     cameraManager = mCameraManager;
   }
 
   cameraManager.forget(aCameraManager);
+  printf_stderr("mikeh: aCameraManager = %p\n", aCameraManager);
+  printf_stderr("mikeh: *aCameraManager = %p\n", *aCameraManager);
   return NS_OK;
 }
 #endif //MOZ_B2G_CAMERA

@@ -8,7 +8,7 @@
 
 NS_IMPL_ISUPPORTS1(nsDOMCameraManager, nsIDOMCameraManager)
 
-DOMCI_DATA(nsDOMCameraManager, nsDOMCameraManager)
+DOMCI_DATA(CameraManager, nsIDOMCameraManager)
 
 /*
   nsDOMCameraManager::GetCamera() and nsDOMCameraManager::GetListOfCameras

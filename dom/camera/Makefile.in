@@ -26,6 +26,7 @@ CPPSRCS = \
 ifeq (gonk,$(MOZ_WIDGET_TOOLKIT))
 CPPSRCS += \
   GonkCameraControl.cpp \
+  GonkCameraHwMgr.cpp \
   $(NULL)
 else
 CPPSRCS += \

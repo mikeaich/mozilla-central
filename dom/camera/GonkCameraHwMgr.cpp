@@ -4,38 +4,15 @@
 
 
 #include "nsDebug.h"
-#include "GonkImplHwMgr.h"
+#include "GonkCameraHwMgr.h"
 
 
 // config
 #define GIHM_STUB_NATIVEWINDOW      1
-#define GIHM_LOG_LEVEL              2
 
-#define GIHM_LOG( l, ... )       \
-  do {                                  \
-    if ( GIHM_LOG_LEVEL >= (l) ) {  \
-      printf_stderr (__VA_ARGS__); \
-    }                                   \
-  } while (0)
+#define DOM_CAMERA_LOG_LEVEL        3
+#include "CameraCommon.h"
 
-#define GIHM_LOGA( ... )        GIHM_LOG( 0, __VA_ARGS__ )
-
-#if GIHM_LOG_LEVEL
-enum {
-  LOG_NOTHING,
-  LOG_ERROR,
-  LOG_WARNING,
-  LOG_INFO
-};
-
-#define GIHM_LOGI( ... )        GIHM_LOG( LOG_INFO,  __VA_ARGS__ )
-#define GIHM_LOGW( ... )        GIHM_LOG( LOG_WARNING, __VA_ARGS__ )
-#define GIHM_LOGE( ... )        GIHM_LOG( LOG_ERROR, __VA_ARGS__ )
-#else
-#define GIHM_LOGI( ... )
-#define GIHM_LOGW( ... )
-#define GIHM_LOGE( ... )
-#endif
 
 #if GIHM_TIMING_RECEIVEFRAME
 #define INCLUDE_TIME_H                  1
@@ -106,7 +83,7 @@ GonkCameraHardware::GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera, PR
   mIs420p(false), mClosing(false), mMonitor("GonkCameraHardware.Monitor"),
   mNumFrames(0), mTarget(aTarget)
 {
-  GIHM_LOGI( "%s: this = %p (aTarget = %p)\n", __func__, (void*)this, (void*)aTarget );
+  DOM_CAMERA_LOGI( "%s: this = %p (aTarget = %p)\n", __func__, (void*)this, (void*)aTarget );
   init();
 }
 
@@ -116,7 +93,7 @@ GonkCameraHardware::DataCallback(int32_t aMsgType, const sp<IMemory> &aDataPtr, 
 {
   GonkCameraHardware* hw = getCameraHardware((PRUint32)aUser);
   if (!hw) {
-    GIHM_LOGW("%s:aUser = %d resolved to no camera hw\n", __func__, (PRUint32)aUser);
+    DOM_CAMERA_LOGW("%s:aUser = %d resolved to no camera hw\n", __func__, (PRUint32)aUser);
     return;
   }
   if (hw->mClosing) {
@@ -135,11 +112,11 @@ GonkCameraHardware::DataCallback(int32_t aMsgType, const sp<IMemory> &aDataPtr, 
         break;
 
       default:
-        GIHM_LOGE("Unhandled data callback event %d\n", aMsgType);
+        DOM_CAMERA_LOGE("Unhandled data callback event %d\n", aMsgType);
         break;
     }
   } else {
-    GIHM_LOGW( "%s: hw = %p (camera = NULL)\n", __func__, hw );
+    DOM_CAMERA_LOGW( "%s: hw = %p (camera = NULL)\n", __func__, hw );
   }
 }
 
@@ -150,7 +127,7 @@ GonkCameraHardware::NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2,
   bool bSuccess;
   GonkCameraHardware* hw = getCameraHardware((PRUint32)aUser);
   if (!hw) {
-    GIHM_LOGW("%s:aUser = %d resolved to no camera hw\n", __func__, (PRUint32)aUser);
+    DOM_CAMERA_LOGW("%s:aUser = %d resolved to no camera hw\n", __func__, (PRUint32)aUser);
     return;
   }
   if (hw->mClosing) {
@@ -162,17 +139,17 @@ GonkCameraHardware::NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2,
     switch (aMsgType) {
       case CAMERA_MSG_FOCUS:
         if (ext1) {
-          GIHM_LOGI("Autofocus complete");
+          DOM_CAMERA_LOGI("Autofocus complete");
           bSuccess = true;
         } else {
-          GIHM_LOGW("Autofocus failed");
+          DOM_CAMERA_LOGW("Autofocus failed");
           bSuccess = false;
         }
         GonkCameraAutoFocusComplete(camera, bSuccess);
         break;
 
       default:
-        GIHM_LOGE("Unhandled notify callback event %d\n", aMsgType);
+        DOM_CAMERA_LOGE("Unhandled notify callback event %d\n", aMsgType);
         break;
     }
   }
@@ -181,7 +158,7 @@ GonkCameraHardware::NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2,
 void
 GonkCameraHardware::init()
 {
-  GIHM_LOGI( "%s: this = %p\n", __func__, (void*)this );
+  DOM_CAMERA_LOGI( "%s: this = %p\n", __func__, (void*)this );
 
   if (hw_get_module(CAMERA_HARDWARE_MODULE_ID,
             (const hw_module_t **)&mModule) < 0) {
@@ -220,7 +197,7 @@ GonkCameraHardware::init()
 
   mParams = mHardware->getParameters();
 
-  GIHM_LOGA("Preview formats: %s\n", mParams.get(mParams.KEY_SUPPORTED_PREVIEW_FORMATS));
+  DOM_CAMERA_LOGA("Preview formats: %s\n", mParams.get(mParams.KEY_SUPPORTED_PREVIEW_FORMATS));
 
   Vector<Size> previewSizes;
   mParams.getSupportedPreviewSizes(previewSizes);
@@ -252,12 +229,12 @@ GonkCameraHardware::init()
   mParams = mHardware->getParameters();
   mIs420p = strcmp(mParams.getPreviewFormat(), PREVIEW_FORMAT) == 0;
   if (!mIs420p) {
-    GIHM_LOGA("Camera ignored our request for '%s' format, will have to convert\n", PREVIEW_FORMAT);
+    DOM_CAMERA_LOGA("Camera ignored our request for '%s' format, will have to convert\n", PREVIEW_FORMAT);
   }
   // Check the frame rate and log if the camera ignored our setting
   PRUint32 fps = mParams.getPreviewFrameRate();
   if (fps != mFps) {
-    GIHM_LOGA("We asked for %d fps but camera returned %d fps, using it", mFps, fps);
+    DOM_CAMERA_LOGA("We asked for %d fps but camera returned %d fps, using it", mFps, fps);
     mFps = fps;
   }
 
@@ -266,7 +243,7 @@ GonkCameraHardware::init()
 
 GonkCameraHardware::~GonkCameraHardware()
 {
-  GIHM_LOGI( "XxXxX %s: this = %p\n", __func__, (void*)this );
+  DOM_CAMERA_LOGI( "XxXxX %s: this = %p\n", __func__, (void*)this );
   sHw = nsnull;
 }
 
@@ -277,16 +254,16 @@ void
 GonkCameraHardware::releaseCameraHardwareHandle(PRUint32 aHwHandle)
 {
   GonkCameraHardware* hw = getCameraHardware(aHwHandle);
-  GIHM_LOGI("%s: aHwHandle = %d, hw = %p (sHwHandle = %d)\n", __func__, aHwHandle, (void*)hw, sHwHandle);
+  DOM_CAMERA_LOGI("%s: aHwHandle = %d, hw = %p (sHwHandle = %d)\n", __func__, aHwHandle, (void*)hw, sHwHandle);
 
   if (hw) {
-    GIHM_LOGI("%s: before: sHwHandle = %d\n", __func__, sHwHandle);
+    DOM_CAMERA_LOGI("%s: before: sHwHandle = %d\n", __func__, sHwHandle);
     sHwHandle += 1; // invalidate old handles before deleting
     hw->mClosing = true;
     hw->mHardware->disableMsgType(CAMERA_MSG_ALL_MSGS);
     hw->mHardware->stopPreview();
     hw->mHardware->release();
-    GIHM_LOGI("%s: after: sHwHandle = %d\n", __func__, sHwHandle);
+    DOM_CAMERA_LOGI("%s: after: sHwHandle = %d\n", __func__, sHwHandle);
     delete hw;     // destroy the camera hardware instance
   }
 }
@@ -327,7 +304,7 @@ GonkCameraHardware::getCameraHardwareSize(PRUint32 aHwHandle, PRUint32* aWidth, 
 int
 GonkCameraHardware::doCameraHardwareAutofocus(PRUint32 aHwHandle)
 {
-  GIHM_LOGI("%s: aHwHandle = %d\n", __func__, aHwHandle);
+  DOM_CAMERA_LOGI("%s: aHwHandle = %d\n", __func__, aHwHandle);
   GonkCameraHardware* hw = getCameraHardware(aHwHandle);
   if (hw) {
     hw->mHardware->enableMsgType(CAMERA_MSG_FOCUS);

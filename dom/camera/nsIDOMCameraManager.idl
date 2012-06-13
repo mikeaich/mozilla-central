@@ -11,51 +11,66 @@ interface nsICameraCapabilities : nsISupports
 {
     /* an array of objects with 'height' and 'width' properties
        supported for the preview stream */
+    [implicit_jscontext]
     readonly attribute jsval        previewSizes;
 
     /* an array of objects with 'height' and 'width' properties
        supported for picture taking */
+    [implicit_jscontext]
     readonly attribute jsval        pictureSizes;
 
     /* an array of strings, e.g. [ "jpeg", "rgb565" ] */
+    [implicit_jscontext]
     readonly attribute jsval        fileFormats;
 
     /* an array of strings, e.g. [ "auto", "fluorescent", etc. ] */
+    [implicit_jscontext]
     readonly attribute jsval        whiteBalanceModes;
 
     /* an array of strings, e.g. [ "auto", "night", "beach", etc. ] */
+    [implicit_jscontext]
     readonly attribute jsval        sceneModes;
 
     /* an array of strings, e.g. [ "normal", "sepia", "mono", etc. ] */
+    [implicit_jscontext]
     readonly attribute jsval        effects;
 
     /* an array of strings, e.g. [ "auto", "off", "on", etc. ] */
+    [implicit_jscontext]
     readonly attribute jsval        flashModes;
 
     /* an array of strings, e.g. [ "auto", "fixed", "macro", etc. ] */
+    [implicit_jscontext]
     readonly attribute jsval        focusModes;
 
     /* the maximum number of focus areas supported by the camera */
+    [implicit_jscontext]
     readonly attribute long         maxFocusAreas;
 
     /* the minimum supported exposure compensation value */
+    [implicit_jscontext]
     readonly attribute double       minExposureCompensation;
 
     /* the maximum supported exposure compensation value */
+    [implicit_jscontext]
     readonly attribute double       maxExposureCompensation;
 
     /* exposure compensation minimum step-size */
+    [implicit_jscontext]
     readonly attribute double       stepExposureCompensation;
 
     /* the maximum number of metering areas supported by the camera */
+    [implicit_jscontext]
     readonly attribute long         maxMeteringAreas;
 
     /* an array of doubles, e.g. [ 1.0, 1.2, 1.5, 2.0, 3.0, etc. ],
        or null if zooming is not supported */
+    [implicit_jscontext]
     readonly attribute jsval        zoomRatios;
 
     /* an array of objects with 'height' and 'width' properties
        supported for video recording */
+    [implicit_jscontext]
     readonly attribute jsval        videoSizes;
 };
 

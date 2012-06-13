@@ -1655,7 +1655,7 @@ static nsDOMClassInfoData sClassInfoData[] = {
 #endif
 
 #ifdef MOZ_B2G_CAMERA
-  NS_DEFINE_CLASSINFO_DATA(nsDOMCameraManager, nsDOMGenericSH,
+  NS_DEFINE_CLASSINFO_DATA(CameraManager, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
 #endif
 
@@ -4505,7 +4505,7 @@ nsDOMClassInfo::Init()
 #endif
 
 #ifdef MOZ_B2G_CAMERA
-  DOM_CLASSINFO_MAP_BEGIN(nsDOMCameraManager, nsIDOMCameraManager)
+  DOM_CLASSINFO_MAP_BEGIN(CameraManager, nsIDOMCameraManager)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMCameraManager)
   DOM_CLASSINFO_MAP_END  
 #endif

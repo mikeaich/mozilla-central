@@ -6,6 +6,8 @@
 #include "jsapi.h"
 #include "DOMCameraManager.h"
 #include "CameraControl.h"
+#include "GonkCameraHwMgr.h"
+#include "GonkCameraControl.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
@@ -240,4 +242,46 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
 
   *_retval = OBJECT_TO_JSVAL(a);
   return NS_OK;
+}
+
+const char*
+nsCameraControl::GetParameter(const char* key)
+{
+  return GonkCameraHardware::getCameraHardwareParameter(mHwHandle, key);
+}
+
+void
+nsCameraControl::SetParameter(const char* key, const char* value)
+{
+  GonkCameraHardware::setCameraHardwareParameter(mHwHandle, key, value);
+}
+
+void
+nsCameraControl::ReceiveImage(PRUint8* aData, PRUint32 aLength)
+{
+}
+
+void
+nsCameraControl::AutoFocusComplete(bool success)
+{
+}
+
+void
+nsCameraControl::ReceiveFrame(PRUint8* aData, PRUint32 aLength)
+{
+}
+
+void GonkCameraReceiveImage(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength)
+{
+  gc->ReceiveImage(aData, aLength);
+}
+
+void GonkCameraAutoFocusComplete(nsCameraControl* gc, bool success)
+{
+  gc->AutoFocusComplete(success);
+}
+
+void GonkCameraReceiveFrame(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength)
+{
+  gc->ReceiveFrame(aData, aLength);
 }

@@ -6,8 +6,8 @@
 #define DOM_CAMERA_NSCAMERACAPABILITIES_H
 
 
-#include "nsIDOMCameraManager.h"
-#include "nsCOMPtr.h"
+#include "CameraControl.h"
+#include "nsAutoPtr.h"
 
 
 class nsCameraCapabilities : public nsICameraCapabilities
@@ -16,14 +16,27 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSICAMERACAPABILITIES
 
-  nsCameraCapabilities(nsCOMPtr<nsIDOMCameraManager> aCamera);
+  nsCameraCapabilities(nsRefPtr<nsCameraControl> aCamera);
+
+  nsresult parameterListToNewArray(
+    JSContext *cx,
+    JSObject **array,
+    const char *key,
+    nsresult (*parseItemAndAdd)(
+      JSContext *cx,
+      JSObject *array,
+      PRUint32 index,
+      const char *start,
+      char **end
+    )
+  );
 
 private:
   ~nsCameraCapabilities();
 
 protected:
   /* additional members */
-  nsCOMPtr<nsIDOMCameraManager> mCamera;
+  nsRefPtr<nsCameraControl> mCamera;
 };
 
 

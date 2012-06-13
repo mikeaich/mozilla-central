@@ -9,7 +9,10 @@
 #include "libcameraservice/CameraHardwareInterface.h"
 #include "binder/IMemory.h"
 #include "mozilla/ReentrantMonitor.h"
-#include "GonkImpl.h"
+
+// #include "GonkImpl.h"
+#include "GonkCameraControl.h"
+typedef class nsCameraControl GonkCamera;
 
 
 // config

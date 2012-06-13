@@ -6,6 +6,7 @@
 #define DOM_CAMERA_NSCAMERACONTROL_H
 
 
+#include "prtypes.h"
 #include "nsIDOMCameraManager.h"
 
 
@@ -17,11 +18,19 @@ public:
 
   nsCameraControl();
 
+  const char* GetParameter(const char* key);
+  void SetParameter(const char* key, const char* value);
+
+  void ReceiveImage(PRUint8* aData, PRUint32 aLength);
+  void AutoFocusComplete(bool success);
+  void ReceiveFrame(PRUint8* aData, PRUint32 aLength);
+
 private:
   ~nsCameraControl();
 
 protected:
   /* additional members */
+  PRUint32  mHwHandle;
 };
 
 
