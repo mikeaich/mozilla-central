@@ -528,7 +528,7 @@ DOMCI_CLASS(BluetoothAdapter)
 #endif
 
 #ifdef MOZ_B2G_CAMERA
-DOMCI_CLASS(CameraManager)
+DOMCI_CLASS(nsDOMCameraManager)
 #endif
 
 DOMCI_CLASS(DOMError)

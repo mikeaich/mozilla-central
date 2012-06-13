@@ -2,7 +2,9 @@
 
 #include "nsIDOMMediaStream.idl"
 #include "nsIDOMDOMRequest.idl"
-#include "nsIDOMFile.idl"
+
+
+interface nsIDOMBlob;
 
 [scriptable, uuid(64196840-0d03-4b65-a955-790f43a4b810)]
 interface nsICameraCapabilities : nsISupports
@@ -266,7 +268,7 @@ interface nsICameraGetCameraCallback : nsISupports
 };
 
 [scriptable, uuid(671ee624-0336-441a-a24e-26b5319f14fe)]
-interface nsICameraManager : nsISupports
+interface nsIDOMCameraManager : nsISupports
 {
     /* get a camera instance; options will be used to specify which
        camera to get from the list returned by getListOfCameras(), e.g.:
@@ -283,9 +285,3 @@ interface nsICameraManager : nsISupports
     [implicit_jscontext]
     jsval getListOfCameras();
 };
-
-[scriptable, uuid(bbb2456a-a6c8-42c8-8f52-6de071097e4b)]
-interface nsIDOMNavigatorCamera : nsISupports
-{
-    readonly attribute nsICameraManager mozCameras;
-}

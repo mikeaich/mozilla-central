@@ -5,7 +5,7 @@
 
 #include "nsCOMPtr.h"
 #include "nsDOMMediaStream.h"
-#include "cameracontrol.h"
+#include "nsIDOMCameraManager.h"
 #include "CameraImpl.h"
 #include "MediaStreamGraph.h"
 #include "BaseCameraStream.h"

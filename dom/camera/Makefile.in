@@ -2,10 +2,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
-DEPTH		     = ../../..
-topsrcdir	     = @top_srcdir@
-srcdir		     = @srcdir@
-VPATH		     = @srcdir@
+DEPTH		         = ../..
+topsrcdir	       = @top_srcdir@
+srcdir		       = @srcdir@
+VPATH		         = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
@@ -18,23 +18,28 @@ FORCE_STATIC_LIB = 1
 include $(topsrcdir)/dom/dom-config.mk
 
 CPPSRCS = \
-  CameraSupport.cpp \
+  DOMCameraManager.cpp \
+  CameraCapabilities.cpp \
+  CameraPictureOptions.cpp \
   $(NULL)
 
 ifeq (gonk,$(MOZ_WIDGET_TOOLKIT))
 CPPSRCS += \
-  GonkImpl.cpp \
-  GonkImplHwMgr.cpp \
-  CameraNativeWindow.cpp \
+  GonkCameraControl.cpp \
   $(NULL)
 else
 CPPSRCS += \
-  FallbackImpl.cpp \
+  FallbackCameraControl.cpp \
   $(NULL)
 endif
 
 XPIDLSRCS = \
-  nsIDOMNavigatorCameraSupport.idl \
+  nsIDOMNavigatorCamera.idl \
+  nsIDOMCameraManager.idl \
+  $(NULL)
+
+EXPORTS = \
+  DOMCameraManager.h \
   $(NULL)
 
 include $(topsrcdir)/config/rules.mk

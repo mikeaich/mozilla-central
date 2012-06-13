@@ -5,7 +5,7 @@
 #ifndef B2G_CAMERASUPPORT_H
 #define B2G_CAMERASUPPORT_H
 
-#include "cameracontrol.h"
+#include "nsIDOMCameraManager.h"
 #include "nsIClassInfo.h"
 
 class CameraSupport : public nsICameraSupport

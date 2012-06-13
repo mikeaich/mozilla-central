@@ -40,6 +40,7 @@ class nsIDOMTelephony;
 
 #ifdef MOZ_B2G_CAMERA
 #include "nsIDOMNavigatorCamera.h"
+#include "DOMCameraManager.h"
 #endif
 
 //*****************************************************************************
@@ -155,7 +156,7 @@ private:
   nsCOMPtr<nsIDOMBluetoothManager> mBluetooth;
 #endif
 #ifdef MOZ_B2G_CAMERA
-  nsCOMPtr<nsIDOMCameraManager> mCamera;
+  nsRefPtr<nsDOMCameraManager> mCameraManager;
 #endif
   nsWeakPtr mWindow;
 };
