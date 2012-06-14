@@ -3,6 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include <string.h>
+#include <stdlib.h>
 #include "jsapi.h"
 #include "camera/CameraParameters.h"
 #include "CameraControl.h"
@@ -51,6 +52,56 @@ parseZoomRatioItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const c
   return NS_OK;
 }
 
+static nsresult
+parseStringItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const char *start, char **end)
+{
+  JSString* v;
+
+  if (*end) {
+    v = JS_NewStringCopyN(cx, start, *end - start);
+  } else {
+    v = JS_NewStringCopyZ(cx, start);
+  }
+
+  if (!v) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  if (!JS_SetElement(cx, array, index, &STRING_TO_JSVAL(v))) {
+    return NS_ERROR_FAILURE;
+  }
+  
+  return NS_OK;
+}
+
+static nsresult
+parseDimensionItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const char *start, char **end)
+{
+  char* x;
+  jsval w;
+  jsval h;
+
+  w = INT_TO_JSVAL(strtol(start, &x, 10));
+  h = INT_TO_JSVAL(strtol(x + 1, end, 10));
+
+  JSObject *o = JS_NewObject(cx, nsnull, nsnull, nsnull);
+  if (!o) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  if (!JS_SetProperty(cx, o, "width", &w)) {
+    return NS_ERROR_FAILURE;
+  }
+  if (!JS_SetProperty(cx, o, "height", &h)) {
+    return NS_ERROR_FAILURE;
+  }
+
+  if (!JS_SetElement(cx, array, index, &OBJECT_TO_JSVAL(o))) {
+    return NS_ERROR_FAILURE;
+  }
+
+  return NS_OK;
+}
+
 nsresult
 nsCameraCapabilities::parameterListToNewArray(JSContext *cx, JSObject **array, const char *key, nsresult (*parseItemAndAdd)(JSContext *cx, JSObject *array, PRUint32 index, const char *start,  char **end))
 {
@@ -89,105 +140,86 @@ nsCameraCapabilities::parameterListToNewArray(JSContext *cx, JSObject **array, c
   return NS_OK;
 }
 
+nsresult
+nsCameraCapabilities::stringListToNewObject(JSContext* cx, JS::Value *aArray, const char *key)
+{
+  JSObject* array;
+  nsresult rv;
+
+  rv = parameterListToNewArray(cx, &array, key, parseStringItemAndAdd);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  *aArray = OBJECT_TO_JSVAL(array);
+  return NS_OK;
+}
+
+nsresult
+nsCameraCapabilities::dimensionListToNewObject(JSContext* cx, JS::Value *aArray, const char *key)
+{
+  JSObject* array;
+  nsresult rv;
+
+  rv = parameterListToNewArray(cx, &array, key, parseDimensionItemAndAdd);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  *aArray = OBJECT_TO_JSVAL(array);
+  return NS_OK;
+}
+
 /* readonly attribute jsval previewSizes; */
 NS_IMETHODIMP
 nsCameraCapabilities::GetPreviewSizes(JSContext* cx, JS::Value *aPreviewSizes)
 {
-  CHECK_CAMERA_PTR(mCamera);
-  
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return dimensionListToNewObject(cx, aPreviewSizes, CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES);
 }
 
 /* readonly attribute jsval pictureSizes; */
 NS_IMETHODIMP
 nsCameraCapabilities::GetPictureSizes(JSContext* cx, JS::Value *aPictureSizes)
 {
-  CHECK_CAMERA_PTR(mCamera);
-  
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return dimensionListToNewObject(cx, aPictureSizes, CameraParameters::KEY_SUPPORTED_PICTURE_SIZES);
 }
 
 /* readonly attribute jsval fileFormats; */
 NS_IMETHODIMP
 nsCameraCapabilities::GetFileFormats(JSContext* cx, JS::Value *aFileFormats)
 {
-  CHECK_CAMERA_PTR(mCamera);
-  
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return stringListToNewObject(cx, aFileFormats, CameraParameters::KEY_SUPPORTED_PICTURE_FORMATS);
 }
 
 /* readonly attribute jsval whiteBalanceModes; */
 NS_IMETHODIMP
 nsCameraCapabilities::GetWhiteBalanceModes(JSContext* cx, JS::Value *aWhiteBalanceModes)
 {
-  CHECK_CAMERA_PTR(mCamera);
-  
-  PRUint32 index = 0;
-  const char* value;
-  JSObject* rv;
-
-  value = mCamera->GetParameter(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE);
-  if (!value) {
-    /* in case we get nonsense data back */
-    *aWhiteBalanceModes = JSVAL_NULL;
-    return NS_OK;
-  }
-  
-  rv = JS_NewArrayObject(cx, 0, nsnull);
-  
-  const char* p = value;
-  const char* q;
-  while ((q = strchr(p, ',')) != nsnull) {
-    if (q != p) { /* skip consecutive delimiters, just in case */
-      JSString* v = JS_NewStringCopyN(cx, p, q - p);
-      if (!v) {
-        return NS_ERROR_OUT_OF_MEMORY;
-      }
-      if (!JS_SetElement(cx, rv, index++, &STRING_TO_JSVAL(v))) {
-        return NS_ERROR_FAILURE;
-      }
-    }
-    p = q + 1;
-  }
-
-  *aWhiteBalanceModes = OBJECT_TO_JSVAL(rv);
-  return NS_OK;
+  return stringListToNewObject(cx, aWhiteBalanceModes, CameraParameters::KEY_SUPPORTED_WHITE_BALANCE);
 }
 
 /* readonly attribute jsval sceneModes; */
 NS_IMETHODIMP
 nsCameraCapabilities::GetSceneModes(JSContext* cx, JS::Value *aSceneModes)
 {
-  CHECK_CAMERA_PTR(mCamera);
-  
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return stringListToNewObject(cx, aSceneModes, CameraParameters::KEY_SUPPORTED_SCENE_MODES);
 }
 
 /* readonly attribute jsval effects; */
 NS_IMETHODIMP
 nsCameraCapabilities::GetEffects(JSContext* cx, JS::Value *aEffects)
 {
-  CHECK_CAMERA_PTR(mCamera);
-  
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return stringListToNewObject(cx, aEffects, CameraParameters::KEY_SUPPORTED_EFFECTS);
 }
 
 /* readonly attribute jsval flashModes; */
 NS_IMETHODIMP
 nsCameraCapabilities::GetFlashModes(JSContext* cx, JS::Value *aFlashModes)
 {
-  CHECK_CAMERA_PTR(mCamera);
-  
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return stringListToNewObject(cx, aFlashModes, CameraParameters::KEY_SUPPORTED_FLASH_MODES);
 }
 
 /* readonly attribute jsval focusModes; */
 NS_IMETHODIMP
 nsCameraCapabilities::GetFocusModes(JSContext* cx, JS::Value *aFocusModes)
 {
-  CHECK_CAMERA_PTR(mCamera);
-  
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return stringListToNewObject(cx, aFocusModes, CameraParameters::KEY_SUPPORTED_FOCUS_MODES);
 }
 
 /* readonly attribute long maxFocusAreas; */
@@ -264,7 +296,15 @@ nsCameraCapabilities::GetMaxMeteringAreas(JSContext* cx, PRInt32 *aMaxMeteringAr
 {
   CHECK_CAMERA_PTR(mCamera);
   
-  return NS_ERROR_NOT_IMPLEMENTED;
+  const char* value = mCamera->GetParameter(CameraParameters::KEY_MAX_NUM_METERING_AREAS);
+  if (!value) {
+    /* in case we get nonsense data back */
+    *aMaxMeteringAreas = 0;
+    return NS_OK;
+  }
+  
+  *aMaxMeteringAreas = atoi(value);
+  return NS_OK;
 }
 
 /* readonly attribute jsval zoomRatios; */
@@ -295,7 +335,5 @@ nsCameraCapabilities::GetZoomRatios(JSContext* cx, JS::Value *aZoomRatios)
 NS_IMETHODIMP
 nsCameraCapabilities::GetVideoSizes(JSContext* cx, JS::Value *aVideoSizes)
 {
-  CHECK_CAMERA_PTR(mCamera);
-  
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return dimensionListToNewObject(cx, aVideoSizes, CameraParameters::KEY_SUPPORTED_VIDEO_SIZES);
 }

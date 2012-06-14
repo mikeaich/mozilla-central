@@ -30,6 +30,8 @@ public:
       char **end
     )
   );
+  nsresult stringListToNewObject(JSContext* cx, JS::Value *aArray, const char *key);
+  nsresult dimensionListToNewObject(JSContext* cx, JS::Value *aArray, const char *key);
 
 private:
   ~nsCameraCapabilities();
