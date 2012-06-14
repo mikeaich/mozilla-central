@@ -2,11 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include <string.h>
 #include "libcameraservice/CameraHardwareInterface.h"
+#include "camera/CameraParameters.h"
 #include "jsapi.h"
 #include "DOMCameraManager.h"
 #include "CameraControl.h"
 #include "GonkCameraHwMgr.h"
+#include "CameraCapabilities.h"
 #include "GonkCameraControl.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
@@ -15,9 +18,45 @@
 
 NS_IMPL_ISUPPORTS1(nsCameraControl, nsICameraControl)
 
-nsCameraControl::nsCameraControl()
+nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError, JSContext* cx, nsCOMPtr<nsIThread> aCameraThread)
+  : mCameraThread(aCameraThread)
 {
   /* member initializers and constructor code */
+}
+
+nsresult
+nsCameraControl::Create(const JS::Value & aOptions, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError, JSContext* cx, nsICameraControl * *aCameraControl)
+{
+  nsresult rv;
+  nsCOMPtr<nsIThread> cameraThread;
+  nsCOMPtr<nsICameraControl> cameraControl;
+  PRUint32 cameraId = 0;  /* front camera by default */
+  
+  if (aOptions.isObject()) {
+    /* extract values from aOptions */
+    JSObject *options = JSVAL_TO_OBJECT(aOptions);
+    jsval v;
+    
+    if (JS_GetProperty(cx, options, "camera", &v)) {
+      if (JSVAL_IS_STRING(v)) {
+        const char* camera = JS_EncodeString(cx, JSVAL_TO_STRING(v));
+        if (camera) {
+          if (strcmp(camera, "back") == 0) {
+            cameraId = 1;
+          }
+        }
+      }
+    }
+  }
+
+  rv = NS_NewThread(getter_AddRefs(cameraThread));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  cameraControl = new nsCameraControl(cameraId, onSuccess, onError, cx, cameraThread);
+  NS_ENSURE_TRUE(cameraControl, NS_ERROR_OUT_OF_MEMORY);
+
+  cameraControl.forget(aCameraControl);
+  return NS_OK;
 }
 
 nsCameraControl::~nsCameraControl()
@@ -28,7 +67,17 @@ nsCameraControl::~nsCameraControl()
 /* readonly attribute nsICameraCapabilities capabilities; */
 NS_IMETHODIMP nsCameraControl::GetCapabilities(nsICameraCapabilities * *aCapabilities)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  nsRefPtr<nsICameraCapabilities> capabilities = mCapabilities;
+  
+  if (!capabilities) {
+    capabilities = new nsCameraCapabilities(this);
+    if (!capabilities) {
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+  }
+
+  capabilities.forget(aCapabilities);
+  return NS_OK;
 }
 
 /* attribute DOMString effect; */
@@ -186,6 +235,10 @@ NS_IMETHODIMP nsCameraControl::GetPreviewStream(const JS::Value & aOptions, nsIC
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+/*
+  From nsDOMCameraManager, but gonk-specific!
+*/
 
 /* [implicit_jscontext] void getCamera ([optional] in jsval aOptions, in nsICameraGetCameraCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
 NS_IMETHODIMP

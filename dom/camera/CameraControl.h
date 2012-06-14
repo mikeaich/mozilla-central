@@ -7,6 +7,7 @@
 
 
 #include "prtypes.h"
+#include "nsThread.h"
 #include "nsIDOMCameraManager.h"
 
 
@@ -16,7 +17,12 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSICAMERACONTROL
 
-  nsCameraControl();
+  static nsresult Create(const JS::Value & aOptions,
+    nsICameraGetCameraCallback* onSuccess,
+    nsICameraErrorCallback* onError,
+    JSContext* cx,
+    nsICameraControl * *aCameraControl
+  );
 
   const char* GetParameter(const char* key);
   void SetParameter(const char* key, const char* value);
@@ -26,11 +32,20 @@ public:
   void ReceiveFrame(PRUint8* aData, PRUint32 aLength);
 
 private:
+  nsCameraControl(PRUint32 aCameraId,
+    nsICameraGetCameraCallback* onSuccess,
+    nsICameraErrorCallback* onError,
+    JSContext* cx,
+    nsCOMPtr<nsIThread> aCameraThread
+  );
+  nsCameraControl(const nsCameraControl&);
   ~nsCameraControl();
 
 protected:
   /* additional members */
-  PRUint32  mHwHandle;
+  PRUint32 mHwHandle;
+  nsRefPtr<nsICameraCapabilities> mCapabilities;
+  nsCOMPtr<nsIThread> mCameraThread;
 };
 
 

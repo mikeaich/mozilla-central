@@ -6,9 +6,17 @@
 #include "nsDOMClassInfo.h"
 
 
-NS_IMPL_ISUPPORTS1(nsDOMCameraManager, nsIDOMCameraManager)
+// NS_IMPL_ISUPPORTS1(nsDOMCameraManager, nsIDOMCameraManager)
 
 DOMCI_DATA(CameraManager, nsIDOMCameraManager)
+
+NS_INTERFACE_MAP_BEGIN(nsDOMCameraManager)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCameraManager)
+  NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(CameraManager)
+NS_INTERFACE_MAP_END
+
+NS_IMPL_ADDREF(nsDOMCameraManager)
+NS_IMPL_RELEASE(nsDOMCameraManager)
 
 /*
   nsDOMCameraManager::GetCamera() and nsDOMCameraManager::GetListOfCameras
