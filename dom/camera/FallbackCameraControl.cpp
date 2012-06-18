@@ -5,7 +5,19 @@
 #include "CameraControl.h"
 
 
-NS_IMPL_ISUPPORTS1(nsCameraControl, nsICameraControl)
+// NS_IMPL_ISUPPORTS1(nsCameraControl, nsICameraControl)
+
+DOMCI_DATA(CameraControl, nsICameraControl)
+
+NS_INTERFACE_MAP_BEGIN(nsCameraControl)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsICameraControl)
+  NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(CameraControl)
+NS_INTERFACE_MAP_END
+
+NS_IMPL_ADDREF(nsCameraControl)
+NS_IMPL_RELEASE(nsCameraControl)
+
 
 nsCameraControl::nsCameraControl()
 {

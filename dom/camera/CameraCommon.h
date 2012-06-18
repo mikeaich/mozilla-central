@@ -8,6 +8,10 @@
 #define DOM_CAMERA_CAMERACOMMON_H
 
 
+#include "nsThreadUtils.h"
+#include "nsIDOMCameraManager.h"
+
+
 #define BEGIN_CAMERA_NAMESPACE \
   namespace mozilla { namespace dom { namespace camera {
 
@@ -43,6 +47,30 @@ enum {
 #define DOM_CAMERA_LOGW( ... )
 #define DOM_CAMERA_LOGE( ... )
 #endif
+
+
+class CameraErrorResult : public nsRunnable
+{
+public:
+  CameraErrorResult(nsICameraErrorCallback *onError, const nsString& aErrorMsg)
+    : mOnErrorCb(onError)
+    , mErrorMsg(aErrorMsg)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    if (mOnErrorCb) {
+      mOnErrorCb->HandleEvent(mErrorMsg);
+    }
+    return NS_OK;
+  }
+
+protected:
+  nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
+  const nsString mErrorMsg;
+};
 
 
 #endif // DOM_CAMERA_CAMERACOMMON_H

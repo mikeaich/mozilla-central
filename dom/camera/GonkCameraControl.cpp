@@ -18,45 +18,11 @@
 
 NS_IMPL_ISUPPORTS1(nsCameraControl, nsICameraControl)
 
-nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError, JSContext* cx, nsCOMPtr<nsIThread> aCameraThread)
-  : mCameraThread(aCameraThread)
+nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
+  : mCameraId(aCameraId)
+  , mCameraThread(aCameraThread)
 {
   /* member initializers and constructor code */
-}
-
-nsresult
-nsCameraControl::Create(const JS::Value & aOptions, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError, JSContext* cx, nsICameraControl * *aCameraControl)
-{
-  nsresult rv;
-  nsCOMPtr<nsIThread> cameraThread;
-  nsCOMPtr<nsICameraControl> cameraControl;
-  PRUint32 cameraId = 0;  /* front camera by default */
-  
-  if (aOptions.isObject()) {
-    /* extract values from aOptions */
-    JSObject *options = JSVAL_TO_OBJECT(aOptions);
-    jsval v;
-    
-    if (JS_GetProperty(cx, options, "camera", &v)) {
-      if (JSVAL_IS_STRING(v)) {
-        const char* camera = JS_EncodeString(cx, JSVAL_TO_STRING(v));
-        if (camera) {
-          if (strcmp(camera, "back") == 0) {
-            cameraId = 1;
-          }
-        }
-      }
-    }
-  }
-
-  rv = NS_NewThread(getter_AddRefs(cameraThread));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  cameraControl = new nsCameraControl(cameraId, onSuccess, onError, cx, cameraThread);
-  NS_ENSURE_TRUE(cameraControl, NS_ERROR_OUT_OF_MEMORY);
-
-  cameraControl.forget(aCameraControl);
-  return NS_OK;
 }
 
 nsCameraControl::~nsCameraControl()
@@ -234,67 +200,6 @@ NS_IMETHODIMP nsCameraControl::StopRecording()
 NS_IMETHODIMP nsCameraControl::GetPreviewStream(const JS::Value & aOptions, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/*
-  From nsDOMCameraManager, but gonk-specific!
-*/
-
-/* [implicit_jscontext] void getCamera ([optional] in jsval aOptions, in nsICameraGetCameraCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
-NS_IMETHODIMP
-nsDOMCameraManager::GetCamera(const JS::Value & aOptions, nsICameraGetCameraCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* [implicit_jscontext] jsval getListOfCameras (); */
-NS_IMETHODIMP
-nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPARAM)
-{
-  JSObject* a = JS_NewArrayObject(cx, 0, nsnull);
-  camera_module_t* module;
-  PRUint32 index = 0;
-  PRUint32 count;
-  
-  if (!a) {
-    DOM_CAMERA_LOGE("getListOfCameras : Could not create array object");
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-  if (hw_get_module(CAMERA_HARDWARE_MODULE_ID,
-            (const hw_module_t **)&module) < 0) {
-    DOM_CAMERA_LOGE("getListOfCameras : Could not load camera HAL module");
-    return NS_ERROR_NOT_AVAILABLE;
-  }
-
-  count = module->get_number_of_cameras();
-  DOM_CAMERA_LOGI("getListOfCameras : get_number_of_cameras() returned %d\n", count);
-  while (count--) {
-    JSString* v;
-
-    switch (count) {
-      case 0:
-        v = JS_NewStringCopyZ(cx, "back");
-        break;
-      
-      case 1:
-        v = JS_NewStringCopyZ(cx, "front");
-        break;
-      
-      default:
-        // TODO: add a unique identifier for each one...
-        v = JS_NewStringCopyZ(cx, "extra-camera");
-        break;
-    }
-    if (!v) {
-      DOM_CAMERA_LOGE("getListOfCameras : out of memory populating camera list");
-      // TODO: clean up any partial objects?
-      return NS_ERROR_NOT_AVAILABLE;
-    }
-    JS_SetElement(cx, a, index++, &STRING_TO_JSVAL(v));
-  }
-
-  *_retval = OBJECT_TO_JSVAL(a);
-  return NS_OK;
 }
 
 const char*

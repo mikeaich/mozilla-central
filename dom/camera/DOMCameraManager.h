@@ -8,9 +8,10 @@
 #define DOM_CAMERA_DOMCAMERAMANAGER_H
 
 
-#include "nsIDOMCameraManager.h"
 #include "nsCOMPtr.h"
 #include "nsAutoPtr.h"
+#include "nsIThread.h"
+#include "nsIDOMCameraManager.h"
 
 
 class nsDOMCameraManager : public nsIDOMCameraManager
@@ -31,6 +32,7 @@ private:
 
 protected:
   PRUint64 mWindowId;
+  nsCOMPtr<nsIThread> mCameraThread;
 };
 
 

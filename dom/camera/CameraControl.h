@@ -17,13 +17,6 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSICAMERACONTROL
 
-  static nsresult Create(const JS::Value & aOptions,
-    nsICameraGetCameraCallback* onSuccess,
-    nsICameraErrorCallback* onError,
-    JSContext* cx,
-    nsICameraControl * *aCameraControl
-  );
-
   const char* GetParameter(const char* key);
   void SetParameter(const char* key, const char* value);
 
@@ -31,22 +24,20 @@ public:
   void AutoFocusComplete(bool success);
   void ReceiveFrame(PRUint8* aData, PRUint32 aLength);
 
-private:
-  nsCameraControl(PRUint32 aCameraId,
-    nsICameraGetCameraCallback* onSuccess,
-    nsICameraErrorCallback* onError,
-    JSContext* cx,
-    nsCOMPtr<nsIThread> aCameraThread
-  );
-  nsCameraControl(const nsCameraControl&);
+  nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread);
   ~nsCameraControl();
+
+private:
+  nsCameraControl(const nsCameraControl&);
 
 protected:
   /* additional members */
-  PRUint32 mHwHandle;
-  nsRefPtr<nsICameraCapabilities> mCapabilities;
+  PRUint32 mCameraId;
   nsCOMPtr<nsIThread> mCameraThread;
+  nsRefPtr<nsICameraCapabilities> mCapabilities;
+  PRUint32 mHwHandle;
 };
+
 
 
 #endif // DOM_CAMERA_NSCAMERACONTROL_H

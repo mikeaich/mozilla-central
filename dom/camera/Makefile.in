@@ -25,11 +25,13 @@ CPPSRCS = \
 
 ifeq (gonk,$(MOZ_WIDGET_TOOLKIT))
 CPPSRCS += \
+  GonkCameraManager.cpp \
   GonkCameraControl.cpp \
   GonkCameraHwMgr.cpp \
   $(NULL)
 else
 CPPSRCS += \
+  FallbackCameraManager.cpp \
   FallbackCameraControl.cpp \
   $(NULL)
 endif
