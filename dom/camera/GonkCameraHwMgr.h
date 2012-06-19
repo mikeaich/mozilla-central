@@ -27,7 +27,7 @@ using namespace android;
 class GonkCameraHardware
 {
 protected:
-  GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFps);
+  GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera);
   ~GonkCameraHardware();
   void init();
 
@@ -36,9 +36,10 @@ protected:
 
 public:
   static void                   releaseCameraHardwareHandle(PRUint32 aHwHandle);
-  static PRUint32               getCameraHardwareHandle(GonkCamera* aTarget, PRUint32 aCamera, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFps);
+  static PRUint32               getCameraHardwareHandle(GonkCamera* aTarget, PRUint32 aCamera);
   static PRUint32               getCameraHardwareFps(PRUint32 aHwHandle);
-  static void                   getCameraHardwareSize(PRUint32 aHwHandle, PRUint32* aWidth, PRUint32* aHeight);
+  static void                   getCameraHardwarePreviewSize(PRUint32 aHwHandle, PRUint32* aWidth, PRUint32* aHeight);
+  static void                   setCameraHardwarePreviewSize(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight);
   static int                    doCameraHardwareAutofocus(PRUint32 aHwHandle);
   static int                    doCameraHardwareTakePicture(PRUint32 aHwHandle);
   static int                    doCameraHardwareStartPreview(PRUint32 aHwHandle);
@@ -63,6 +64,10 @@ protected:
       return nsnull;
     }
   }
+  
+  /* instance wrappers to make member function access easier */
+  void setPreviewSize(PRUint32 aWidth, PRUint32 aHeight);
+  int startPreview();
 
   PRUint32                      mCamera;
   PRUint32                      mWidth;

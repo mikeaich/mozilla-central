@@ -8,6 +8,7 @@
 
 #include "prtypes.h"
 #include "nsThread.h"
+#include "CameraPreview.h"
 #include "nsIDOMCameraManager.h"
 
 
@@ -32,10 +33,13 @@ private:
 
 protected:
   /* additional members */
-  PRUint32 mCameraId;
-  nsCOMPtr<nsIThread> mCameraThread;
+  PRUint32                        mCameraId;
+  nsCOMPtr<nsIThread>             mCameraThread;
   nsRefPtr<nsICameraCapabilities> mCapabilities;
-  PRUint32 mHwHandle;
+  PRUint32                        mHwHandle;
+  PRUint32                        mPreviewWidth;
+  PRUint32                        mPreviewHeight;
+  nsRefPtr<CameraPreview>         mPreview;
 };
 
 

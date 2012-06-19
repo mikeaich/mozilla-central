@@ -5,7 +5,10 @@
 #include <string.h>
 #include "libcameraservice/CameraHardwareInterface.h"
 #include "camera/CameraParameters.h"
+#include "nsCOMPtr.h"
+#include "nsDOMClassInfo.h"
 #include "jsapi.h"
+#include "nsIThread.h"
 #include "DOMCameraManager.h"
 #include "CameraControl.h"
 #include "GonkCameraHwMgr.h"
@@ -16,18 +19,34 @@
 #include "CameraCommon.h"
 
 
-NS_IMPL_ISUPPORTS1(nsCameraControl, nsICameraControl)
+// NS_IMPL_ISUPPORTS1(nsCameraControl, nsICameraControl)
+
+DOMCI_DATA(CameraControl, nsICameraControl)
+
+NS_INTERFACE_MAP_BEGIN(nsCameraControl)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsICameraControl)
+  NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(CameraControl)
+NS_INTERFACE_MAP_END
+
+NS_IMPL_ADDREF(nsCameraControl)
+NS_IMPL_RELEASE(nsCameraControl)
+
 
 nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
   : mCameraId(aCameraId)
   , mCameraThread(aCameraThread)
+  , mCapabilities(nsnull)
+  , mHwHandle(0)
 {
-  /* member initializers and constructor code */
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  mHwHandle = GonkCameraHardware::getCameraHardwareHandle(this, mCameraId);
 }
 
 nsCameraControl::~nsCameraControl()
 {
-  /* destructor code */
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  GonkCameraHardware::releaseCameraHardwareHandle(mHwHandle);
 }
 
 /* readonly attribute nsICameraCapabilities capabilities; */
@@ -196,10 +215,88 @@ NS_IMETHODIMP nsCameraControl::StopRecording()
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+class GetPreviewStreamResult : public nsRunnable
+{
+public:
+  GetPreviewStreamResult(nsIDOMMediaStream *aStream, nsICameraPreviewStreamCallback *onSuccess)
+    : mStream(aStream)
+    , mOnSuccessCb(onSuccess)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+    MOZ_ASSERT(NS_IsMainThread());
+    
+    if (mOnSuccessCb) {
+      mOnSuccessCb->HandleEvent(mStream);
+    }
+    return NS_OK;
+  }
+
+protected:
+  nsCOMPtr<nsIDOMMediaStream> mStream;
+  nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
+};
+
+class DoGetPreviewStream : public nsRunnable
+{
+public:
+  DoGetPreviewStream(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError)
+    : mHwHandle(aHwHandle)
+    , mWidth(aWidth)
+    , mHeight(aHeight)
+    , mOnSuccessCb(onSuccess)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    nsCOMPtr<CameraPreview> preview = new CameraPreview(mHwHandle, mWidth, mHeight);
+
+    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+
+    if (NS_FAILED(NS_DispatchToMainThread(new GetPreviewStreamResult(preview, mOnSuccessCb)))) {
+      NS_WARNING("Failed to dispatch getPreviewStream() onSuccess callback to main thread!");
+    }
+    return NS_OK;
+  }
+
+protected:
+  PRUint32 mHwHandle;
+  PRUint32 mWidth;
+  PRUint32 mHeight;
+  nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
+};
+
 /* [implicit_jscontext] void getPreviewStream (in jsval aOptions, in nsICameraPreviewStreamCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
 NS_IMETHODIMP nsCameraControl::GetPreviewStream(const JS::Value & aOptions, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  /* 0 means not specified, use default value */
+  PRUint32 width = 0;
+  PRUint32 height = 0;
+
+  NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
+
+  if (aOptions.isObject()) {
+    JSObject *options = JSVAL_TO_OBJECT(aOptions);
+    jsval v;
+
+    if (JS_GetProperty(cx, options, "width", &v)) {
+      if (JSVAL_IS_INT(v)) {
+        width = JSVAL_TO_INT(v);
+      }
+    }
+    if (JS_GetProperty(cx, options, "height", &v)) {
+      if (JSVAL_IS_INT(v)) {
+        height = JSVAL_TO_INT(v);
+      }
+    }
+  }
+
+  nsCOMPtr<nsIRunnable> doGetPreviewStream = new DoGetPreviewStream(mHwHandle, width, height, onSuccess, onError);
+  mCameraThread->Dispatch(doGetPreviewStream, NS_DISPATCH_NORMAL);
+
+  return NS_OK;
 }
 
 const char*
@@ -227,19 +324,25 @@ nsCameraControl::AutoFocusComplete(bool success)
 void
 nsCameraControl::ReceiveFrame(PRUint8* aData, PRUint32 aLength)
 {
+  if (mPreview) {
+    mPreview->ReceiveFrame(aData, aLength);
+  }
 }
 
-void GonkCameraReceiveImage(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength)
+void
+GonkCameraReceiveImage(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength)
 {
   gc->ReceiveImage(aData, aLength);
 }
 
-void GonkCameraAutoFocusComplete(nsCameraControl* gc, bool success)
+void
+GonkCameraAutoFocusComplete(nsCameraControl* gc, bool success)
 {
   gc->AutoFocusComplete(success);
 }
 
-void GonkCameraReceiveFrame(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength)
+void
+GonkCameraReceiveFrame(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength)
 {
   gc->ReceiveFrame(aData, aLength);
 }
