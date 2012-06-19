@@ -22,6 +22,7 @@ public:
   NS_DECL_ISUPPORTS
 
   CameraPreview(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight);
+  ~CameraPreview();
 
   NS_IMETHODIMP
   GetCurrentTime(double* aCurrentTime) {

@@ -8,7 +8,7 @@
 #include "nsCOMPtr.h"
 #include "nsDOMClassInfo.h"
 #include "jsapi.h"
-#include "nsIThread.h"
+#include "nsThread.h"
 #include "DOMCameraManager.h"
 #include "CameraControl.h"
 #include "GonkCameraHwMgr.h"
@@ -215,61 +215,9 @@ NS_IMETHODIMP nsCameraControl::StopRecording()
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-class GetPreviewStreamResult : public nsRunnable
-{
-public:
-  GetPreviewStreamResult(nsIDOMMediaStream *aStream, nsICameraPreviewStreamCallback *onSuccess)
-    : mStream(aStream)
-    , mOnSuccessCb(onSuccess)
-  { }
-
-  NS_IMETHOD Run()
-  {
-    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    MOZ_ASSERT(NS_IsMainThread());
-    
-    if (mOnSuccessCb) {
-      mOnSuccessCb->HandleEvent(mStream);
-    }
-    return NS_OK;
-  }
-
-protected:
-  nsCOMPtr<nsIDOMMediaStream> mStream;
-  nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
-};
-
-class DoGetPreviewStream : public nsRunnable
-{
-public:
-  DoGetPreviewStream(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError)
-    : mHwHandle(aHwHandle)
-    , mWidth(aWidth)
-    , mHeight(aHeight)
-    , mOnSuccessCb(onSuccess)
-  { }
-
-  NS_IMETHOD Run()
-  {
-    nsCOMPtr<CameraPreview> preview = new CameraPreview(mHwHandle, mWidth, mHeight);
-
-    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-
-    if (NS_FAILED(NS_DispatchToMainThread(new GetPreviewStreamResult(preview, mOnSuccessCb)))) {
-      NS_WARNING("Failed to dispatch getPreviewStream() onSuccess callback to main thread!");
-    }
-    return NS_OK;
-  }
-
-protected:
-  PRUint32 mHwHandle;
-  PRUint32 mWidth;
-  PRUint32 mHeight;
-  nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
-};
-
 /* [implicit_jscontext] void getPreviewStream (in jsval aOptions, in nsICameraPreviewStreamCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
-NS_IMETHODIMP nsCameraControl::GetPreviewStream(const JS::Value & aOptions, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
+NS_IMETHODIMP
+nsCameraControl::GetPreviewStream(const JS::Value & aOptions, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
   /* 0 means not specified, use default value */
   PRUint32 width = 0;
@@ -293,7 +241,7 @@ NS_IMETHODIMP nsCameraControl::GetPreviewStream(const JS::Value & aOptions, nsIC
     }
   }
 
-  nsCOMPtr<nsIRunnable> doGetPreviewStream = new DoGetPreviewStream(mHwHandle, width, height, onSuccess, onError);
+  nsCOMPtr<nsIRunnable> doGetPreviewStream = new DoGetPreviewStream(this, width, height, onSuccess, onError);
   mCameraThread->Dispatch(doGetPreviewStream, NS_DISPATCH_NORMAL);
 
   return NS_OK;

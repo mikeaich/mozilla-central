@@ -13,7 +13,18 @@
 static const TrackID TRACK_AUDIO = 1;
 static const TrackID TRACK_VIDEO = 2;
 
-NS_IMPL_ISUPPORTS1(CameraPreview, CameraPreview)
+// NS_IMPL_ISUPPORTS2(CameraPreview, CameraPreview, nsIDOMMediaStream)
+
+DOMCI_DATA(CameraPreview, CameraPreview)
+
+NS_INTERFACE_MAP_BEGIN(CameraPreview)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsDOMMediaStream)
+  NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(CameraPreview)
+NS_INTERFACE_MAP_END
+
+NS_IMPL_ADDREF(CameraPreview)
+NS_IMPL_RELEASE(CameraPreview)
 
 CameraPreview::CameraPreview(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight)
   : nsDOMMediaStream()
@@ -24,13 +35,19 @@ CameraPreview::CameraPreview(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeig
   , mIs420p(false)
   , mFrameCount(0)
 {
-  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  DOM_CAMERA_LOGI("%s:%d : mWidth = %d, mHeight = %d\n", __func__, __LINE__, mWidth, mHeight);
 
   mImageContainer = LayerManager::CreateImageContainer();
   MediaStreamGraph *gm = MediaStreamGraph::GetInstance();
   mStream = gm->CreateInputStream(this);
   mInput = GetStream()->AsSourceStream();
   mInput->AddListener(this);
+}
+
+CameraPreview::~CameraPreview()
+{
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  GonkCameraHardware::doCameraHardwareStopPreview(mHwHandle);
 }
 
 void
@@ -60,10 +77,12 @@ CameraPreview::NotifyConsumptionChanged(MediaStreamGraph* aGraph, Consumption aC
       break;
     
     case CONSUMED:
+      GonkCameraHardware::setCameraHardwarePreviewSize(mHwHandle, mWidth, mHeight);
+      GonkCameraHardware::getCameraHardwarePreviewSize(mHwHandle, &mWidth, &mHeight);
       if (GonkCameraHardware::doCameraHardwareStartPreview(mHwHandle) == OK) {
         // mState = HW_STATE_PREVIEW;
         mFramesPerSecond = GonkCameraHardware::getCameraHardwareFps(mHwHandle);
-        // GonkCameraHardware::getCameraHardwareSize(mHwHandle, &mWidth, &mHeight);
+        DOM_CAMERA_LOGI("preview stream is %d x %d (w x h), %d frames per second\n", mWidth, mHeight, mFramesPerSecond);
         mInput->AddTrack(TRACK_VIDEO, mFramesPerSecond, 0, new VideoSegment());
         mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
       } else {
@@ -112,6 +131,11 @@ CameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
       src0 = *src++;
       src1 = *src++;
 
+      u1 = ( src0 & 0xFF00UL ) >> 8 | ( src0 & 0xFF000000UL ) >> 16;
+      u1 |= ( src1 & 0xFF00UL ) << 8 | ( src1 & 0xFF000000UL );
+      v1 = ( src0 & 0xFFUL ) | ( src0 & 0xFF0000UL ) >> 8;
+      v1 |= ( src1 & 0xFFUL ) << 16 | ( src1 & 0xFF0000UL ) << 8;
+
       *u++ = u0;
       *u++ = u1;
       *v++ = v0;
@@ -142,4 +166,8 @@ CameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
   mInput->AppendToTrack(TRACK_VIDEO, &mVideoSegment);
 
   mFrameCount += 1;
+
+  if ((mFrameCount % 10) == 0) {
+    DOM_CAMERA_LOGI("%s:%d : mFrameCount = %d\n", __func__, __LINE__, mFrameCount);
+  }
 }
