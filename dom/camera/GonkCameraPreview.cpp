@@ -13,18 +13,7 @@
 static const TrackID TRACK_AUDIO = 1;
 static const TrackID TRACK_VIDEO = 2;
 
-// NS_IMPL_ISUPPORTS2(CameraPreview, CameraPreview, nsIDOMMediaStream)
-
-DOMCI_DATA(CameraPreview, CameraPreview)
-
-NS_INTERFACE_MAP_BEGIN(CameraPreview)
-  NS_INTERFACE_MAP_ENTRY(nsISupports)
-  NS_INTERFACE_MAP_ENTRY(nsDOMMediaStream)
-  NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(CameraPreview)
-NS_INTERFACE_MAP_END
-
-NS_IMPL_ADDREF(CameraPreview)
-NS_IMPL_RELEASE(CameraPreview)
+NS_IMPL_ISUPPORTS1(CameraPreview, CameraPreview)
 
 CameraPreview::CameraPreview(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight)
   : nsDOMMediaStream()
@@ -48,6 +37,8 @@ CameraPreview::~CameraPreview()
 {
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
   GonkCameraHardware::doCameraHardwareStopPreview(mHwHandle);
+  mInput->RemoveListener(this);
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 }
 
 void
@@ -82,7 +73,7 @@ CameraPreview::NotifyConsumptionChanged(MediaStreamGraph* aGraph, Consumption aC
       if (GonkCameraHardware::doCameraHardwareStartPreview(mHwHandle) == OK) {
         // mState = HW_STATE_PREVIEW;
         mFramesPerSecond = GonkCameraHardware::getCameraHardwareFps(mHwHandle);
-        DOM_CAMERA_LOGI("preview stream is %d x %d (w x h), %d frames per second\n", mWidth, mHeight, mFramesPerSecond);
+        DOM_CAMERA_LOGI("preview stream is (actually!) %d x %d (w x h), %d frames per second\n", mWidth, mHeight, mFramesPerSecond);
         mInput->AddTrack(TRACK_VIDEO, mFramesPerSecond, 0, new VideoSegment());
         mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
       } else {

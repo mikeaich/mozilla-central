@@ -41,12 +41,14 @@ nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
 {
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
   mHwHandle = GonkCameraHardware::getCameraHardwareHandle(this, mCameraId);
+  DOM_CAMERA_LOGI("%s:%d : this = %p, mHwHandle = %d\n", __func__, __LINE__, this, mHwHandle);
 }
 
 nsCameraControl::~nsCameraControl()
 {
-  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  DOM_CAMERA_LOGI("%s:%d : this = %p, mHwHandle = %d\n", __func__, __LINE__, this, mHwHandle);
   GonkCameraHardware::releaseCameraHardwareHandle(mHwHandle);
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 }
 
 /* readonly attribute nsICameraCapabilities capabilities; */
