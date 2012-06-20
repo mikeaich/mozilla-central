@@ -37,6 +37,9 @@ CameraPreview::~CameraPreview()
 {
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
   GonkCameraHardware::doCameraHardwareStopPreview(mHwHandle);
+  
+  /* We _must_ remember to call RemoveListener on this before destroying this,
+     else the media framework will trigger a double-free. */
   mInput->RemoveListener(this);
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 }

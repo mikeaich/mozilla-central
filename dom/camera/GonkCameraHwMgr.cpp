@@ -81,11 +81,11 @@ void WindowDecRef(struct android_native_base_t* base) {
 GonkCameraHardware::GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera)
   : mCamera(aCamera)
   , mIs420p(false)
+  , mFps(30)
   , mClosing(false)
   , mMonitor("GonkCameraHardware.Monitor")
   , mNumFrames(0)
   , mTarget(aTarget)
-  , mFps(30)
 {
   DOM_CAMERA_LOGI( "%s: this = %p (aTarget = %p)\n", __func__, (void*)this, (void*)aTarget );
   init();
@@ -330,7 +330,7 @@ GonkCameraHardware::setCameraHardwarePreviewSize(PRUint32 aHwHandle, PRUint32 aW
 }
 
 int
-GonkCameraHardware::doCameraHardwareAutofocus(PRUint32 aHwHandle)
+GonkCameraHardware::doCameraHardwareAutoFocus(PRUint32 aHwHandle)
 {
   DOM_CAMERA_LOGI("%s: aHwHandle = %d\n", __func__, aHwHandle);
   GonkCameraHardware* hw = getCameraHardware(aHwHandle);
@@ -339,6 +339,16 @@ GonkCameraHardware::doCameraHardwareAutofocus(PRUint32 aHwHandle)
     return hw->mHardware->autoFocus();
   } else {
     return !OK;
+  }
+}
+
+void
+GonkCameraHardware::doCameraHardwareCancelAutoFocus(PRUint32 aHwHandle)
+{
+  DOM_CAMERA_LOGI("%s: aHwHandle = %d\n", __func__, aHwHandle);
+  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  if (hw) {
+    hw->mHardware->cancelAutoFocus();
   }
 }
 
@@ -351,6 +361,15 @@ GonkCameraHardware::doCameraHardwareTakePicture(PRUint32 aHwHandle)
     return hw->mHardware->takePicture();
   } else {
     return !OK;
+  }
+}
+
+void
+GonkCameraHardware::doCameraHardwareCancelTakePicture(PRUint32 aHwHandle)
+{
+  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  if (hw) {
+    hw->mHardware->cancelPicture();
   }
 }
 

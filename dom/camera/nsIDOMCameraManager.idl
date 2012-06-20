@@ -250,7 +250,8 @@ interface nsICameraControl : nsISupports
        
        invoking this function will stop the preview stream, which must be
        manually restarted (e.g. by calling .play() on it). */
-    void takePicture(in nsICameraTakePictureCallback onSuccess, [optional] in nsICameraErrorCallback onError);
+    [implicit_jscontext]
+    void takePicture(in nsICameraPictureOptions aOptions, in nsICameraTakePictureCallback onSuccess, [optional] in nsICameraErrorCallback onError);
 
     /* start recording video; 'aOptions' define the frame size of to
        capture, chosen from capabilities.videoSizes, e.g.:
@@ -259,6 +260,7 @@ interface nsICameraControl : nsISupports
             height: 480
         }
     */
+    [implicit_jscontext]
     void startRecording(in jsval aOptions, in nsICameraStartRecordingCallback onSuccess, [optional] in nsICameraErrorCallback onError);
     
     /* stop precording video. */

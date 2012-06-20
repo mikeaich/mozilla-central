@@ -40,8 +40,10 @@ public:
   static PRUint32               getCameraHardwareFps(PRUint32 aHwHandle);
   static void                   getCameraHardwarePreviewSize(PRUint32 aHwHandle, PRUint32* aWidth, PRUint32* aHeight);
   static void                   setCameraHardwarePreviewSize(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight);
-  static int                    doCameraHardwareAutofocus(PRUint32 aHwHandle);
+  static int                    doCameraHardwareAutoFocus(PRUint32 aHwHandle);
+  static void                   doCameraHardwareCancelAutoFocus(PRUint32 aHwHandle);
   static int                    doCameraHardwareTakePicture(PRUint32 aHwHandle);
+  static void                   doCameraHardwareCancelTakePicture(PRUint32 aHwHandle);
   static int                    doCameraHardwareStartPreview(PRUint32 aHwHandle);
   static void                   doCameraHardwareStopPreview(PRUint32 aHwHandle);
   static const char*            getCameraHardwareParameter(PRUint32 aHwHandle, const char* key);
