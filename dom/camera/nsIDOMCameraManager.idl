@@ -122,7 +122,7 @@ interface nsICameraPreviewStreamCallback : nsISupports
 [scriptable, function, uuid(6baa4ac7-9c25-4c48-9bb0-5193b38b9b0a)]
 interface nsICameraAutoFocusCallback : nsISupports
 {
-    void handleEvent();
+    void handleEvent(in boolean success);
 };
 
 [scriptable, function, uuid(17af779e-cb6f-4ca5-890c-06468ff82e4f)]
@@ -203,6 +203,7 @@ interface nsICameraControl : nsISupports
 
         this attribute can be set to null to allow the camera to determine
         where to perform light metering. */
+    [implicit_jscontext]
     attribute jsval             meteringAreas;
     
     /* an array of one or more objects that define where the camera will
@@ -213,6 +214,7 @@ interface nsICameraControl : nsISupports
        
        this attribute can be set to null to allow the camera to determine
        where to focus. */
+    [implicit_jscontext]
     attribute jsval             focusAreas;
     
     /* focal length in millimetres */

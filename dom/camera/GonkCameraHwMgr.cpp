@@ -80,8 +80,8 @@ void WindowDecRef(struct android_native_base_t* base) {
 
 GonkCameraHardware::GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera)
   : mCamera(aCamera)
-  , mIs420p(false)
   , mFps(30)
+  , mIs420p(false)
   , mClosing(false)
   , mMonitor("GonkCameraHardware.Monitor")
   , mNumFrames(0)
@@ -373,24 +373,23 @@ GonkCameraHardware::doCameraHardwareCancelTakePicture(PRUint32 aHwHandle)
   }
 }
 
-const char*
-GonkCameraHardware::getCameraHardwareParameter(PRUint32 aHwHandle, const char* key)
+int
+GonkCameraHardware::doCameraHardwarePushParameters(PRUint32 aHwHandle, const CameraParameters& aParams)
 {
   GonkCameraHardware* hw = getCameraHardware(aHwHandle);
   if (hw) {
-    return hw->mParams.get(key);
+    return hw->mHardware->setParameters(aParams);
   } else {
-    return nsnull;
+    return !OK;
   }
 }
 
 void
-GonkCameraHardware::setCameraHardwareParameter(PRUint32 aHwHandle, const char* key, const char* value)
+GonkCameraHardware::doCameraHardwarePullParameters(PRUint32 aHwHandle, CameraParameters& aParams)
 {
   GonkCameraHardware* hw = getCameraHardware(aHwHandle);
   if (hw) {
-    hw->mParams.set(key, value);
-    hw->mHardware->setParameters(hw->mParams);
+    aParams = hw->mHardware->getParameters();
   }
 }
 

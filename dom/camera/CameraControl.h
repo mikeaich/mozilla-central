@@ -6,6 +6,8 @@
 #define DOM_CAMERA_NSCAMERACONTROL_H
 
 
+// #include "utils/StrongPointer.h"
+#include "camera/CameraParameters.h"
 #include "prtypes.h"
 #include "nsCOMPtr.h"
 #include "nsThread.h"
@@ -23,6 +25,8 @@ class StartRecordingTask;
 class StopRecordingTask;
 class SetParameterTask;
 class GetParameterTask;
+class PushParametersTask;
+class PullParametersTask;
 
 /*
   Main camera control.
@@ -36,17 +40,48 @@ class nsCameraControl : public nsICameraControl
   friend class StopRecordingTask;
   friend class SetParameterTask;
   friend class GetParameterTask;
+  friend class PushParametersTask;
+  friend class PullParametersTask;
 
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSICAMERACONTROL
 
-  const char* GetParameter(const char* key);
-  void SetParameter(const char* key, const char* value);
+  class CameraRegion
+  {
+  public:
+    PRInt32 mTop;
+    PRInt32 mLeft;
+    PRInt32 mBottom;
+    PRInt32 mRight;
+    PRUint32 mWeight;
+  };
 
-  void TakePictureComplete(PRUint8* aData, PRUint32 aLength);
+  enum {
+    CAMERA_PARAM_EFFECT,
+    CAMERA_PARAM_WHITEBALANCE,
+    CAMERA_PARAM_SCENEMODE,
+    CAMERA_PARAM_FLASHMODE,
+    CAMERA_PARAM_FOCUSMODE,
+    CAMERA_PARAM_ZOOM,
+    CAMERA_PARAM_METERINGAREAS,
+    CAMERA_PARAM_FOCUSAREAS,
+    CAMERA_PARAM_FOCALLENGTH,
+    CAMERA_PARAM_FOCUSDISTANCENEAR,
+    CAMERA_PARAM_FOCUSDISTANCEOPTIMUM,
+    CAMERA_PARAM_FOCUSDISTANCEFAR,
+    CAMERA_PARAM_EXPOSURECOMPENSATION
+  };
+  const char* GetParameter(const char *aKey);
+  const char* GetParameter(PRUint32 aKey);
+  void SetParameter(const char *aKey, const char *aValue);
+  void SetParameter(PRUint32 aKey, const char *aValue);
+  void SetParameter(PRUint32 aKey, double aValue);
+  void SetParameter(PRUint32 aKey, CameraRegion* aRegions, PRUint32 aLength);
+
+  void TakePictureComplete(PRUint8 *aData, PRUint32 aLength);
   void AutoFocusComplete(bool aSuccess);
-  void ReceiveFrame(PRUint8* aData, PRUint32 aLength);
+  void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
 
   nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread);
   ~nsCameraControl();
@@ -56,9 +91,9 @@ protected:
   nsresult DoAutoFocus(AutoFocusTask *aAutoFocus);
   nsresult DoTakePicture(TakePictureTask *aTakePicture);
   nsresult DoStartRecording(StartRecordingTask *aStartRecording);
-  nsresult DoStopRecording(StopRecordingTask *sStopRecording);
-  nsresult DoSetParameter(const nsString& aKey, const nsString& aValue);
-  nsresult DoGetParameter(const nsString& aKey, nsString& aValue);
+  nsresult DoStopRecording(StopRecordingTask *aStopRecording);
+  nsresult DoPushParameters(PushParametersTask *aPushParameters);
+  nsresult DoPullParameters(PullParametersTask *aPullParameters);
 
 private:
   nsCameraControl(const nsCameraControl&);
@@ -72,6 +107,8 @@ protected:
   PRUint32                        mPreviewWidth;
   PRUint32                        mPreviewHeight;
   nsCOMPtr<CameraPreview>         mPreview;
+  const char*                     mFileFormat;
+  bool                            mDeferConfigUpdate;
 
   nsCOMPtr<nsICameraAutoFocusCallback>      mAutoFocusOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback>          mAutoFocusOnErrorCb;
@@ -79,6 +116,9 @@ protected:
   nsCOMPtr<nsICameraErrorCallback>          mTakePictureOnErrorCb;
   nsCOMPtr<nsICameraStartRecordingCallback> mStartRecordingOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback>          mStartRecordingOnErrorCb;
+
+  /* TODO: move this into a Gonk-specific class */
+  android::CameraParameters       mParams;
 };
 
 /*
@@ -159,7 +199,7 @@ public:
     MOZ_ASSERT(NS_IsMainThread());
     
     if (mOnSuccessCb) {
-      mOnSuccessCb->HandleEvent();
+      mOnSuccessCb->HandleEvent(mSuccess);
     }
     return NS_OK;
   }
@@ -380,23 +420,21 @@ protected:
 };
 
 /*
-  Set a camera parameter.
+  Pushes all camera parameters to the camera.
 */
-class SetParameterTask : public nsRunnable
+class PushParametersTask : public nsRunnable
 {
   friend class nsCameraControl;
 
 public:
-  SetParameterTask(nsCameraControl *aCameraControl, const nsString& aKey, const nsString& aValue)
+  PushParametersTask(nsCameraControl *aCameraControl)
     : mCameraControl(aCameraControl)
-    , mKey(aKey)
-    , mValue(aValue)
   { }
 
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoSetParameter(mKey, mValue);
+    nsresult rv = mCameraControl->DoPushParameters(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv)) {
@@ -407,28 +445,24 @@ public:
 
 protected:
   nsCOMPtr<nsCameraControl> mCameraControl;
-  const nsString mKey;
-  const nsString mValue;
 };
 
 /*
-  Get a camera parameter.
+  Get all camera parameters from the camera.
 */
-class GetParameterTask : public nsRunnable
+class PullParametersTask : public nsRunnable
 {
   friend class nsCameraControl;
 
 public:
-  GetParameterTask(nsCameraControl *aCameraControl, const nsString& aKey, nsString& aValue)
+  PullParametersTask(nsCameraControl *aCameraControl)
     : mCameraControl(aCameraControl)
-    , mKey(aKey)
-    , mValue(aValue)
   { }
 
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoGetParameter(mKey, mValue);
+    nsresult rv = mCameraControl->DoPullParameters(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv)) {
@@ -439,8 +473,6 @@ public:
 
 protected:
   nsCOMPtr<nsCameraControl> mCameraControl;
-  const nsString mKey;
-  nsString mValue;
 };
 
 

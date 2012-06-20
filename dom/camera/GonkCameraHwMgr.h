@@ -46,8 +46,8 @@ public:
   static void                   doCameraHardwareCancelTakePicture(PRUint32 aHwHandle);
   static int                    doCameraHardwareStartPreview(PRUint32 aHwHandle);
   static void                   doCameraHardwareStopPreview(PRUint32 aHwHandle);
-  static const char*            getCameraHardwareParameter(PRUint32 aHwHandle, const char* key);
-  static void                   setCameraHardwareParameter(PRUint32 aHwHandle, const char* key, const char* value);
+  static int                    doCameraHardwarePushParameters(PRUint32 aHwHandle, const CameraParameters& aParams);
+  static void                   doCameraHardwarePullParameters(PRUint32 aHwHandle, CameraParameters& aParams);
 
 protected:
   static GonkCameraHardware*    sHw;
