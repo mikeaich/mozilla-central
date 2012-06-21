@@ -110,8 +110,8 @@ nsCameraControl::GetParameter(PRUint32 aKey)
 void
 nsCameraControl::PushParameters()
 {
-  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
   if (!mDeferConfigUpdate) {
+    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
     if (NS_IsMainThread()) {
       nsCOMPtr<nsIRunnable> pushParametersTask = new PushParametersTask(this);
       mCameraThread->Dispatch(pushParametersTask, NS_DISPATCH_NORMAL);
@@ -190,7 +190,7 @@ nsresult
 nsCameraControl::DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream)
 {
   nsCOMPtr<CameraPreview> preview = mPreview;
-  
+
   if (!preview) {
     preview = new CameraPreview(mHwHandle, aGetPreviewStream->mWidth, aGetPreviewStream->mHeight);
     if (!preview) {
@@ -336,6 +336,7 @@ nsCameraControl::DoTakePicture(TakePictureTask *aTakePicture)
   PushParameters();
 
   if (GonkCameraHardware::doCameraHardwareTakePicture(mHwHandle) == OK) {
+    // mPreview->Stop();
     return NS_OK;
   } else {
     return NS_ERROR_FAILURE;

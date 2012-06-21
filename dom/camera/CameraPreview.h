@@ -32,6 +32,9 @@ public:
   void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
   void NotifyConsumptionChanged(MediaStreamGraph *aGraph, Consumption aConsuming);
 
+  void Start();
+  void Stop();
+
 protected:
   PRUint32 mHwHandle;
   PRUint32 mWidth;

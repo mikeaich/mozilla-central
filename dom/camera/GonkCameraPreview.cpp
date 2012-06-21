@@ -31,6 +31,10 @@ CameraPreview::CameraPreview(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeig
   mStream = gm->CreateInputStream(this);
   mInput = GetStream()->AsSourceStream();
   mInput->AddListener(this);
+
+  mFramesPerSecond = GonkCameraHardware::getCameraHardwareFps(mHwHandle);
+  mInput->AddTrack(TRACK_VIDEO, mFramesPerSecond, 0, new VideoSegment());
+  mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
 }
 
 CameraPreview::~CameraPreview()
@@ -75,10 +79,7 @@ CameraPreview::NotifyConsumptionChanged(MediaStreamGraph* aGraph, Consumption aC
       GonkCameraHardware::getCameraHardwarePreviewSize(mHwHandle, &mWidth, &mHeight);
       if (GonkCameraHardware::doCameraHardwareStartPreview(mHwHandle) == OK) {
         // mState = HW_STATE_PREVIEW;
-        mFramesPerSecond = GonkCameraHardware::getCameraHardwareFps(mHwHandle);
         DOM_CAMERA_LOGI("preview stream is (actually!) %d x %d (w x h), %d frames per second\n", mWidth, mHeight, mFramesPerSecond);
-        mInput->AddTrack(TRACK_VIDEO, mFramesPerSecond, 0, new VideoSegment());
-        mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
       } else {
         DOM_CAMERA_LOGE("%s: failed to start preview\n", __func__);
       }
@@ -89,6 +90,11 @@ CameraPreview::NotifyConsumptionChanged(MediaStreamGraph* aGraph, Consumption aC
 void
 CameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
 {
+  if (mInput->HaveEnoughBuffered(TRACK_VIDEO)) {
+    DOM_CAMERA_LOGI("mInput has enough data buffered, discarding\n");
+    return;
+  }
+
   Image::Format format = Image::PLANAR_YCBCR;
   nsRefPtr<Image> image = mImageContainer->CreateImage(&format, 1);
   image->AddRef();
@@ -164,4 +170,16 @@ CameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
   if ((mFrameCount % 10) == 0) {
     DOM_CAMERA_LOGI("%s:%d : mFrameCount = %d\n", __func__, __LINE__, mFrameCount);
   }
+}
+
+void
+CameraPreview::Stop()
+{
+  mInput->EndTrack(TRACK_VIDEO);
+  mInput->Finish();
+}
+
+void
+CameraPreview::Start()
+{
 }

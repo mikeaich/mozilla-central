@@ -22,8 +22,8 @@ NS_IMPL_ADDREF(nsDOMCameraManager)
 NS_IMPL_RELEASE(nsDOMCameraManager)
 
 /*
-  nsDOMCameraManager::GetCamera() and nsDOMCameraManager::GetListOfCameras
-  are implementation-specific, and can be found in (e.g.)
+  nsDOMCameraManager::GetListOfCameras
+  is implementation-specific, and can be found in (e.g.)
   GonkCameraManager.cpp and FallbackCameraManager.cpp.
 */
 
@@ -31,11 +31,13 @@ nsDOMCameraManager::nsDOMCameraManager(PRUint64 aWindowId)
   : mWindowId(aWindowId)
 {
   /* member initializers and constructor code */
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 }
 
 nsDOMCameraManager::~nsDOMCameraManager()
 {
   /* destructor code */
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 }
 
 void
