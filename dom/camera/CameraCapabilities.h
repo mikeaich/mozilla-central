@@ -16,7 +16,7 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSICAMERACAPABILITIES
 
-  nsCameraCapabilities(nsRefPtr<nsCameraControl> aCamera);
+  nsCameraCapabilities(nsCameraControl *aCamera);
 
   nsresult parameterListToNewArray(
     JSContext *cx,
@@ -38,7 +38,7 @@ private:
 
 protected:
   /* additional members */
-  nsRefPtr<nsCameraControl> mCamera;
+  nsCOMPtr<nsCameraControl> mCamera;
 };
 
 

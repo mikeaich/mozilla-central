@@ -519,6 +519,7 @@ using mozilla::dom::indexedDB::IDBWrapperCache;
 #ifdef MOZ_B2G_CAMERA
 #include "DOMCameraManager.h"
 #include "CameraControl.h"
+#include "CameraCapabilities.h"
 #endif
 
 #include "DOMError.h"
@@ -1659,6 +1660,8 @@ static nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(CameraManager, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(CameraControl, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(CameraCapabilities, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
 #endif
 
@@ -4514,6 +4517,10 @@ nsDOMClassInfo::Init()
 
   DOM_CLASSINFO_MAP_BEGIN(CameraControl, nsICameraControl)
     DOM_CLASSINFO_MAP_ENTRY(nsICameraControl)
+  DOM_CLASSINFO_MAP_END  
+
+  DOM_CLASSINFO_MAP_BEGIN(CameraCapabilities, nsICameraCapabilities)
+    DOM_CLASSINFO_MAP_ENTRY(nsICameraCapabilities)
   DOM_CLASSINFO_MAP_END  
 #endif
 

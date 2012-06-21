@@ -15,6 +15,7 @@
 #include "CameraPreview.h"
 #include "nsIDOMCameraManager.h"
 
+#define DOM_CAMERA_LOG_LEVEL 3
 #include "CameraCommon.h"
 
 
@@ -78,6 +79,7 @@ public:
   void SetParameter(PRUint32 aKey, const char *aValue);
   void SetParameter(PRUint32 aKey, double aValue);
   void SetParameter(PRUint32 aKey, CameraRegion* aRegions, PRUint32 aLength);
+  void PushParameters();
 
   void TakePictureComplete(PRUint8 *aData, PRUint32 aLength);
   void AutoFocusComplete(bool aSuccess);
@@ -102,7 +104,7 @@ protected:
   /* additional members */
   PRUint32                        mCameraId;
   nsCOMPtr<nsIThread>             mCameraThread;
-  nsRefPtr<nsICameraCapabilities> mCapabilities;
+  nsCOMPtr<nsICameraCapabilities> mCapabilities;
   PRUint32                        mHwHandle;
   PRUint32                        mPreviewWidth;
   PRUint32                        mPreviewHeight;

@@ -66,9 +66,17 @@ nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
   , mFileFormat(nsnull)
   , mDeferConfigUpdate(false)
 {
+  /* Constructor runs on the camera thread--see DOMCameraManager.cpp::DoGetCamera(). */
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
   mHwHandle = GonkCameraHardware::getCameraHardwareHandle(this, mCameraId);
   DOM_CAMERA_LOGI("%s:%d : this = %p, mHwHandle = %d\n", __func__, __LINE__, this, mHwHandle);
+
+  /* Initialize our camera configuration database. */
+  // nsCOMPtr<PullParametersTask> pullParametersTask = new PullParametersTask(this);
+  DoPullParameters(nsnull);
+
+  const char *v = mParams.get(CameraParameters::KEY_MAX_NUM_FOCUS_AREAS);
+  printf_stderr("max num focus areas = '%s'\n", v);
 }
 
 nsCameraControl::~nsCameraControl()
@@ -100,9 +108,24 @@ nsCameraControl::GetParameter(PRUint32 aKey)
 }
 
 void
+nsCameraControl::PushParameters()
+{
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  if (!mDeferConfigUpdate) {
+    if (NS_IsMainThread()) {
+      nsCOMPtr<nsIRunnable> pushParametersTask = new PushParametersTask(this);
+      mCameraThread->Dispatch(pushParametersTask, NS_DISPATCH_NORMAL);
+    } else {
+      DoPushParameters(nsnull);
+    }
+  }
+}
+
+void
 nsCameraControl::SetParameter(const char *aKey, const char *aValue)
 {
   mParams.set(aKey, aValue);
+  PushParameters();
 }
 
 void
@@ -111,6 +134,7 @@ nsCameraControl::SetParameter(PRUint32 aKey, const char *aValue)
   const char *key = getKeyText(aKey);
   if (key) {
     mParams.set(key, aValue);
+    PushParameters();
   }
 }
 
@@ -120,6 +144,7 @@ nsCameraControl::SetParameter(PRUint32 aKey, double aValue)
   const char *key = getKeyText(aKey);
   if (key) {
     mParams.setFloat(key, aValue);
+    PushParameters();
   }
 }
 
@@ -131,6 +156,7 @@ nsCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aL
     if (!aLength) {
       /* This tells the camera driver to revert to automatic regioning. */
       mParams.set(key, "(0,0,0,0,0)");
+      PushParameters();
       return;
     }
     
@@ -156,6 +182,7 @@ nsCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aL
     
     mParams.set(key, s);
     delete[] s;
+    PushParameters();
   }
 }
 
@@ -232,6 +259,9 @@ nsCameraControl::DoTakePicture(TakePictureTask *aTakePicture)
   mTakePictureOnSuccessCb = aTakePicture->mOnSuccessCb;
   mTakePictureOnErrorCb = aTakePicture->mOnErrorCb;
   
+  /* batch-update camera configuration */
+  mDeferConfigUpdate = true;
+  
   /* height and width */
   if (snprintf(d, sizeof(d), "%dx%d", aTakePicture->mWidth, aTakePicture->mHeight) > 0) {
     DOM_CAMERA_LOGI("setting picture size to %s\n", d);
@@ -301,6 +331,9 @@ nsCameraControl::DoTakePicture(TakePictureTask *aTakePicture)
       DOM_CAMERA_LOGW("failed to set picture timestamp\n");
     }
   }
+
+  mDeferConfigUpdate = false;
+  PushParameters();
 
   if (GonkCameraHardware::doCameraHardwareTakePicture(mHwHandle) == OK) {
     return NS_OK;

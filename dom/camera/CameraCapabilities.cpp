@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include "nsDOMClassInfo.h"
 #include "jsapi.h"
 #include "camera/CameraParameters.h"
 #include "CameraControl.h"
@@ -20,17 +21,31 @@ using namespace android;
     return NS_ERROR_NOT_AVAILABLE;  \
   }
 
-NS_IMPL_ISUPPORTS1(nsCameraCapabilities, nsICameraCapabilities)
+// NS_IMPL_ISUPPORTS1(nsCameraCapabilities, nsICameraCapabilities)
 
-nsCameraCapabilities::nsCameraCapabilities(nsRefPtr<nsCameraControl> aCamera) :
+DOMCI_DATA(CameraCapabilities, nsICameraCapabilities)
+
+NS_INTERFACE_MAP_BEGIN(nsCameraCapabilities)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsICameraCapabilities)
+  NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(CameraCapabilities)
+NS_INTERFACE_MAP_END
+
+NS_IMPL_ADDREF(nsCameraCapabilities)
+NS_IMPL_RELEASE(nsCameraCapabilities)
+
+
+nsCameraCapabilities::nsCameraCapabilities(nsCameraControl *aCamera) :
   mCamera(aCamera)
 {
   /* member initializers and constructor code */
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 }
 
 nsCameraCapabilities::~nsCameraCapabilities()
 {
   /* destructor code */
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
   mCamera = nsnull;
 }
 
@@ -38,6 +53,12 @@ static nsresult
 parseZoomRatioItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const char *start, char **end)
 {
   static const double ZOOM_RATIO_SCALING_FACTOR = 100;
+
+  if (!*end) {
+    /* make 'end' follow the same semantics as strchr(). */
+    end = nsnull;
+  }
+
   double d = strtod(start, end);
   jsval v;
 
@@ -79,6 +100,11 @@ parseDimensionItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const c
   char* x;
   jsval w;
   jsval h;
+
+  if (!*end) {
+    /* make 'end' follow the same semantics as strchr(). */
+    end = nsnull;
+  }
 
   w = INT_TO_JSVAL(strtol(start, &x, 10));
   h = INT_TO_JSVAL(strtol(x + 1, end, 10));

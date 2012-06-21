@@ -135,7 +135,7 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValu
 NS_IMETHODIMP
 nsCameraControl::GetCapabilities(nsICameraCapabilities * *aCapabilities)
 {
-  nsRefPtr<nsICameraCapabilities> capabilities = mCapabilities;
+  nsCOMPtr<nsICameraCapabilities> capabilities = mCapabilities;
   
   if (!capabilities) {
     capabilities = new nsCameraCapabilities(this);
