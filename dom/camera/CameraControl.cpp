@@ -136,7 +136,7 @@ NS_IMETHODIMP
 nsCameraControl::GetCapabilities(nsICameraCapabilities * *aCapabilities)
 {
   nsCOMPtr<nsICameraCapabilities> capabilities = mCapabilities;
-  
+
   if (!capabilities) {
     capabilities = new nsCameraCapabilities(this);
     if (!capabilities) {
@@ -393,7 +393,7 @@ NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, ns
   if (pictureSize.isObject()) {
     JSObject* options = JSVAL_TO_OBJECT(pictureSize);
     jsval v;
-    
+
     if (JS_GetProperty(cx, options, "width", &v)) {
       if (JSVAL_IS_INT(v)) {
         width = JSVAL_TO_INT(v);
@@ -405,21 +405,21 @@ NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, ns
       }
     }
   }
-  
+
   nsString fileFormat;
   rv = aOptions->GetFileFormat(fileFormat);
   NS_ENSURE_SUCCESS(rv, rv);
-  
+
   rv = aOptions->GetRotation(&rotation);
   NS_ENSURE_SUCCESS(rv, rv);
-  
+
   jsval position;
   rv = aOptions->GetPosition(&position);
   NS_ENSURE_SUCCESS(rv, rv);
   if (position.isObject()) {
     JSObject* options = JSVAL_TO_OBJECT(position);
     jsval v;
-    
+
     if (JS_GetProperty(cx, options, "latitude", &v)) {
       if (JSVAL_IS_NUMBER(v)) {
         if (JS_ValueToNumber(cx, v, &latitude)) {

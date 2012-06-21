@@ -66,7 +66,7 @@ protected:
       return nsnull;
     }
   }
-  
+
   /* instance wrappers to make member function access easier */
   void setPreviewSize(PRUint32 aWidth, PRUint32 aHeight);
   int startPreview();

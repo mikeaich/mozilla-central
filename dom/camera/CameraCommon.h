@@ -21,7 +21,7 @@
 #define USING_CAMERA_NAMESPACE \
   using namespace mozilla::dom::camera;
 
-  
+
 #define DOM_CAMERA_LOG( l, ... )       \
   do {                                  \
     if ( DOM_CAMERA_LOG_LEVEL >= (l) ) {  \

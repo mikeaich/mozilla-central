@@ -102,7 +102,7 @@ public:
     }
     return NS_OK;
   }
-  
+
 protected:
   PRUint32 mCameraId;
   nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
@@ -116,14 +116,14 @@ nsDOMCameraManager::GetCamera(const JS::Value & aOptions, nsICameraGetCameraCall
 {
   nsresult rv;
   PRUint32 cameraId = 0;  /* front camera by default */
-  
+
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
-  
+
   if (aOptions.isObject()) {
     /* extract values from aOptions */
     JSObject *options = JSVAL_TO_OBJECT(aOptions);
     jsval v;
-    
+
     if (JS_GetProperty(cx, options, "camera", &v)) {
       if (JSVAL_IS_STRING(v)) {
         const char* camera = JS_EncodeString(cx, JSVAL_TO_STRING(v));

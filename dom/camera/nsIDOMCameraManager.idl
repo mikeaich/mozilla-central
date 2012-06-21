@@ -84,7 +84,7 @@ interface nsICameraPictureOptions : nsISupports
     /* an object with a combination of 'height' and 'width' properties
        chosen from nsICameraCapabilities.pictureSizes */
     attribute jsval     pictureSize;
-    
+
     /* one of the file formats chosen from
        nsICameraCapabilities.fileFormats */
     attribute DOMString fileFormat;
@@ -93,7 +93,7 @@ interface nsICameraPictureOptions : nsISupports
        steps of 90; this doesn't affect the image, only the
        rotation recorded in the image header.*/
     attribute long      rotation;
-    
+
     /* an object containing any or all of 'latitude', 'longitude',
        'elevation', and 'timestamp', used to record when and where
        the image was taken.  e.g.
@@ -103,10 +103,10 @@ interface nsICameraPictureOptions : nsISupports
             elevation: 500
             // timestamp not specified, in this case
         }
-    
+
         can be null in the case where position information isn't
         available/desired.
-        
+
         'elevation' is in metres; 'timestamp' is UTC, in seconds from
         January 1, 1970.
     */
@@ -157,11 +157,11 @@ interface nsICameraErrorCallback : nsISupports
 interface nsICameraControl : nsISupports
 {
     readonly attribute nsICameraCapabilities capabilities;
-    
+
     /* one of the vales chosen from capabilities.effects;
        default is "none" */
     attribute DOMString         effect;
-    
+
     /* one of the values chosen from capabilities.whiteBalanceModes;
        default is "auto" */
     attribute DOMString         whiteBalanceMode;
@@ -177,7 +177,7 @@ interface nsICameraControl : nsISupports
     /* one of the values chosen from capabilities.focusModes;
        default is "auto", if supported, or "fixed" */
     attribute DOMString         focusMode;
-    
+
     /* one of the values chosen from capabilities.zoomRatios; other
        values will be rounded to the nearest supported value;
        default is 1.0 */
@@ -205,18 +205,18 @@ interface nsICameraControl : nsISupports
         where to perform light metering. */
     [implicit_jscontext]
     attribute jsval             meteringAreas;
-    
+
     /* an array of one or more objects that define where the camera will
        perform auto-focusing, with the same definition as meteringAreas.
-       
+
        if the array contains more than capabilities.maxFocusAreas, extra
        areas will be ignored.
-       
+
        this attribute can be set to null to allow the camera to determine
        where to focus. */
     [implicit_jscontext]
     attribute jsval             focusAreas;
-    
+
     /* focal length in millimetres */
     readonly attribute double   focalLength;
 
@@ -232,13 +232,13 @@ interface nsICameraControl : nsISupports
 
     /* 'compensation' is optional, and if missing, will
        set the camera to use automatic exposure compensation.
-    
+
        acceptable values must range from minExposureCompensation
        to maxExposureCompensation in steps of stepExposureCompensation;
        invalid values will be rounded to the nearest valid value. */
     void setExposureCompensation([optional] in double compensation);
     readonly attribute double   exposureCompensation;
-    
+
     /* the function to call on the camera's shutter event, to trigger
        a shutter sound and/or a visual shutter indicator. */
     attribute nsICameraShutterCallback onShutter;
@@ -264,7 +264,7 @@ interface nsICameraControl : nsISupports
     */
     [implicit_jscontext]
     void startRecording(in jsval aOptions, in nsICameraStartRecordingCallback onSuccess, [optional] in nsICameraErrorCallback onError);
-    
+
     /* stop precording video. */
     void stopRecording();
 
@@ -297,7 +297,7 @@ interface nsIDOMCameraManager : nsISupports
     */
     [implicit_jscontext]
     void getCamera([optional] in jsval aOptions, in nsICameraGetCameraCallback onSuccess, [optional] in nsICameraErrorCallback onError);
-    
+
     /* return a JSON array of camera   identifiers, e.g.
         [ "front", "back" ]
     */

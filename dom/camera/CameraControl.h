@@ -137,7 +137,7 @@ public:
   NS_IMETHOD Run()
   {
     MOZ_ASSERT(NS_IsMainThread());
-    
+
     if (mOnSuccessCb) {
       mOnSuccessCb->HandleEvent(mStream);
     }
@@ -199,7 +199,7 @@ public:
   NS_IMETHOD Run()
   {
     MOZ_ASSERT(NS_IsMainThread());
-    
+
     if (mOnSuccessCb) {
       mOnSuccessCb->HandleEvent(mSuccess);
     }
@@ -259,7 +259,7 @@ public:
   NS_IMETHOD Run()
   {
     MOZ_ASSERT(NS_IsMainThread());
-    
+
     if (mOnSuccessCb) {
       mOnSuccessCb->HandleEvent(mImage);
     }
@@ -343,7 +343,7 @@ public:
   NS_IMETHOD Run()
   {
     MOZ_ASSERT(NS_IsMainThread());
-    
+
     if (mOnSuccessCb) {
       mOnSuccessCb->HandleEvent(mStream);
     }

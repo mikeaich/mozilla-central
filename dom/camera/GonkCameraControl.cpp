@@ -159,12 +159,12 @@ nsCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aL
       PushParameters();
       return;
     }
-    
+
     PRUint32 size = aLength * 31;
     char *s = new char[size];
     char *p = s;
     PRUint32 n;
-    
+
     for (PRUint32 i = 0; i < aLength; ++i) {
       CameraRegion *r = &aRegions[i];
       n = snprintf(p, size, "(%d,%d,%d,%d,%d),", r->mTop, r->mLeft, r->mBottom, r->mRight, r->mWeight);
@@ -179,7 +179,7 @@ nsCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aL
 
     *p = '\0'; /* remove the trailing comma */
     DOM_CAMERA_LOGI("camera region string '%s'\n", s);
-    
+
     mParams.set(key, s);
     delete[] s;
     PushParameters();
@@ -258,10 +258,10 @@ nsCameraControl::DoTakePicture(TakePictureTask *aTakePicture)
 
   mTakePictureOnSuccessCb = aTakePicture->mOnSuccessCb;
   mTakePictureOnErrorCb = aTakePicture->mOnErrorCb;
-  
+
   /* batch-update camera configuration */
   mDeferConfigUpdate = true;
-  
+
   /* height and width */
   if (snprintf(d, sizeof(d), "%dx%d", aTakePicture->mWidth, aTakePicture->mHeight) > 0) {
     DOM_CAMERA_LOGI("setting picture size to %s\n", d);

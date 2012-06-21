@@ -69,7 +69,7 @@ parseZoomRatioItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const c
   if (!JS_SetElement(cx, array, index, &v)) {
     return NS_ERROR_FAILURE;
   }
-  
+
   return NS_OK;
 }
 
@@ -90,7 +90,7 @@ parseStringItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const char
   if (!JS_SetElement(cx, array, index, &STRING_TO_JSVAL(v))) {
     return NS_ERROR_FAILURE;
   }
-  
+
   return NS_OK;
 }
 
@@ -136,16 +136,16 @@ nsCameraCapabilities::parameterListToNewArray(JSContext *cx, JSObject **array, c
   PRUint32 index = 0;
   const char *value;
   nsresult rv;
-  
+
   value = mCamera->GetParameter(key);
   if (!value) {
     /* in case we get nonsense data back */
     *array = nsnull;
     return NS_OK;
   }
-  
+
   *array = JS_NewArrayObject(cx, 0, nsnull);
-  
+
   const char* p = value;
   char* q;
   while (p) {
@@ -174,7 +174,7 @@ nsCameraCapabilities::stringListToNewObject(JSContext* cx, JS::Value *aArray, co
 
   rv = parameterListToNewArray(cx, &array, key, parseStringItemAndAdd);
   NS_ENSURE_SUCCESS(rv, rv);
-  
+
   *aArray = OBJECT_TO_JSVAL(array);
   return NS_OK;
 }
@@ -187,7 +187,7 @@ nsCameraCapabilities::dimensionListToNewObject(JSContext* cx, JS::Value *aArray,
 
   rv = parameterListToNewArray(cx, &array, key, parseDimensionItemAndAdd);
   NS_ENSURE_SUCCESS(rv, rv);
-  
+
   *aArray = OBJECT_TO_JSVAL(array);
   return NS_OK;
 }
@@ -253,14 +253,14 @@ NS_IMETHODIMP
 nsCameraCapabilities::GetMaxFocusAreas(JSContext* cx, PRInt32 *aMaxFocusAreas)
 {
   CHECK_CAMERA_PTR(mCamera);
-  
+
   const char* value = mCamera->GetParameter(CameraParameters::KEY_MAX_NUM_FOCUS_AREAS);
   if (!value) {
     /* in case we get nonsense data back */
     *aMaxFocusAreas = 0;
     return NS_OK;
   }
-  
+
   *aMaxFocusAreas = atoi(value);
   return NS_OK;
 }
@@ -270,14 +270,14 @@ NS_IMETHODIMP
 nsCameraCapabilities::GetMinExposureCompensation(JSContext* cx, double *aMinExposureCompensation)
 {
   CHECK_CAMERA_PTR(mCamera);
-  
+
   const char* value = mCamera->GetParameter(CameraParameters::KEY_MIN_EXPOSURE_COMPENSATION);
   if (!value) {
     /* in case we get nonsense data back */
     *aMinExposureCompensation = 0;
     return NS_OK;
   }
-  
+
   *aMinExposureCompensation = atof(value);
   return NS_OK;
 }
@@ -287,14 +287,14 @@ NS_IMETHODIMP
 nsCameraCapabilities::GetMaxExposureCompensation(JSContext* cx, double *aMaxExposureCompensation)
 {
   CHECK_CAMERA_PTR(mCamera);
-  
+
   const char* value = mCamera->GetParameter(CameraParameters::KEY_MAX_EXPOSURE_COMPENSATION);
   if (!value) {
     /* in case we get nonsense data back */
     *aMaxExposureCompensation = 0;
     return NS_OK;
   }
-  
+
   *aMaxExposureCompensation = atof(value);
   return NS_OK;
 }
@@ -304,14 +304,14 @@ NS_IMETHODIMP
 nsCameraCapabilities::GetStepExposureCompensation(JSContext* cx, double *aStepExposureCompensation)
 {
   CHECK_CAMERA_PTR(mCamera);
-  
+
   const char* value = mCamera->GetParameter(CameraParameters::KEY_EXPOSURE_COMPENSATION_STEP);
   if (!value) {
     /* in case we get nonsense data back */
     *aStepExposureCompensation = 0;
     return NS_OK;
   }
-  
+
   *aStepExposureCompensation = atof(value);
   return NS_OK;
 }
@@ -321,14 +321,14 @@ NS_IMETHODIMP
 nsCameraCapabilities::GetMaxMeteringAreas(JSContext* cx, PRInt32 *aMaxMeteringAreas)
 {
   CHECK_CAMERA_PTR(mCamera);
-  
+
   const char* value = mCamera->GetParameter(CameraParameters::KEY_MAX_NUM_METERING_AREAS);
   if (!value) {
     /* in case we get nonsense data back */
     *aMaxMeteringAreas = 0;
     return NS_OK;
   }
-  
+
   *aMaxMeteringAreas = atoi(value);
   return NS_OK;
 }
@@ -338,7 +338,7 @@ NS_IMETHODIMP
 nsCameraCapabilities::GetZoomRatios(JSContext* cx, JS::Value *aZoomRatios)
 {
   CHECK_CAMERA_PTR(mCamera);
-  
+
   const char* value;
   JSObject* array;
   nsresult rv;
@@ -349,10 +349,10 @@ nsCameraCapabilities::GetZoomRatios(JSContext* cx, JS::Value *aZoomRatios)
     *aZoomRatios = JSVAL_NULL;
     return NS_OK;
   }
-  
+
   rv = parameterListToNewArray(cx, &array, CameraParameters::KEY_ZOOM_RATIOS, parseZoomRatioItemAndAdd);
   NS_ENSURE_SUCCESS(rv, rv);
-  
+
   *aZoomRatios = OBJECT_TO_JSVAL(array);
   return NS_OK;
 }

@@ -41,7 +41,7 @@ CameraPreview::~CameraPreview()
 {
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
   GonkCameraHardware::doCameraHardwareStopPreview(mHwHandle);
-  
+
   /* We _must_ remember to call RemoveListener on this before destroying this,
      else the media framework will trigger a double-free. */
   mInput->RemoveListener(this);
@@ -52,28 +52,28 @@ void
 CameraPreview::NotifyConsumptionChanged(MediaStreamGraph* aGraph, Consumption aConsuming)
 {
   const char* state;
-  
+
   switch (aConsuming) {
     case NOT_CONSUMED:
       state = "not consuming";
       break;
-    
+
     case CONSUMED:
       state = "consuming";
       break;
-    
+
     default:
       state = "unknown";
       break;
   }
-  
+
   DOM_CAMERA_LOGA("camera viewfinder is %s\n", state);
-  
+
   switch (aConsuming) {
     case NOT_CONSUMED:
       GonkCameraHardware::doCameraHardwareStopPreview(mHwHandle);
       break;
-    
+
     case CONSUMED:
       GonkCameraHardware::setCameraHardwarePreviewSize(mHwHandle, mWidth, mHeight);
       GonkCameraHardware::getCameraHardwarePreviewSize(mHwHandle, &mWidth, &mHeight);

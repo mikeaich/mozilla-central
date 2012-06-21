@@ -21,7 +21,7 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
   camera_module_t* module;
   PRUint32 index = 0;
   PRUint32 count;
-  
+
   if (!a) {
     DOM_CAMERA_LOGE("getListOfCameras : Could not create array object");
     return NS_ERROR_OUT_OF_MEMORY;
@@ -41,11 +41,11 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
       case 0:
         v = JS_NewStringCopyZ(cx, "back");
         break;
-      
+
       case 1:
         v = JS_NewStringCopyZ(cx, "front");
         break;
-      
+
       default:
         // TODO: add a unique identifier for each one...
         v = JS_NewStringCopyZ(cx, "extra-camera");
