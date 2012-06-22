@@ -52,8 +52,6 @@ nsCameraCapabilities::~nsCameraCapabilities()
 static nsresult
 parseZoomRatioItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const char *start, char **end)
 {
-  static const double ZOOM_RATIO_SCALING_FACTOR = 100;
-
   if (!*end) {
     /* make 'end' follow the same semantics as strchr(). */
     end = nsnull;
@@ -62,7 +60,7 @@ parseZoomRatioItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const c
   double d = strtod(start, end);
   jsval v;
 
-  d /= ZOOM_RATIO_SCALING_FACTOR;
+  d /= 100;
   if (!JS_NewNumberValue(cx, d, &v)) {
     return NS_ERROR_FAILURE;
   }
@@ -100,6 +98,7 @@ parseDimensionItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const c
   char* x;
   jsval w;
   jsval h;
+  jsval v;
 
   if (!*end) {
     /* make 'end' follow the same semantics as strchr(). */
@@ -121,7 +120,8 @@ parseDimensionItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const c
     return NS_ERROR_FAILURE;
   }
 
-  if (!JS_SetElement(cx, array, index, &OBJECT_TO_JSVAL(o))) {
+  v = OBJECT_TO_JSVAL(o);
+  if (!JS_SetElement(cx, array, index, &v)) {
     return NS_ERROR_FAILURE;
   }
 

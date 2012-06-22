@@ -63,8 +63,16 @@ nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
   , mCameraThread(aCameraThread)
   , mCapabilities(nsnull)
   , mHwHandle(0)
+  , mPreview(nsnull)
   , mFileFormat(nsnull)
   , mDeferConfigUpdate(false)
+  , mAutoFocusOnSuccessCb(nsnull)
+  , mAutoFocusOnErrorCb(nsnull)
+  , mTakePictureOnSuccessCb(nsnull)
+  , mTakePictureOnErrorCb(nsnull)
+  , mStartRecordingOnSuccessCb(nsnull)
+  , mStartRecordingOnErrorCb(nsnull)
+  , mOnShutterCb(nsnull)
 {
   /* Constructor runs on the camera thread--see DOMCameraManager.cpp::DoGetCamera(). */
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
@@ -74,9 +82,6 @@ nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
   /* Initialize our camera configuration database. */
   // nsCOMPtr<PullParametersTask> pullParametersTask = new PullParametersTask(this);
   DoPullParameters(nsnull);
-
-  const char *v = mParams.get(CameraParameters::KEY_MAX_NUM_FOCUS_AREAS);
-  printf_stderr("max num focus areas = '%s'\n", v);
 }
 
 nsCameraControl::~nsCameraControl()
@@ -97,7 +102,7 @@ nsCameraControl::GetParameter(const char *aKey)
 }
 
 const char*
-nsCameraControl::GetParameter(PRUint32 aKey)
+nsCameraControl::GetParameterConstChar(PRUint32 aKey)
 {
   const char *key = getKeyText(aKey);
   if (key) {
@@ -105,6 +110,151 @@ nsCameraControl::GetParameter(PRUint32 aKey)
   } else {
     return nsnull;
   }
+}
+
+double
+nsCameraControl::GetParameterDouble(PRUint32 aKey)
+{
+  const char *key = getKeyText(aKey);
+  if (key) {
+    if (aKey == CAMERA_PARAM_ZOOM) {
+      double zoom = mParams.getInt(key);
+      return zoom / 100;
+    } else {
+      return mParams.getFloat(key);
+    }
+  } else {
+    if (aKey == CAMERA_PARAM_ZOOM) {
+      /* return 1x when zooming is not supported */
+      return 1.0;
+    } else {
+      return 0.0;
+    }
+  }
+}
+
+void
+nsCameraControl::GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint32 *aLength)
+{
+  const char* key = getKeyText(aKey);
+  if (!key) {
+    *aRegions = nsnull;
+    *aLength = 0;
+    return;
+  }
+
+  const char* value = mParams.get(key);
+  const char* p = value;
+  PRUint32 count = 1;
+
+  DOM_CAMERA_LOGI("key='%s' --> value='%s'\n", key, value);
+
+  if (!value) {
+    *aRegions = nsnull;
+    *aLength = 0;
+    return;
+  }
+
+  /* count the number of regions in the string */
+  while ((p = strstr(p, "),("))) {
+    ++count;
+    p += 3;
+  }
+
+  CameraRegion *regions = new CameraRegion[count];
+  CameraRegion *r;
+
+  /* parse all of the region sets */
+  char *end;
+  p = value + 1;
+  for (PRUint32 i = 0; i < count; ++i) {
+    r = &regions[i];
+
+    for (PRUint32 field = 0; field < 5; ++field) {
+      PRInt32 v;
+      if (field != 4) {
+        /* dimension fields are signed */
+        v = strtol(p, &end, 10);
+      }
+      switch (field) {
+        case 0:
+          r->mTop = v;
+          break;
+
+        case 1:
+          r->mLeft = v;
+          break;
+
+        case 2:
+          r->mBottom = v;
+          break;
+
+        case 3:
+          r->mRight = v;
+          break;
+
+        case 4:
+          /* weight value is unsigned */
+          r->mWeight = strtoul(p, &end, 10);
+          break;
+
+        default:
+          DOM_CAMERA_LOGE("%s:%d : should never reach here\n", __func__, __LINE__);
+          goto GetParameter_error;
+      }
+      p = end;
+      switch (*p) {
+        case ')':
+          if (field == 4) {
+            /* end of this region */
+            switch (*++p) {
+              case ',':
+                /* there are more regions */
+                if (*(p + 1) == '(') {
+                  p += 2;
+                  continue;
+                }
+                break;
+
+              case '\0':
+                /* end of string, we're done */
+                if (i + 1 != count) {
+                  DOM_CAMERA_LOGE("%s:%d : region list parsed short\n", __func__, __LINE__);
+                  count = i;
+                }
+                goto GetParameter_done;
+            }
+          }
+          /* intentional fallthrough */
+
+        default:
+          DOM_CAMERA_LOGE("%s:%d : malformed region '%s'\n", __func__, __LINE__, p);
+          goto GetParameter_error;
+
+        case '\0':
+          DOM_CAMERA_LOGE("%s:%d : abnormally short region group\n", __func__, __LINE__);
+          goto GetParameter_error;
+
+        case ',':
+          if (field != 4) {
+            ++p;
+            break;
+          }
+          DOM_CAMERA_LOGE("%s:%d : abnormally long region group\n", __func__, __LINE__);
+          goto GetParameter_error;
+      }
+    }
+  }
+
+GetParameter_done:
+  *aRegions = regions;
+  *aLength = count;
+  return;
+
+GetParameter_error:
+  delete[] *aRegions;
+  *aRegions = nsnull;
+  *aLength = 0;
 }
 
 void
@@ -177,7 +327,7 @@ nsCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aL
       p += n;
     }
 
-    *p = '\0'; /* remove the trailing comma */
+    *(p - 1) = '\0'; /* remove the trailing comma */
     DOM_CAMERA_LOGI("camera region string '%s'\n", s);
 
     mParams.set(key, s);

@@ -74,11 +74,13 @@ public:
     CAMERA_PARAM_EXPOSURECOMPENSATION
   };
   const char* GetParameter(const char *aKey);
-  const char* GetParameter(PRUint32 aKey);
+  const char* GetParameterConstChar(PRUint32 aKey);
+  double GetParameterDouble(PRUint32 aKey);
+  void GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint32 *aLength);
   void SetParameter(const char *aKey, const char *aValue);
   void SetParameter(PRUint32 aKey, const char *aValue);
   void SetParameter(PRUint32 aKey, double aValue);
-  void SetParameter(PRUint32 aKey, CameraRegion* aRegions, PRUint32 aLength);
+  void SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aLength);
   void PushParameters();
 
   void TakePictureComplete(PRUint8 *aData, PRUint32 aLength);
@@ -118,6 +120,7 @@ protected:
   nsCOMPtr<nsICameraErrorCallback>          mTakePictureOnErrorCb;
   nsCOMPtr<nsICameraStartRecordingCallback> mStartRecordingOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback>          mStartRecordingOnErrorCb;
+  nsCOMPtr<nsICameraShutterCallback>        mOnShutterCb;
 
   /* TODO: move this into a Gonk-specific class */
   android::CameraParameters       mParams;

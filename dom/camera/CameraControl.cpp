@@ -27,7 +27,7 @@ NS_IMPL_ADDREF(nsCameraControl)
 NS_IMPL_RELEASE(nsCameraControl)
 
 /*
-  Helper for string properties.
+  Helpers for string properties.
 */
 static nsresult
 setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const nsAString& aValue)
@@ -42,8 +42,20 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const nsAString& aValue
   }
 }
 
+static nsresult
+getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, nsAString& aValue)
+{
+  const char *value = aCameraControl->GetParameterConstChar(aKey);
+  if (value) {
+    aValue.AssignASCII(value);
+    return NS_OK;
+  } else {
+    return NS_ERROR_FAILURE;
+  }
+}
+
 /*
-  Helper for doubles.
+  Helpers for doubles.
 */
 static nsresult
 setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, double aValue)
@@ -51,6 +63,17 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, double aValue)
   aCameraContol->SetParameter(aKey, aValue);
   return NS_OK;
 }
+
+static nsresult
+getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, double *aValue)
+{
+  if (aValue) {
+    *aValue = aCameraControl->GetParameterDouble(aKey);
+    return NS_OK;
+  } else {
+    return NS_ERROR_UNEXPECTED;
+  }
+} 
 
 /*
   Helper for weighted regions.
@@ -128,6 +151,70 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValu
   }
 
   aCameraContol->SetParameter(aKey, parsedRegions, length);
+  delete[] parsedRegions;
+  return NS_OK;
+}
+
+static nsresult
+getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, JSContext *cx, JS::Value *aValue)
+{
+  nsAutoArrayPtr<nsCameraControl::CameraRegion> regions;
+  PRUint32 length = 0;
+
+  aCameraControl->GetParameter(aKey, getter_Transfers(regions), &length);
+  if (!regions && length > 0) {
+    DOM_CAMERA_LOGE("%s:%d : got length %d, but no regions\n", __func__, __LINE__, length);
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  JSObject *array = JS_NewArrayObject(cx, 0, nsnull);
+  if (!array) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  
+  DOM_CAMERA_LOGI("%s:%d : got %d regions\n", __func__, __LINE__, length);
+
+  for (PRUint32 i = 0; i < length; ++i) {
+    JS::Value v;
+
+    JSObject *o = JS_NewObject(cx, nsnull, nsnull, nsnull);
+    if (!o) {
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    DOM_CAMERA_LOGI("mLeft=%d\n", regions[i].mTop);
+    v = INT_TO_JSVAL(regions[i].mTop);
+    if (!JS_SetProperty(cx, o, "top", &v)) {
+      return NS_ERROR_FAILURE;
+    }
+    DOM_CAMERA_LOGI("mLeft=%d\n", regions[i].mLeft);
+    v = INT_TO_JSVAL(regions[i].mLeft);
+    if (!JS_SetProperty(cx, o, "left", &v)) {
+      return NS_ERROR_FAILURE;
+    }
+    DOM_CAMERA_LOGI("mBottom=%d\n", regions[i].mBottom);
+    v = INT_TO_JSVAL(regions[i].mBottom);
+    if (!JS_SetProperty(cx, o, "bottom", &v)) {
+      return NS_ERROR_FAILURE;
+    }
+    DOM_CAMERA_LOGI("mRight=%d\n", regions[i].mRight);
+    v = INT_TO_JSVAL(regions[i].mRight);
+    if (!JS_SetProperty(cx, o, "right", &v)) {
+      return NS_ERROR_FAILURE;
+    }
+    DOM_CAMERA_LOGI("mWeight=%d\n", regions[i].mWeight);
+    v = INT_TO_JSVAL(regions[i].mWeight);
+    if (!JS_SetProperty(cx, o, "weight", &v)) {
+      return NS_ERROR_FAILURE;
+    }
+
+    v = OBJECT_TO_JSVAL(o);
+    if (!JS_SetElement(cx, array, i, &v)) {
+      return NS_ERROR_FAILURE;
+    }
+  }
+
+  *aValue = JS::ObjectValue(*array);
   return NS_OK;
 }
 
@@ -149,9 +236,10 @@ nsCameraControl::GetCapabilities(nsICameraCapabilities * *aCapabilities)
 }
 
 /* attribute DOMString effect; */
-NS_IMETHODIMP nsCameraControl::GetEffect(nsAString & aEffect)
+NS_IMETHODIMP
+nsCameraControl::GetEffect(nsAString & aEffect)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_EFFECT, aEffect);
 }
 NS_IMETHODIMP
 nsCameraControl::SetEffect(const nsAString & aEffect)
@@ -160,9 +248,10 @@ nsCameraControl::SetEffect(const nsAString & aEffect)
 }
 
 /* attribute DOMString whiteBalanceMode; */
-NS_IMETHODIMP nsCameraControl::GetWhiteBalanceMode(nsAString & aWhiteBalanceMode)
+NS_IMETHODIMP
+nsCameraControl::GetWhiteBalanceMode(nsAString & aWhiteBalanceMode)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_WHITEBALANCE, aWhiteBalanceMode);
 }
 NS_IMETHODIMP
 nsCameraControl::SetWhiteBalanceMode(const nsAString & aWhiteBalanceMode)
@@ -171,9 +260,10 @@ nsCameraControl::SetWhiteBalanceMode(const nsAString & aWhiteBalanceMode)
 }
 
 /* attribute DOMString sceneMode; */
-NS_IMETHODIMP nsCameraControl::GetSceneMode(nsAString & aSceneMode)
+NS_IMETHODIMP
+nsCameraControl::GetSceneMode(nsAString & aSceneMode)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_SCENEMODE, aSceneMode);
 }
 NS_IMETHODIMP
 nsCameraControl::SetSceneMode(const nsAString & aSceneMode)
@@ -182,9 +272,10 @@ nsCameraControl::SetSceneMode(const nsAString & aSceneMode)
 }
 
 /* attribute DOMString flashMode; */
-NS_IMETHODIMP nsCameraControl::GetFlashMode(nsAString & aFlashMode)
+NS_IMETHODIMP
+nsCameraControl::GetFlashMode(nsAString & aFlashMode)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_FLASHMODE, aFlashMode);
 }
 NS_IMETHODIMP
 nsCameraControl::SetFlashMode(const nsAString & aFlashMode)
@@ -193,9 +284,10 @@ nsCameraControl::SetFlashMode(const nsAString & aFlashMode)
 }
 
 /* attribute DOMString focusMode; */
-NS_IMETHODIMP nsCameraControl::GetFocusMode(nsAString & aFocusMode)
+NS_IMETHODIMP
+nsCameraControl::GetFocusMode(nsAString & aFocusMode)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_FOCUSMODE, aFocusMode);
 }
 NS_IMETHODIMP
 nsCameraControl::SetFocusMode(const nsAString & aFocusMode)
@@ -204,9 +296,10 @@ nsCameraControl::SetFocusMode(const nsAString & aFocusMode)
 }
 
 /* attribute double zoom; */
-NS_IMETHODIMP nsCameraControl::GetZoom(double *aZoom)
+NS_IMETHODIMP
+nsCameraControl::GetZoom(double *aZoom)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_ZOOM, aZoom);
 }
 NS_IMETHODIMP
 nsCameraControl::SetZoom(double aZoom)
@@ -215,9 +308,10 @@ nsCameraControl::SetZoom(double aZoom)
 }
 
 /* attribute jsval meteringAreas; */
-NS_IMETHODIMP nsCameraControl::GetMeteringAreas(JSContext *cx, JS::Value *aMeteringAreas)
+NS_IMETHODIMP
+nsCameraControl::GetMeteringAreas(JSContext *cx, JS::Value *aMeteringAreas)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_METERINGAREAS, cx, aMeteringAreas);
 }
 NS_IMETHODIMP
 nsCameraControl::SetMeteringAreas(JSContext *cx, const JS::Value & aMeteringAreas)
@@ -226,9 +320,10 @@ nsCameraControl::SetMeteringAreas(JSContext *cx, const JS::Value & aMeteringArea
 }
 
 /* attribute jsval focusAreas; */
-NS_IMETHODIMP nsCameraControl::GetFocusAreas(JSContext *cx, JS::Value *aFocusAreas)
+NS_IMETHODIMP
+nsCameraControl::GetFocusAreas(JSContext *cx, JS::Value *aFocusAreas)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_FOCUSAREAS, cx, aFocusAreas);
 }
 NS_IMETHODIMP
 nsCameraControl::SetFocusAreas(JSContext *cx, const JS::Value & aFocusAreas)
@@ -237,50 +332,59 @@ nsCameraControl::SetFocusAreas(JSContext *cx, const JS::Value & aFocusAreas)
 }
 
 /* readonly attribute double focalLength; */
-NS_IMETHODIMP nsCameraControl::GetFocalLength(double *aFocalLength)
+NS_IMETHODIMP
+nsCameraControl::GetFocalLength(double *aFocalLength)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_FOCALLENGTH, aFocalLength);
 }
 
 /* readonly attribute double focusDistanceNear; */
-NS_IMETHODIMP nsCameraControl::GetFocusDistanceNear(double *aFocusDistanceNear)
+NS_IMETHODIMP
+nsCameraControl::GetFocusDistanceNear(double *aFocusDistanceNear)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_FOCUSDISTANCENEAR, aFocusDistanceNear);
 }
 
 /* readonly attribute double focusDistanceOptimum; */
-NS_IMETHODIMP nsCameraControl::GetFocusDistanceOptimum(double *aFocusDistanceOptimum)
+NS_IMETHODIMP
+nsCameraControl::GetFocusDistanceOptimum(double *aFocusDistanceOptimum)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_FOCUSDISTANCEOPTIMUM, aFocusDistanceOptimum);
 }
 
 /* readonly attribute double focusDistanceFar; */
-NS_IMETHODIMP nsCameraControl::GetFocusDistanceFar(double *aFocusDistanceFar)
+NS_IMETHODIMP
+nsCameraControl::GetFocusDistanceFar(double *aFocusDistanceFar)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_FOCUSDISTANCEFAR, aFocusDistanceFar);
 }
 
 /* void setExposureCompensation ([optional] in double compensation); */
 NS_IMETHODIMP
 nsCameraControl::SetExposureCompensation(double compensation)
 {
-  return setHelper(this, CAMERA_PARAM_WHITEBALANCE, compensation);
+  return setHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, compensation);
 }
 
 /* readonly attribute double exposureCompensation; */
-NS_IMETHODIMP nsCameraControl::GetExposureCompensation(double *aExposureCompensation)
+NS_IMETHODIMP
+nsCameraControl::GetExposureCompensation(double *aExposureCompensation)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return getHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, aExposureCompensation);
 }
 
 /* attribute nsICameraShutterCallback onShutter; */
-NS_IMETHODIMP nsCameraControl::GetOnShutter(nsICameraShutterCallback * *aOnShutter)
+NS_IMETHODIMP
+nsCameraControl::GetOnShutter(nsICameraShutterCallback * *aOnShutter)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  *aOnShutter = mOnShutterCb;
+  return NS_OK;
 }
-NS_IMETHODIMP nsCameraControl::SetOnShutter(nsICameraShutterCallback *aOnShutter)
+NS_IMETHODIMP
+nsCameraControl::SetOnShutter(nsICameraShutterCallback *aOnShutter)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  mOnShutterCb = aOnShutter;
+  return NS_OK;
 }
 
 /* void startRecording (in jsval aOptions, in nsICameraStartRecordingCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
