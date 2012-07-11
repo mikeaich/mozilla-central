@@ -115,7 +115,7 @@ NS_IMETHODIMP
 nsDOMCameraManager::GetCamera(const JS::Value & aOptions, nsICameraGetCameraCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
   nsresult rv;
-  PRUint32 cameraId = 0;  /* front camera by default */
+  PRUint32 cameraId = 0;  /* back (or forward-facing) camera by default */
 
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
 
@@ -128,7 +128,7 @@ nsDOMCameraManager::GetCamera(const JS::Value & aOptions, nsICameraGetCameraCall
       if (JSVAL_IS_STRING(v)) {
         const char* camera = JS_EncodeString(cx, JSVAL_TO_STRING(v));
         if (camera) {
-          if (strcmp(camera, "back") == 0) {
+          if (strcmp(camera, "front") == 0) {
             cameraId = 1;
           }
         }
