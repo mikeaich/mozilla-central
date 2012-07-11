@@ -183,6 +183,12 @@ Navigator::Invalidate()
   }
 #endif
 
+#ifdef MOZ_B2G_CAMERA
+  if (mCameraManager) {
+    mCameraManager = nsnull;
+  }
+#endif
+
 #ifdef MOZ_SYS_MSG
   if (mMessagesManager) {
     mMessagesManager = nsnull;
@@ -1136,11 +1142,6 @@ Navigator::IsSmsSupported() const
   return result;
 #else
   return false;
-#endif
-#ifdef MOZ_B2G_CAMERA
-  if (mCameraManager) {
-    mCameraManager = nsnull;
-  }
 #endif
 }
 
