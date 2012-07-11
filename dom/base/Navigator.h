@@ -40,6 +40,11 @@ class nsIDOMTelephony;
 
 #include "nsIDOMNavigatorSystemMessages.h"
 
+#ifdef MOZ_B2G_CAMERA
+#include "nsIDOMNavigatorCamera.h"
+#include "DOMCameraManager.h"
+#endif
+
 //*****************************************************************************
 // Navigator: Script "navigator" object
 //*****************************************************************************
@@ -80,6 +85,9 @@ class Navigator : public nsIDOMNavigator
                 , public nsIDOMMozNavigatorNetwork
 #ifdef MOZ_B2G_BT
                 , public nsIDOMNavigatorBluetooth
+#endif
+#ifdef MOZ_B2G_CAMERA
+                , public nsIDOMNavigatorCamera
 #endif
                 , public nsIDOMNavigatorSystemMessages
 {
@@ -133,6 +141,9 @@ public:
   // Helper to initialize mMessagesManager.
   nsresult EnsureMessagesManager();
 #endif
+#ifdef MOZ_B2G_CAMERA
+  NS_DECL_NSIDOMNAVIGATORCAMERA
+#endif
 
 private:
   bool IsSmsAllowed() const;
@@ -152,6 +163,9 @@ private:
   nsRefPtr<network::MobileConnection> mMobileConnection;
 #ifdef MOZ_B2G_BT
   nsCOMPtr<nsIDOMBluetoothManager> mBluetooth;
+#endif
+#ifdef MOZ_B2G_CAMERA
+  nsRefPtr<nsDOMCameraManager> mCameraManager;
 #endif
   nsCOMPtr<nsIDOMNavigatorSystemMessages> mMessagesManager;
   nsWeakPtr mWindow;

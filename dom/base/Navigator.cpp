@@ -49,6 +49,10 @@
 #include "nsIDOMBluetoothManager.h"
 #include "BluetoothManager.h"
 #endif
+#ifdef MOZ_B2G_CAMERA
+#include "nsIDOMCameraManager.h"
+#include "DOMCameraManager.h"
+#endif
 
 #include "nsIDOMGlobalPropertyInitializer.h"
 
@@ -110,6 +114,9 @@ NS_INTERFACE_MAP_BEGIN(Navigator)
   NS_INTERFACE_MAP_ENTRY(nsIDOMMozNavigatorNetwork)
 #ifdef MOZ_B2G_BT
   NS_INTERFACE_MAP_ENTRY(nsIDOMNavigatorBluetooth)
+#endif
+#ifdef MOZ_B2G_CAMERA
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNavigatorCamera)
 #endif
   NS_INTERFACE_MAP_ENTRY(nsIDOMNavigatorSystemMessages)
   NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(Navigator)
@@ -1130,6 +1137,11 @@ Navigator::IsSmsSupported() const
 #else
   return false;
 #endif
+#ifdef MOZ_B2G_CAMERA
+  if (mCameraManager) {
+    mCameraManager = nsnull;
+  }
+#endif
 }
 
 NS_IMETHODIMP
@@ -1320,6 +1332,36 @@ Navigator::MozSetMessageHandler(const nsAString& aType,
 #endif
 }
 
+#ifdef MOZ_B2G_CAMERA
+//*****************************************************************************
+//    nsNavigator::nsIDOMNavigatorCamera
+//*****************************************************************************
+
+NS_IMETHODIMP
+Navigator::GetMozCameras(nsIDOMCameraManager** aCameraManager)
+{
+  nsRefPtr<nsDOMCameraManager> cameraManager = mCameraManager;
+
+  if (!cameraManager) {
+    nsCOMPtr<nsPIDOMWindow> win = do_QueryReferent(mWindow);
+    NS_ENSURE_TRUE(win, NS_ERROR_FAILURE);
+
+    if (!win || !win->GetOuterWindow() ||
+        win->GetOuterWindow()->GetCurrentInnerWindow() != win) {
+      return NS_ERROR_NOT_AVAILABLE;
+    }
+
+    nsresult rv = nsDOMCameraManager::Create(win->WindowID(), getter_AddRefs(mCameraManager));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    cameraManager = mCameraManager;
+  }
+
+  cameraManager.forget(aCameraManager);
+  return NS_OK;
+}
+#endif //MOZ_B2G_CAMERA
+
 size_t
 Navigator::SizeOfIncludingThis(nsMallocSizeOfFun aMallocSizeOf) const
 {
@@ -1345,10 +1387,15 @@ void
 Navigator::OnNavigation()
 {
   // Inform MediaManager in case there are live streams or pending callbacks.
+  nsCOMPtr<nsPIDOMWindow> win = do_QueryReferent(mWindow);
 #ifdef MOZ_MEDIA_NAVIGATOR
   MediaManager *manager = MediaManager::Get();
-  nsCOMPtr<nsPIDOMWindow> win = do_QueryReferent(mWindow);
-  return manager->OnNavigation(win->WindowID());
+  manager->OnNavigation(win->WindowID());
+#endif
+#ifdef MOZ_B2G_CAMERA
+  if (mCameraManager) {
+    mCameraManager->OnNavigation(win->WindowID());
+  }
 #endif
 }
 
