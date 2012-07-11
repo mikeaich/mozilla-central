@@ -86,6 +86,7 @@ GonkCameraHardware::GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera)
   , mMonitor("GonkCameraHardware.Monitor")
   , mNumFrames(0)
   , mTarget(aTarget)
+  , mInitialized(false)
 {
   DOM_CAMERA_LOGI( "%s: this = %p (aTarget = %p)\n", __func__, (void*)this, (void*)aTarget );
   init();
@@ -205,6 +206,8 @@ GonkCameraHardware::init()
   mParams = mHardware->getParameters();
 
   mHardware->setPreviewWindow(mWindow);
+
+  mInitialized = true;
 }
 
 GonkCameraHardware::~GonkCameraHardware()
@@ -240,7 +243,15 @@ GonkCameraHardware::getCameraHardwareHandle(GonkCamera* aTarget, PRUint32 aCamer
   releaseCameraHardwareHandle(sHwHandle);
 
   sHw = new GonkCameraHardware(aTarget, aCamera);
-  return sHwHandle;
+
+  if (sHw->initialized()) {
+    return sHwHandle;
+  }
+
+  DOM_CAMERA_LOGE("failed to initialize camera hardware\n");
+  delete sHw;
+  sHw = nsnull;
+  return 0;
 }
 
 PRUint32

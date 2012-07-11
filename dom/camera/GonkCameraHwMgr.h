@@ -88,6 +88,12 @@ protected:
   struct timespec               mStart;
   struct timespec               mAutoFocusStart;
 #endif
+  bool                          mInitialized;
+
+  bool initialized()
+  {
+    return mInitialized;
+  }
 };
 
 
