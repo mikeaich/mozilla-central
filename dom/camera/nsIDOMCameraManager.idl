@@ -236,7 +236,7 @@ interface nsICameraControl : nsISupports
        acceptable values must range from minExposureCompensation
        to maxExposureCompensation in steps of stepExposureCompensation;
        invalid values will be rounded to the nearest valid value. */
-    void setExposureCompensation([optional] in double compensation);
+    void setExposureCompensation([optional] in jsval compensation);
     readonly attribute double   exposureCompensation;
 
     /* the function to call on the camera's shutter event, to trigger

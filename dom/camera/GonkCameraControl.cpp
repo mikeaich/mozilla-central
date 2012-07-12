@@ -83,6 +83,13 @@ nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
   // nsCOMPtr<PullParametersTask> pullParametersTask = new PullParametersTask(this);
   mRwLock = PR_NewRWLock(PR_RWLOCK_RANK_NONE, "GonkCameraControl.Parameters.Lock");
   DoPullParameters(nsnull);
+
+  /* Grab any settings we'll need later */
+  mExpsoureCompensationMin = mParams.getFloat(CameraParameters::KEY_MIN_EXPOSURE_COMPENSATION);
+  mExpsoureCompensationStep = mParams.getFloat(CameraParameters::KEY_EXPOSURE_COMPENSATION_STEP);
+
+  DOM_CAMERA_LOGI("minimum exposure compensation = %f\n", mExpsoureCompensationMin);
+  DOM_CAMERA_LOGI("exposure compensation step = %f\n", mExpsoureCompensationStep);
 }
 
 nsCameraControl::~nsCameraControl()
@@ -375,11 +382,24 @@ nsCameraControl::SetParameter(PRUint32 aKey, const char *aValue)
 void
 nsCameraControl::SetParameter(PRUint32 aKey, double aValue)
 {
+  PRUint32 index;
+
   const char *key = getKeyText(aKey);
   if (key) {
     {
       RwAutoLockWrite lock(mRwLock);
-      mParams.setFloat(key, aValue);
+      switch (aKey) {
+        case CAMERA_PARAM_EXPOSURECOMPENSATION:
+          /* convert from real value to a Gonk index, round to the nearest step; index is 1-based */
+          index = (aValue - mExpsoureCompensationMin + mExpsoureCompensationStep / 2) / mExpsoureCompensationStep + 1;
+          DOM_CAMERA_LOGI("compensation = %f --> index = %d\n", aValue, index);
+          mParams.set(key, index);
+          break;
+
+        default:
+          mParams.setFloat(key, aValue);
+          break;
+      }
     }
     PushParameters();
   }

@@ -73,7 +73,7 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, double *aValue)
   } else {
     return NS_ERROR_UNEXPECTED;
   }
-} 
+}
 
 /*
   Helper for weighted regions.
@@ -359,11 +359,21 @@ nsCameraControl::GetFocusDistanceFar(double *aFocusDistanceFar)
   return getHelper(this, CAMERA_PARAM_FOCUSDISTANCEFAR, aFocusDistanceFar);
 }
 
-/* void setExposureCompensation ([optional] in double compensation); */
+/* void setExposureCompensation (const JS::Value & aCompensation); */
 NS_IMETHODIMP
-nsCameraControl::SetExposureCompensation(double compensation)
+nsCameraControl::SetExposureCompensation(const JS::Value & aCompensation)
 {
-  return setHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, compensation);
+  if (JSVAL_IS_DOUBLE(aCompensation)) {
+    double compensation = JSVAL_TO_DOUBLE(aCompensation);
+    return setHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, compensation);
+  } else if(JSVAL_IS_INT(aCompensation)) {
+    PRUint32 compensation = JSVAL_TO_INT(aCompensation);
+    return setHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, compensation);
+  } else if(JSVAL_IS_NULL(aCompensation) || JSVAL_IS_VOID(aCompensation)) {
+    /* use NaN to switch the camera back into auto mode */
+    return setHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, NAN);
+  }
+  return NS_ERROR_INVALID_ARG;
 }
 
 /* readonly attribute double exposureCompensation; */

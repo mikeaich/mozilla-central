@@ -114,6 +114,8 @@ protected:
   nsCOMPtr<CameraPreview>         mPreview;
   const char*                     mFileFormat;
   bool                            mDeferConfigUpdate;
+  double                          mExpsoureCompensationMin;
+  double                          mExpsoureCompensationStep;
 
   nsCOMPtr<nsICameraAutoFocusCallback>      mAutoFocusOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback>          mAutoFocusOnErrorCb;
