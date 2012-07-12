@@ -10,6 +10,8 @@
 #include "nsAutoPtr.h"
 
 
+BEGIN_CAMERA_NAMESPACE
+
 class nsCameraCapabilities : public nsICameraCapabilities
 {
 public:
@@ -34,12 +36,16 @@ public:
   nsresult dimensionListToNewObject(JSContext* cx, JS::Value *aArray, const char *key);
 
 private:
+  nsCameraCapabilities(const nsCameraCapabilities&);
+  nsCameraCapabilities& operator=(const nsCameraCapabilities&);
   ~nsCameraCapabilities();
 
 protected:
   /* additional members */
   nsCOMPtr<nsCameraControl> mCamera;
 };
+
+END_CAMERA_NAMESPACE
 
 
 #endif // DOM_CAMERA_NSCAMERACAPABILITIES_H

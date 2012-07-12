@@ -20,6 +20,8 @@
 #include "CameraCommon.h"
 
 
+USING_CAMERA_NAMESPACE
+
 static const char* getKeyText(PRUint32 aKey)
 {
   switch (aKey) {
@@ -80,7 +82,6 @@ nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
   DOM_CAMERA_LOGI("%s:%d : this = %p, mHwHandle = %d\n", __func__, __LINE__, this, mHwHandle);
 
   /* Initialize our camera configuration database. */
-  // nsCOMPtr<PullParametersTask> pullParametersTask = new PullParametersTask(this);
   mRwLock = PR_NewRWLock(PR_RWLOCK_RANK_NONE, "GonkCameraControl.Parameters.Lock");
   DoPullParameters(nsnull);
 
@@ -641,6 +642,8 @@ nsCameraControl::DoStopRecording(StopRecordingTask *aStopRecording)
 /*
   Gonk callback handlers.
 */
+BEGIN_CAMERA_NAMESPACE
+
 void
 GonkCameraReceiveImage(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength)
 {
@@ -658,3 +661,5 @@ GonkCameraReceiveFrame(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength)
 {
   gc->ReceiveFrame(aData, aLength);
 }
+
+END_CAMERA_NAMESPACE

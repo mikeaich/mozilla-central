@@ -3,7 +3,10 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "CameraPictureOptions.h"
+#include "CameraCommon.h"
 
+
+USING_CAMERA_NAMESPACE
 
 NS_IMPL_ISUPPORTS1(nsCameraPictureOptions, nsICameraPictureOptions)
 

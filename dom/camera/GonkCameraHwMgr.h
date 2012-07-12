@@ -10,10 +10,8 @@
 #include "binder/IMemory.h"
 #include "mozilla/ReentrantMonitor.h"
 
-// #include "GonkImpl.h"
 #include "GonkCameraControl.h"
-typedef class nsCameraControl GonkCamera;
-
+#include "CameraCommon.h"
 
 // config
 #define GIHM_TIMING_RECEIVEFRAME    0
@@ -23,6 +21,9 @@ typedef class nsCameraControl GonkCamera;
 using namespace mozilla;
 using namespace android;
 
+BEGIN_CAMERA_NAMESPACE
+
+typedef class nsCameraControl GonkCamera;
 
 class GonkCameraHardware
 {
@@ -94,7 +95,13 @@ protected:
   {
     return mInitialized;
   }
+
+private:
+  GonkCameraHardware(const GonkCameraHardware&);
+  GonkCameraHardware& operator=(const GonkCameraHardware&);
 };
+
+END_CAMERA_NAMESPACE
 
 
 #endif // GONK_IMPL_HW_MGR_H

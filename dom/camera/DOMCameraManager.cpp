@@ -10,6 +10,8 @@
 #include "CameraCommon.h"
 
 
+USING_CAMERA_NAMESPACE
+
 DOMCI_DATA(CameraManager, nsIDOMCameraManager)
 
 NS_INTERFACE_MAP_BEGIN(nsDOMCameraManager)

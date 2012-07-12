@@ -28,6 +28,8 @@ public:
 private:
   nsDOMCameraManager();
   nsDOMCameraManager(PRUint64 aWindowId);
+  nsDOMCameraManager(const nsDOMCameraManager&);
+  nsDOMCameraManager& operator=(const nsDOMCameraManager&);
   ~nsDOMCameraManager();
 
 protected:

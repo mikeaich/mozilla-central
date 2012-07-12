@@ -10,6 +10,8 @@
 #include "CameraCommon.h"
 
 
+USING_CAMERA_NAMESPACE
+
 static const TrackID TRACK_AUDIO = 1;
 static const TrackID TRACK_VIDEO = 2;
 

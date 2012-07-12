@@ -4,14 +4,15 @@
 
 #include "jsapi.h"
 #include "libcameraservice/CameraHardwareInterface.h"
-#include "CameraCommon.h"
 #include "DOMCameraManager.h"
+
+#define DOM_CAMERA_LOG_LEVEL  3
+#include "CameraCommon.h"
 
 
 /*
   From nsDOMCameraManager, but gonk-specific!
 */
-
 
 /* [implicit_jscontext] jsval getListOfCameras (); */
 NS_IMETHODIMP

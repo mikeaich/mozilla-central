@@ -7,7 +7,10 @@
 
 
 #include "prtypes.h"
+#include "CameraCommon.h"
 
+
+BEGIN_CAMERA_NAMESPACE
 
 class nsCameraControl;
 
@@ -15,6 +18,8 @@ class nsCameraControl;
 void GonkCameraReceiveImage(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength);
 void GonkCameraAutoFocusComplete(nsCameraControl* gc, bool success);
 void GonkCameraReceiveFrame(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength);
+
+END_CAMERA_NAMESPACE
 
 
 #endif // DOM_CAMERA_GONKCAMERACONTROL_H

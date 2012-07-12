@@ -16,6 +16,8 @@
 
 using namespace android;
 
+USING_CAMERA_NAMESPACE
+
 #define CHECK_CAMERA_PTR(c)         \
   if (!c) {                         \
     return NS_ERROR_NOT_AVAILABLE;  \

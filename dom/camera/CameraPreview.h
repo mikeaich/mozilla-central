@@ -9,11 +9,13 @@
 #include "MediaStreamGraph.h"
 #include "StreamBuffer.h"
 #include "nsDOMMediaStream.h"
+#include "CameraCommon.h"
 
 
 using namespace mozilla;
 using namespace mozilla::layers;
 
+BEGIN_CAMERA_NAMESPACE
 
 class CameraPreview : public nsDOMMediaStream
                     , public MediaStreamListener
@@ -45,7 +47,13 @@ protected:
   VideoSegment mVideoSegment;
   PRUint32 mFrameCount;
   PRUint32 mDiscardedFrameCount;
+
+private:
+  CameraPreview(const CameraPreview&);
+  CameraPreview& operator=(const CameraPreview&);
 };
+
+END_CAMERA_NAMESPACE
 
 
 #endif // DOM_CAMERA_CAMERAPREVIEW_H

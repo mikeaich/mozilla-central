@@ -7,7 +7,10 @@
 
 
 #include "nsIDOMCameraManager.h"
+#include "CameraCommon.h"
 
+
+BEGIN_CAMERA_NAMESPACE
 
 class nsCameraPictureOptions : public nsICameraPictureOptions
 {
@@ -23,6 +26,8 @@ private:
 protected:
   /* additional members */
 };
+
+END_CAMERA_NAMESPACE
 
 
 #endif // DOM_CAMERA_NSCAMERAPICTUREOPTIONS_H

@@ -14,6 +14,8 @@
 #include "CameraCommon.h"
 
 
+USING_CAMERA_NAMESPACE
+
 #if GIHM_TIMING_RECEIVEFRAME
 #define INCLUDE_TIME_H                  1
 #endif

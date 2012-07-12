@@ -20,6 +20,8 @@
 #include "CameraCommon.h"
 
 
+BEGIN_CAMERA_NAMESPACE
+
 class GetPreviewStreamTask;
 class AutoFocusTask;
 class TakePictureTask;
@@ -102,6 +104,7 @@ protected:
 
 private:
   nsCameraControl(const nsCameraControl&);
+  nsCameraControl& operator=(const nsCameraControl&);
 
 protected:
   /* additional members */
@@ -483,6 +486,8 @@ public:
 protected:
   nsCOMPtr<nsCameraControl> mCameraControl;
 };
+
+END_CAMERA_NAMESPACE
 
 
 #endif // DOM_CAMERA_NSCAMERACONTROL_H
