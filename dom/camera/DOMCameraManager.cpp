@@ -45,6 +45,7 @@ nsDOMCameraManager::~nsDOMCameraManager()
 void
 nsDOMCameraManager::OnNavigation(PRUint64 aWindowId)
 {
+  /* TODO: implement -- see getUserMedia() implementation */
 }
 
 /* static creator */
@@ -57,60 +58,6 @@ nsDOMCameraManager::Create(PRUint64 aWindowId, nsDOMCameraManager * *aMozCameras
   cameraManager.forget(aMozCameras);
   return NS_OK;
 }
-
-class GetCameraResult : public nsRunnable
-{
-public:
-  GetCameraResult(nsICameraControl *aCameraControl, nsICameraGetCameraCallback *onSuccess)
-    : mCameraControl(aCameraControl)
-    , mOnSuccessCb(onSuccess)
-  { }
-
-  NS_IMETHOD Run()
-  {
-    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    MOZ_ASSERT(NS_IsMainThread());
-
-    /* TO DO: window management stuff */
-    if (mOnSuccessCb) {
-      mOnSuccessCb->HandleEvent(mCameraControl);
-    }
-    return NS_OK;
-  }
-
-protected:
-  nsCOMPtr<nsICameraControl> mCameraControl;
-  nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
-};
-
-class DoGetCamera : public nsRunnable
-{
-public:
-  DoGetCamera(PRUint32 aCameraId, nsICameraGetCameraCallback *onSuccess, nsICameraErrorCallback *onError, nsIThread *aCameraThread)
-    : mCameraId(aCameraId)
-    , mOnSuccessCb(onSuccess)
-    , mOnErrorCb(onError)
-    , mCameraThread(aCameraThread)
-  { }
-
-  NS_IMETHOD Run()
-  {
-    nsCOMPtr<nsICameraControl> cameraControl = new nsCameraControl(mCameraId, mCameraThread);
-
-    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-
-    if (NS_FAILED(NS_DispatchToMainThread(new GetCameraResult(cameraControl, mOnSuccessCb)))) {
-      NS_WARNING("Failed to dispatch getCamera() onSuccess callback to main thread!");
-    }
-    return NS_OK;
-  }
-
-protected:
-  PRUint32 mCameraId;
-  nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
-  nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
-  nsCOMPtr<nsIThread> mCameraThread;
-};
 
 /* [implicit_jscontext] void getCamera ([optional] in jsval aOptions, in nsICameraGetCameraCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
 NS_IMETHODIMP

@@ -9,7 +9,6 @@
 // #include "utils/StrongPointer.h"
 #include "camera/CameraParameters.h"
 #include "prtypes.h"
-#include "prrwlock.h"
 #include "nsCOMPtr.h"
 #include "nsThread.h"
 #include "nsDOMFile.h"
@@ -76,31 +75,50 @@ public:
     CAMERA_PARAM_FOCUSDISTANCEFAR,
     CAMERA_PARAM_EXPOSURECOMPENSATION
   };
-  const char* GetParameter(const char *aKey);
-  const char* GetParameterConstChar(PRUint32 aKey);
-  double GetParameterDouble(PRUint32 aKey);
-  void GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint32 *aLength);
-  void SetParameter(const char *aKey, const char *aValue);
-  void SetParameter(PRUint32 aKey, const char *aValue);
-  void SetParameter(PRUint32 aKey, double aValue);
-  void SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aLength);
-  void PushParameters();
+  virtual const char* GetParameter(const char *aKey) = 0;
+  virtual const char* GetParameterConstChar(PRUint32 aKey) = 0;
+  virtual double GetParameterDouble(PRUint32 aKey) = 0;
+  virtual void GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint32 *aLength) = 0;
+  virtual void SetParameter(const char *aKey, const char *aValue) = 0;
+  virtual void SetParameter(PRUint32 aKey, const char *aValue) = 0;
+  virtual void SetParameter(PRUint32 aKey, double aValue) = 0;
+  virtual void SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aLength) = 0;
+  virtual void PushParameters() = 0;
+
+  nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
+    : mCameraId(aCameraId)
+    , mCameraThread(aCameraThread)
+    , mCapabilities(nsnull)
+    , mPreview(nsnull)
+    , mFileFormat(nsnull)
+    , mAutoFocusOnSuccessCb(nsnull)
+    , mAutoFocusOnErrorCb(nsnull)
+    , mTakePictureOnSuccessCb(nsnull)
+    , mTakePictureOnErrorCb(nsnull)
+    , mStartRecordingOnSuccessCb(nsnull)
+    , mStartRecordingOnErrorCb(nsnull)
+    , mOnShutterCb(nsnull)
+  { }
+
+  ~nsCameraControl()
+  {
+    if (mFileFormat) {
+      nsMemory::Free(const_cast<char*>(mFileFormat));
+    }
+  }
 
   void TakePictureComplete(PRUint8 *aData, PRUint32 aLength);
   void AutoFocusComplete(bool aSuccess);
   void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
 
-  nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread);
-  ~nsCameraControl();
-
 protected:
-  nsresult DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream);
-  nsresult DoAutoFocus(AutoFocusTask *aAutoFocus);
-  nsresult DoTakePicture(TakePictureTask *aTakePicture);
-  nsresult DoStartRecording(StartRecordingTask *aStartRecording);
-  nsresult DoStopRecording(StopRecordingTask *aStopRecording);
-  nsresult DoPushParameters(PushParametersTask *aPushParameters);
-  nsresult DoPullParameters(PullParametersTask *aPullParameters);
+  virtual nsresult DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream) = 0;
+  virtual nsresult DoAutoFocus(AutoFocusTask *aAutoFocus) = 0;
+  virtual nsresult DoTakePicture(TakePictureTask *aTakePicture) = 0;
+  virtual nsresult DoStartRecording(StartRecordingTask *aStartRecording) = 0;
+  virtual nsresult DoStopRecording(StopRecordingTask *aStopRecording) = 0;
+  virtual nsresult DoPushParameters(PushParametersTask *aPushParameters) = 0;
+  virtual nsresult DoPullParameters(PullParametersTask *aPullParameters) = 0;
 
 private:
   nsCameraControl(const nsCameraControl&);
@@ -111,14 +129,10 @@ protected:
   PRUint32                        mCameraId;
   nsCOMPtr<nsIThread>             mCameraThread;
   nsCOMPtr<nsICameraCapabilities> mCapabilities;
-  PRUint32                        mHwHandle;
   PRUint32                        mPreviewWidth;
   PRUint32                        mPreviewHeight;
   nsCOMPtr<CameraPreview>         mPreview;
   const char*                     mFileFormat;
-  bool                            mDeferConfigUpdate;
-  double                          mExpsoureCompensationMin;
-  double                          mExpsoureCompensationStep;
 
   nsCOMPtr<nsICameraAutoFocusCallback>      mAutoFocusOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback>          mAutoFocusOnErrorCb;
@@ -127,10 +141,6 @@ protected:
   nsCOMPtr<nsICameraStartRecordingCallback> mStartRecordingOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback>          mStartRecordingOnErrorCb;
   nsCOMPtr<nsICameraShutterCallback>        mOnShutterCb;
-
-  /* TODO: move this into a Gonk-specific class */
-  android::CameraParameters       mParams;
-  PRRWLock*                       mRwLock;
 };
 
 /*
@@ -164,8 +174,6 @@ protected:
 */
 class GetPreviewStreamTask : public nsRunnable
 {
-  friend class nsCameraControl;
-
 public:
   GetPreviewStreamTask(nsCameraControl *aCameraControl, PRUint32 aWidth, PRUint32 aHeight, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError)
     : mWidth(aWidth)
@@ -187,7 +195,6 @@ public:
     return NS_OK;
   }
 
-protected:
   PRUint32 mWidth;
   PRUint32 mHeight;
   nsCOMPtr<nsCameraControl> mCameraControl;
@@ -226,8 +233,6 @@ protected:
 */
 class AutoFocusTask : public nsRunnable
 {
-  friend class nsCameraControl;
-
 public:
   AutoFocusTask(nsCameraControl *aCameraControl, nsICameraAutoFocusCallback *onSuccess, nsICameraErrorCallback *onError)
     : mCameraControl(aCameraControl)
@@ -249,7 +254,6 @@ public:
     return NS_OK;
   }
 
-protected:
   nsCOMPtr<nsCameraControl> mCameraControl;
   nsCOMPtr<nsICameraAutoFocusCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
@@ -286,8 +290,6 @@ protected:
 */
 class TakePictureTask : public nsRunnable
 {
-  friend class nsCameraControl;
-
 public:
   TakePictureTask(nsCameraControl *aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRInt32 aRotation, nsString aFileFormat, double aLatitude, bool aLatitudeSet, double aLongitude, bool aLongitudeSet, double aAltitude, bool aAltitudeSet, double aTimestamp, bool aTimestampSet, nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError)
     : mCameraControl(aCameraControl)
@@ -321,7 +323,6 @@ public:
     return NS_OK;
   }
 
-protected:
   nsCOMPtr<nsCameraControl> mCameraControl;
   PRUint32 mWidth;
   PRUint32 mHeight;
@@ -370,8 +371,6 @@ protected:
 */
 class StartRecordingTask : public nsRunnable
 {
-  friend class nsCameraControl;
-
 public:
   StartRecordingTask(nsCameraControl *aCameraControl, PRUint32 aWidth, PRUint32 aHeight, nsICameraStartRecordingCallback *onSuccess, nsICameraErrorCallback *onError)
     : mWidth(aWidth)
@@ -395,7 +394,6 @@ public:
     return NS_OK;
   }
 
-protected:
   PRUint32 mWidth;
   PRUint32 mHeight;
   nsCOMPtr<nsCameraControl> mCameraControl;
@@ -408,8 +406,6 @@ protected:
 */
 class StopRecordingTask : public nsRunnable
 {
-  friend class nsCameraControl;
-
 public:
   StopRecordingTask(nsCameraControl *aCameraControl)
     : mCameraControl(aCameraControl)
@@ -427,7 +423,6 @@ public:
     return NS_OK;
   }
 
-protected:
   nsCOMPtr<nsCameraControl> mCameraControl;
 };
 
@@ -436,8 +431,6 @@ protected:
 */
 class PushParametersTask : public nsRunnable
 {
-  friend class nsCameraControl;
-
 public:
   PushParametersTask(nsCameraControl *aCameraControl)
     : mCameraControl(aCameraControl)
@@ -455,7 +448,6 @@ public:
     return NS_OK;
   }
 
-protected:
   nsCOMPtr<nsCameraControl> mCameraControl;
 };
 
@@ -464,8 +456,6 @@ protected:
 */
 class PullParametersTask : public nsRunnable
 {
-  friend class nsCameraControl;
-
 public:
   PullParametersTask(nsCameraControl *aCameraControl)
     : mCameraControl(aCameraControl)
@@ -483,7 +473,6 @@ public:
     return NS_OK;
   }
 
-protected:
   nsCOMPtr<nsCameraControl> mCameraControl;
 };
 

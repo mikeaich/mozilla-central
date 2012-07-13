@@ -4,6 +4,7 @@
 
 #include "jsapi.h"
 #include "libcameraservice/CameraHardwareInterface.h"
+#include "GonkCameraControl.h"
 #include "DOMCameraManager.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
@@ -22,6 +23,7 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
   camera_module_t* module;
   PRUint32 index = 0;
   PRUint32 count;
+  char d[32];
 
   if (!a) {
     DOM_CAMERA_LOGE("getListOfCameras : Could not create array object");
@@ -37,6 +39,7 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
   DOM_CAMERA_LOGI("getListOfCameras : get_number_of_cameras() returned %d\n", count);
   while (count--) {
     JSString* v;
+    jsval jv;
 
     switch (count) {
       case 0:
@@ -48,18 +51,35 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
         break;
 
       default:
-        // TODO: add a unique identifier for each one...
-        v = JS_NewStringCopyZ(cx, "extra-camera");
+        /* TODO: handle extra cameras in getCamera() */
+        snprintf(d, sizeof(d), "extra-camera-%d", count);
+        v = JS_NewStringCopyZ(cx, d);
         break;
     }
     if (!v) {
       DOM_CAMERA_LOGE("getListOfCameras : out of memory populating camera list");
-      // TODO: clean up any partial objects?
+      /* TODO: clean up any partial objects? */
       return NS_ERROR_NOT_AVAILABLE;
     }
-    JS_SetElement(cx, a, index++, &STRING_TO_JSVAL(v));
+    jv = STRING_TO_JSVAL(v);
+    JS_SetElement(cx, a, index++, &jv);
   }
 
   *_retval = OBJECT_TO_JSVAL(a);
+  return NS_OK;
+}
+
+USING_CAMERA_NAMESPACE
+
+NS_IMETHODIMP
+DoGetCamera::Run()
+{
+  nsCOMPtr<nsICameraControl> cameraControl = new nsGonkCameraControl(mCameraId, mCameraThread);
+
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+
+  if (NS_FAILED(NS_DispatchToMainThread(new GetCameraResult(cameraControl, mOnSuccessCb)))) {
+    NS_WARNING("Failed to dispatch getCamera() onSuccess callback to main thread!");
+  }
   return NS_OK;
 }

@@ -11,6 +11,7 @@
 #include "nsCOMPtr.h"
 #include "nsAutoPtr.h"
 #include "nsIThread.h"
+#include "nsThreadUtils.h"
 #include "nsIDOMCameraManager.h"
 
 
@@ -35,6 +36,50 @@ private:
 protected:
   PRUint64 mWindowId;
   nsCOMPtr<nsIThread> mCameraThread;
+};
+
+
+class DoGetCamera : public nsRunnable
+{
+public:
+  DoGetCamera(PRUint32 aCameraId, nsICameraGetCameraCallback *onSuccess, nsICameraErrorCallback *onError, nsIThread *aCameraThread)
+    : mCameraId(aCameraId)
+    , mOnSuccessCb(onSuccess)
+    , mOnErrorCb(onError)
+    , mCameraThread(aCameraThread)
+  { }
+
+  NS_IMETHOD Run();
+
+protected:
+  PRUint32 mCameraId;
+  nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
+  nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
+  nsCOMPtr<nsIThread> mCameraThread;
+};
+
+class GetCameraResult : public nsRunnable
+{
+public:
+  GetCameraResult(nsICameraControl *aCameraControl, nsICameraGetCameraCallback *onSuccess)
+    : mCameraControl(aCameraControl)
+    , mOnSuccessCb(onSuccess)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    /* TO DO: window management stuff */
+    if (mOnSuccessCb) {
+      mOnSuccessCb->HandleEvent(mCameraControl);
+    }
+    return NS_OK;
+  }
+
+protected:
+  nsCOMPtr<nsICameraControl> mCameraControl;
+  nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
 };
 
 

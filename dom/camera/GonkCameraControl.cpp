@@ -60,21 +60,12 @@ static const char* getKeyText(PRUint32 aKey)
   Gonk-specific CameraControl implementation.
 */
 
-nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
-  : mCameraId(aCameraId)
-  , mCameraThread(aCameraThread)
-  , mCapabilities(nsnull)
+nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
+  : nsCameraControl(aCameraId, aCameraThread)
   , mHwHandle(0)
-  , mPreview(nsnull)
-  , mFileFormat(nsnull)
+  , mExpsoureCompensationMin(0.0)
+  , mExpsoureCompensationStep(0.0)
   , mDeferConfigUpdate(false)
-  , mAutoFocusOnSuccessCb(nsnull)
-  , mAutoFocusOnErrorCb(nsnull)
-  , mTakePictureOnSuccessCb(nsnull)
-  , mTakePictureOnErrorCb(nsnull)
-  , mStartRecordingOnSuccessCb(nsnull)
-  , mStartRecordingOnErrorCb(nsnull)
-  , mOnShutterCb(nsnull)
 {
   /* Constructor runs on the camera thread--see DOMCameraManager.cpp::DoGetCamera(). */
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
@@ -93,7 +84,7 @@ nsCameraControl::nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
   DOM_CAMERA_LOGI("exposure compensation step = %f\n", mExpsoureCompensationStep);
 }
 
-nsCameraControl::~nsCameraControl()
+nsGonkCameraControl::~nsGonkCameraControl()
 {
   DOM_CAMERA_LOGI("%s:%d : this = %p, mHwHandle = %d\n", __func__, __LINE__, this, mHwHandle);
   GonkCameraHardware::releaseCameraHardwareHandle(mHwHandle);
@@ -103,9 +94,6 @@ nsCameraControl::~nsCameraControl()
     PR_DestroyRWLock(lock);
   }
 
-  if (mFileFormat) {
-    nsMemory::Free(const_cast<char*>(mFileFormat));
-  }
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 }
 
@@ -146,14 +134,14 @@ protected:
 };
 
 const char*
-nsCameraControl::GetParameter(const char *aKey)
+nsGonkCameraControl::GetParameter(const char *aKey)
 {
   RwAutoLockRead lock(mRwLock);
   return mParams.get(aKey);
 }
 
 const char*
-nsCameraControl::GetParameterConstChar(PRUint32 aKey)
+nsGonkCameraControl::GetParameterConstChar(PRUint32 aKey)
 {
   const char *key = getKeyText(aKey);
   if (key) {
@@ -165,7 +153,7 @@ nsCameraControl::GetParameterConstChar(PRUint32 aKey)
 }
 
 double
-nsCameraControl::GetParameterDouble(PRUint32 aKey)
+nsGonkCameraControl::GetParameterDouble(PRUint32 aKey)
 {
   double val;
   int index = 0;
@@ -218,7 +206,7 @@ nsCameraControl::GetParameterDouble(PRUint32 aKey)
 }
 
 void
-nsCameraControl::GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint32 *aLength)
+nsGonkCameraControl::GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint32 *aLength)
 {
   const char* key = getKeyText(aKey);
   RwAutoLockRead lock(mRwLock);
@@ -344,7 +332,7 @@ GetParameter_error:
 }
 
 void
-nsCameraControl::PushParameters()
+nsGonkCameraControl::PushParameters()
 {
   if (!mDeferConfigUpdate) {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
@@ -358,7 +346,7 @@ nsCameraControl::PushParameters()
 }
 
 void
-nsCameraControl::SetParameter(const char *aKey, const char *aValue)
+nsGonkCameraControl::SetParameter(const char *aKey, const char *aValue)
 {
   {
     RwAutoLockWrite lock(mRwLock);
@@ -368,7 +356,7 @@ nsCameraControl::SetParameter(const char *aKey, const char *aValue)
 }
 
 void
-nsCameraControl::SetParameter(PRUint32 aKey, const char *aValue)
+nsGonkCameraControl::SetParameter(PRUint32 aKey, const char *aValue)
 {
   const char *key = getKeyText(aKey);
   if (key) {
@@ -381,7 +369,7 @@ nsCameraControl::SetParameter(PRUint32 aKey, const char *aValue)
 }
 
 void
-nsCameraControl::SetParameter(PRUint32 aKey, double aValue)
+nsGonkCameraControl::SetParameter(PRUint32 aKey, double aValue)
 {
   PRUint32 index;
 
@@ -407,7 +395,7 @@ nsCameraControl::SetParameter(PRUint32 aKey, double aValue)
 }
 
 void
-nsCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aLength)
+nsGonkCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aLength)
 {
   const char *key = getKeyText(aKey);
   if (key) {
@@ -448,7 +436,7 @@ nsCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aL
 }
 
 nsresult
-nsCameraControl::DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream)
+nsGonkCameraControl::DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream)
 {
   nsCOMPtr<CameraPreview> preview = mPreview;
 
@@ -470,7 +458,7 @@ nsCameraControl::DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream)
 }
 
 nsresult
-nsCameraControl::DoAutoFocus(AutoFocusTask *aAutoFocus)
+nsGonkCameraControl::DoAutoFocus(AutoFocusTask *aAutoFocus)
 {
   nsCOMPtr<nsICameraAutoFocusCallback> cb = mAutoFocusOnSuccessCb;
   if (cb) {
@@ -498,7 +486,7 @@ nsCameraControl::DoAutoFocus(AutoFocusTask *aAutoFocus)
 }
 
 nsresult
-nsCameraControl::DoTakePicture(TakePictureTask *aTakePicture)
+nsGonkCameraControl::DoTakePicture(TakePictureTask *aTakePicture)
 {
   char d[32];
 
@@ -609,7 +597,7 @@ nsCameraControl::DoTakePicture(TakePictureTask *aTakePicture)
 }
 
 nsresult
-nsCameraControl::DoPushParameters(PushParametersTask *aPushParameters)
+nsGonkCameraControl::DoPushParameters(PushParametersTask *aPushParameters)
 {
   RwAutoLockRead lock(mRwLock);
   if (GonkCameraHardware::doCameraHardwarePushParameters(mHwHandle, mParams) == OK) {
@@ -620,7 +608,7 @@ nsCameraControl::DoPushParameters(PushParametersTask *aPushParameters)
 }
 
 nsresult
-nsCameraControl::DoPullParameters(PullParametersTask *aPullParameters)
+nsGonkCameraControl::DoPullParameters(PullParametersTask *aPullParameters)
 {
   RwAutoLockWrite lock(mRwLock);
   GonkCameraHardware::doCameraHardwarePullParameters(mHwHandle, mParams);
@@ -628,13 +616,13 @@ nsCameraControl::DoPullParameters(PullParametersTask *aPullParameters)
 }
 
 nsresult
-nsCameraControl::DoStartRecording(StartRecordingTask *aStartRecording)
+nsGonkCameraControl::DoStartRecording(StartRecordingTask *aStartRecording)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsresult
-nsCameraControl::DoStopRecording(StopRecordingTask *aStopRecording)
+nsGonkCameraControl::DoStopRecording(StopRecordingTask *aStopRecording)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -645,19 +633,19 @@ nsCameraControl::DoStopRecording(StopRecordingTask *aStopRecording)
 BEGIN_CAMERA_NAMESPACE
 
 void
-GonkCameraReceiveImage(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength)
+GonkCameraReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength)
 {
   gc->TakePictureComplete(aData, aLength);
 }
 
 void
-GonkCameraAutoFocusComplete(nsCameraControl* gc, bool success)
+GonkCameraAutoFocusComplete(nsGonkCameraControl* gc, bool success)
 {
   gc->AutoFocusComplete(success);
 }
 
 void
-GonkCameraReceiveFrame(nsCameraControl* gc, PRUint8* aData, PRUint32 aLength)
+GonkCameraReceiveFrame(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength)
 {
   gc->ReceiveFrame(aData, aLength);
 }

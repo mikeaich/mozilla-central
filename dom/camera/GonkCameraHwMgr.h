@@ -23,7 +23,7 @@ using namespace android;
 
 BEGIN_CAMERA_NAMESPACE
 
-typedef class nsCameraControl GonkCamera;
+typedef class nsGonkCameraControl GonkCamera;
 
 class GonkCameraHardware
 {
