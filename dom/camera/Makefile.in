@@ -22,6 +22,7 @@ CPPSRCS = \
   CameraCapabilities.cpp \
   CameraPictureOptions.cpp \
   CameraControl.cpp \
+  CameraPreview.cpp \
   $(NULL)
 
 ifeq (gonk,$(MOZ_WIDGET_TOOLKIT))

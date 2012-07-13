@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef GONK_IMPL_HW_MGR_H
-#define GONK_IMPL_HW_MGR_H
+#ifndef DOM_CAMERA_GONKCAMERAHWMGR_H
+#define DOM_CAMERA_GONKCAMERAHWMGR_H
 
 
 #include "libcameraservice/CameraHardwareInterface.h"

@@ -100,7 +100,7 @@ public:
     , mOnShutterCb(nsnull)
   { }
 
-  ~nsCameraControl()
+  virtual ~nsCameraControl()
   {
     if (mFileFormat) {
       nsMemory::Free(const_cast<char*>(mFileFormat));
@@ -109,7 +109,6 @@ public:
 
   void TakePictureComplete(PRUint8 *aData, PRUint32 aLength);
   void AutoFocusComplete(bool aSuccess);
-  void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
 
 protected:
   virtual nsresult DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream) = 0;

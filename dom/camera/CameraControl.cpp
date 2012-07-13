@@ -573,14 +573,6 @@ NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, ns
 }
 
 void
-nsCameraControl::ReceiveFrame(PRUint8* aData, PRUint32 aLength)
-{
-  if (mPreview) {
-    mPreview->ReceiveFrame(aData, aLength);
-  }
-}
-
-void
 nsCameraControl::AutoFocusComplete(bool aSuccess)
 {
   /* Auto focusing can change some of the camera's parameters, so

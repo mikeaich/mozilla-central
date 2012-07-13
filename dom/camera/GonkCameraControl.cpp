@@ -11,10 +11,10 @@
 #include "jsapi.h"
 #include "nsThread.h"
 #include "DOMCameraManager.h"
-#include "CameraControl.h"
 #include "GonkCameraHwMgr.h"
 #include "CameraCapabilities.h"
 #include "GonkCameraControl.h"
+#include "GonkCameraPreview.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
@@ -441,7 +441,7 @@ nsGonkCameraControl::DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream)
   nsCOMPtr<CameraPreview> preview = mPreview;
 
   if (!preview) {
-    preview = new CameraPreview(mHwHandle, aGetPreviewStream->mWidth, aGetPreviewStream->mHeight);
+    preview = new GonkCameraPreview(mHwHandle, aGetPreviewStream->mWidth, aGetPreviewStream->mHeight);
     if (!preview) {
       if (NS_FAILED(NS_DispatchToMainThread(new CameraErrorResult(aGetPreviewStream->mOnErrorCb, NS_LITERAL_STRING("OUT_OF_MEMORY"))))) {
         NS_WARNING("Failed to dispatch getPreviewStream() onError callback to main thread!");
@@ -625,6 +625,21 @@ nsresult
 nsGonkCameraControl::DoStopRecording(StopRecordingTask *aStopRecording)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+void
+nsGonkCameraControl::ReceiveFrame(PRUint8* aData, PRUint32 aLength)
+{
+  nsCOMPtr<CameraPreview> preview = mPreview;
+
+  if (preview) {
+    GonkCameraPreview *p = static_cast<GonkCameraPreview *>(preview.get());
+    if (p) {
+      p->ReceiveFrame(aData, aLength);
+    } else {
+      DOM_CAMERA_LOGE("%s:%d : weird pointer problem happened\n");
+    }
+  }
 }
 
 /*

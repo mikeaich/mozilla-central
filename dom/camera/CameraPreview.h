@@ -17,27 +17,29 @@ using namespace mozilla::layers;
 
 BEGIN_CAMERA_NAMESPACE
 
+static const TrackID TRACK_AUDIO = 1;
+static const TrackID TRACK_VIDEO = 2;
+
 class CameraPreview : public nsDOMMediaStream
                     , public MediaStreamListener
 {
 public:
   NS_DECL_ISUPPORTS
 
-  CameraPreview(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight);
-  ~CameraPreview();
+  CameraPreview(PRUint32 aWidth, PRUint32 aHeight);
+  virtual ~CameraPreview();
+
+  void SetFrameRate(PRUint32 aFramesPerSecond);
 
   NS_IMETHODIMP
   GetCurrentTime(double* aCurrentTime) {
     return nsDOMMediaStream::GetCurrentTime(aCurrentTime);
   }
 
-  void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
-
-  void Start();
-  void Stop();
+  virtual void Start() = 0;
+  virtual void Stop() = 0;
 
 protected:
-  PRUint32 mHwHandle;
   PRUint32 mWidth;
   PRUint32 mHeight;
   PRUint32 mFramesPerSecond;
@@ -46,7 +48,6 @@ protected:
   nsRefPtr<mozilla::layers::ImageContainer> mImageContainer;
   VideoSegment mVideoSegment;
   PRUint32 mFrameCount;
-  PRUint32 mDiscardedFrameCount;
 
 private:
   CameraPreview(const CameraPreview&);

@@ -42,6 +42,8 @@ public:
   void SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aLength);
   void PushParameters();
 
+  void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
+
 protected:
   nsresult DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream);
   nsresult DoAutoFocus(AutoFocusTask *aAutoFocus);
