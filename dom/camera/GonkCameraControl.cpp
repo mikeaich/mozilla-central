@@ -694,7 +694,7 @@ nsGonkCameraControl::DoToggleMode(ToggleModeTask *aToggleMode)
   }
   
   // restart preview
-  preview = new CameraPreview(mHwHandle, mVideoFrameWidth, mVideoFrameHeight);
+  preview = new GonkCameraPreview(mHwHandle, mVideoFrameWidth, mVideoFrameHeight);
   if (!preview) {
     result = NS_ERROR_OUT_OF_MEMORY;
     goto bailout;
@@ -702,13 +702,13 @@ nsGonkCameraControl::DoToggleMode(ToggleModeTask *aToggleMode)
   mPreview = preview;
 
   // dispatch success
-  if (NS_FAILED(NS_DispatchToMainThread(new SwitchToVideoModeResult(preview.get(), aSwitchToVideoMode->mOnSuccessCb)))) {
+  if (NS_FAILED(NS_DispatchToMainThread(new ToggleModeResult(preview.get(), aToggleMode->mOnSuccessCb)))) {
     NS_WARNING("Failed to dispatch SwitchToVideoMode() onSuccess callback to main thread!");
   }
   return NS_OK;
 
 bailout:
-  if (NS_FAILED(NS_DispatchToMainThread(new CameraErrorResult(aSwitchToVideoMode->mOnErrorCb, NS_LITERAL_STRING("OUT_OF_MEMORY"))))) {
+  if (NS_FAILED(NS_DispatchToMainThread(new CameraErrorResult(aToggleMode->mOnErrorCb, NS_LITERAL_STRING("OUT_OF_MEMORY"))))) {
     NS_WARNING("Failed to dispatch SwitchToVideoMode() onError callback to main thread!");
   }
   return result;

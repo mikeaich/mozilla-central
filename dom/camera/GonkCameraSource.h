@@ -34,6 +34,7 @@ namespace android {
 class IMemory;
 //class Camera;
 //class Surface;
+class GonkCameraSourceListener;
 
 class GonkCameraSource : public MediaSource, public MediaBufferObserver {
 public:
@@ -189,6 +190,8 @@ protected:
     // Called from dataCallbackTimestamp.
     virtual bool skipCurrentFrame(int64_t timestampUs) {return false;}
 
+    friend class GonkCameraSourceListener;
+
     // Callback called when still camera raw data is available.
     virtual void dataCallback(int32_t msgType, const sp<IMemory> &data) {}
 
@@ -196,8 +199,6 @@ protected:
             const sp<IMemory> &data);
 
 private:
-    friend class GonkCameraSourceListener;
-
     Mutex mLock;
     Condition mFrameAvailableCondition;
     Condition mFrameCompleteCondition;

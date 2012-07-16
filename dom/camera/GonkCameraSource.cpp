@@ -29,6 +29,9 @@
 #include <utils/String8.h>
 #include <cutils/properties.h>
 
+
+USING_CAMERA_NAMESPACE
+
 namespace android {
 
 static const int64_t CAMERA_SOURCE_TIMEOUT_NS = 3000000000LL;
@@ -776,4 +779,4 @@ bool GonkCameraSource::isMetaDataStoredInVideoBuffers() const {
     return mIsMetaDataStoredInVideoBuffers;
 }
 
-}  // namespace android
+} // namespace android
