@@ -30,6 +30,7 @@ class SetParameterTask;
 class GetParameterTask;
 class PushParametersTask;
 class PullParametersTask;
+class ToggleModeTask;
 
 /*
   Main camera control.
@@ -45,6 +46,7 @@ class nsCameraControl : public nsICameraControl
   friend class GetParameterTask;
   friend class PushParametersTask;
   friend class PullParametersTask;
+  friend class ToggleModeTask;
 
 public:
   NS_DECL_ISUPPORTS
@@ -118,6 +120,7 @@ protected:
   virtual nsresult DoStopRecording(StopRecordingTask *aStopRecording) = 0;
   virtual nsresult DoPushParameters(PushParametersTask *aPushParameters) = 0;
   virtual nsresult DoPullParameters(PullParametersTask *aPullParameters) = 0;
+  virtual nsresult DoToggleMode(ToggleModeTask *aToggleMode) = 0;
 
 private:
   nsCameraControl(const nsCameraControl&);
@@ -340,14 +343,14 @@ public:
 };
 
 /*
-  Return the captured video to JS.  Runs on the main thread.
+  Return the resulting preview stream to JS.  Runs on the main thread.
 */
-class StartRecordingResult : public nsRunnable
+class ToggleModeResult : public nsRunnable
 {
 public:
-  StartRecordingResult(nsIDOMMediaStream *aStream, nsICameraStartRecordingCallback *onSuccess)
-    : mStream(aStream)
-    , mOnSuccessCb(onSuccess)
+  ToggleModeResult(nsIDOMMediaStream *aStream, nsICameraPreviewStreamCallback *onSuccess)
+     : mStream(aStream)
+     , mOnSuccessCb(onSuccess)
   { }
 
   NS_IMETHOD Run()
@@ -362,6 +365,61 @@ public:
 
 protected:
   nsCOMPtr<nsIDOMMediaStream> mStream;
+  nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
+};
+
+/*
+  Get the video mode preview stream.
+*/
+class ToggleModeTask : public nsRunnable
+{
+public:
+  ToggleModeTask(nsCameraControl *aCameraControl, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError)
+    : mCameraControl(aCameraControl)
+    , mOnSuccessCb(onSuccess)
+    , mOnErrorCb(onError)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    nsresult rv = mCameraControl->DoToggleMode(this);
+
+    if (NS_FAILED(rv)) {
+      if (NS_FAILED(NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE"))))) {
+        NS_WARNING("Failed to dispatch ToggleMode() onError callback to main thread!");
+      }
+    }
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsCameraControl> mCameraControl;
+  nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
+  nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
+};
+
+/*
+  Return the captured video to JS.  Runs on the main thread.
+*/
+class StartRecordingResult : public nsRunnable
+{
+public:
+  StartRecordingResult(nsAString& aVideoFile, nsICameraStartRecordingCallback *onSuccess)
+    : mVideoFile(aVideoFile)
+    , mOnSuccessCb(onSuccess)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    if (mOnSuccessCb) {
+      mOnSuccessCb->HandleEvent(mVideoFile);
+    }
+    return NS_OK;
+  }
+
+protected:
+  nsString mVideoFile;
   nsCOMPtr<nsICameraStartRecordingCallback> mOnSuccessCb;
 };
 
@@ -371,9 +429,10 @@ protected:
 class StartRecordingTask : public nsRunnable
 {
 public:
-  StartRecordingTask(nsCameraControl *aCameraControl, PRUint32 aWidth, PRUint32 aHeight, nsICameraStartRecordingCallback *onSuccess, nsICameraErrorCallback *onError)
+  StartRecordingTask(nsCameraControl *aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aRotation, nsICameraStartRecordingCallback *onSuccess, nsICameraErrorCallback *onError)
     : mWidth(aWidth)
     , mHeight(aHeight)
+    , mRotation(aRotation)
     , mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
@@ -395,6 +454,7 @@ public:
 
   PRUint32 mWidth;
   PRUint32 mHeight;
+  PRUint32 mRotation;
   nsCOMPtr<nsCameraControl> mCameraControl;
   nsCOMPtr<nsICameraStartRecordingCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;

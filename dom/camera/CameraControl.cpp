@@ -406,6 +406,7 @@ nsCameraControl::StartRecording(const JS::Value & aOptions, nsICameraStartRecord
   /* 0 means not specified, use default value */
   PRUint32 width = 0;
   PRUint32 height = 0;
+  PRUint32 rotation = 0;
 
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
 
@@ -423,9 +424,14 @@ nsCameraControl::StartRecording(const JS::Value & aOptions, nsICameraStartRecord
         height = JSVAL_TO_INT(v);
       }
     }
+    if (JS_GetProperty(cx, options, "rotation", &v)) {
+      if (JSVAL_IS_INT(v)) {
+        rotation = JSVAL_TO_INT(v);
+      }
+    }
   }
 
-  nsCOMPtr<nsIRunnable> startRecordingTask = new StartRecordingTask(this, width, height, onSuccess, onError);
+  nsCOMPtr<nsIRunnable> startRecordingTask = new StartRecordingTask(this, width, height, rotation, onSuccess, onError);
   mCameraThread->Dispatch(startRecordingTask, NS_DISPATCH_NORMAL);
 
   return NS_OK;
@@ -486,7 +492,8 @@ nsCameraControl::AutoFocus(nsICameraAutoFocusCallback *onSuccess, nsICameraError
 }
 
 /* void takePicture (in nsICameraTakePictureCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
-NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
+NS_IMETHODIMP
+nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
   PRUint32 width = 0;
   PRUint32 height = 0;
@@ -568,6 +575,18 @@ NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, ns
 
   nsCOMPtr<nsIRunnable> takePictureTask = new TakePictureTask(this, width, height, rotation, fileFormat, latitude, latitudeSet, longitude, longitudeSet, altitude, altitudeSet, timestamp, timestampSet, onSuccess, onError);
   mCameraThread->Dispatch(takePictureTask, NS_DISPATCH_NORMAL);
+
+  return NS_OK;
+}
+
+/* [implicit_jscontext] void ToggleMode (in nsICameraPreviewStreamCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
+NS_IMETHODIMP
+nsCameraControl::ToggleMode(nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
+{
+  NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
+
+  nsCOMPtr<nsIRunnable> toggleMode = new ToggleModeTask(this, onSuccess, onError);
+  mCameraThread->Dispatch(toggleMode, NS_DISPATCH_NORMAL);
 
   return NS_OK;
 }

@@ -1,6 +1,18 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+/*
+ * Copyright (C) 2012 Mozilla Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef DOM_CAMERA_GONKCAMERACONTROL_H
 #define DOM_CAMERA_GONKCAMERACONTROL_H
@@ -10,27 +22,19 @@
 #include "prrwlock.h"
 #include "CameraControl.h"
 #include "CameraCommon.h"
+#include "GonkRecorder.h"
 
 
 BEGIN_CAMERA_NAMESPACE
 
 class nsGonkCameraControl : public nsCameraControl
 {
- /*
-  friend class GetPreviewStreamTask;
-  friend class AutoFocusTask;
-  friend class TakePictureTask;
-  friend class StartRecordingTask;
-  friend class StopRecordingTask;
-  friend class SetParameterTask;
-  friend class GetParameterTask;
-  friend class PushParametersTask;
-  friend class PullParametersTask;
- */
-
 public:
   nsGonkCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread);
   ~nsGonkCameraControl();
+
+  nsresult SetupRecording();
+  nsresult SetupVideoMode();
 
   const char* GetParameter(const char *aKey);
   const char* GetParameterConstChar(PRUint32 aKey);
@@ -52,14 +56,37 @@ protected:
   nsresult DoStopRecording(StopRecordingTask *aStopRecording);
   nsresult DoPushParameters(PushParametersTask *aPushParameters);
   nsresult DoPullParameters(PullParametersTask *aPullParameters);
+  nsresult DoToggleMode(ToggleModeTask *aToggleMode);
 
-  PRUint32                        mHwHandle;
-  double                          mExpsoureCompensationMin;
-  double                          mExpsoureCompensationStep;
-  bool                            mDeferConfigUpdate;
-  PRRWLock*                       mRwLock;
-  android::CameraParameters       mParams;
+  PRUint32                  mHwHandle;
+  double                    mExpsoureCompensationMin;
+  double                    mExpsoureCompensationStep;
+  bool                      mDeferConfigUpdate;
+  PRRWLock*                 mRwLock;
+  android::CameraParameters mParams;
+
+  android::MediaProfiles*   mMediaProfiles;
+  android::GonkRecorder*    mRecorder;
+
+  PRUint32                  mVideoRotation;
+  PRUint32                  mVideoWidth;
+  PRUint32                  mVideoHeight;
+  nsString                  mVideoFile;
+
+  /* video mode settings */
+  int mDuration;
+  int mVideoFileFormat;
+  int mVideoCodec;
+  int mVideoBitRate;
+  int mVideoFrameRate;
+  int mVideoFrameWidth;
+  int mVideoFrameHeight;
+  int mAudioCodec;
+  int mAudioBitRate;
+  int mAudioSampleRate;
+  int mAudioChannels;
 };
+
 
 /* camera driver callbacks */
 void GonkCameraReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);

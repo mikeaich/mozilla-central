@@ -134,7 +134,7 @@ interface nsICameraTakePictureCallback : nsISupports
 [scriptable, function, uuid(ac43f123-529c-48d3-84dd-ad206b7aca9b)]
 interface nsICameraStartRecordingCallback : nsISupports
 {
-    void handleEvent(in nsIDOMMediaStream stream);
+    void handleEvent(in DOMString filename);
 };
 
 [scriptable, function, uuid(fb80db71-e315-42f0-9ea9-dd3dd312ed70)]
@@ -254,6 +254,10 @@ interface nsICameraControl : nsISupports
        manually restarted (e.g. by calling .play() on it). */
     [implicit_jscontext]
     void takePicture(in nsICameraPictureOptions aOptions, in nsICameraTakePictureCallback onSuccess, [optional] in nsICameraErrorCallback onError);
+
+    /* toggle between the (initial) still-picture mode and video recording mode. */
+    [implicit_jscontext]
+    void toggleMode(in nsICameraPreviewStreamCallback onSuccess, [optional] in nsICameraErrorCallback onError);
 
     /* start recording video; 'aOptions' define the frame size of to
        capture, chosen from capabilities.videoSizes, e.g.:
