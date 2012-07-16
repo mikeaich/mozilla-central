@@ -1,6 +1,18 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+/*
+ * Copyright (C) 2012 Mozilla Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include "VideoUtils.h"
 #include "GonkCameraHwMgr.h"
@@ -11,6 +23,8 @@
 
 
 USING_CAMERA_NAMESPACE
+
+#define YUV_CONVERT_INPLACE   0
 
 void
 GonkCameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
@@ -34,6 +48,7 @@ GonkCameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
   PlanarYCbCrImage *videoImage = static_cast<PlanarYCbCrImage*>(image.get());
 
   if (!mIs420p) {
+#if YUV_CONVERT_INPLACE
     uint8_t* y = aData;
     uint32_t yN = mWidth * mHeight;
     uint32_t uvN = yN / 4;
@@ -77,6 +92,29 @@ GonkCameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
 
     memcpy(y + yN, d, yN / 2);
     delete[] d;
+#else
+    PRUint8* data = new PRUint8[ aLength ];
+    if (!data) {
+      DOM_CAMERA_LOGE("Couldn't allocate de-interlacing buffer\n");
+      delete image;
+      return;
+    }
+
+    // we copy the Y plane, and de-interlace the CrCb
+    PRUint32 yFrameSize = mWidth * mHeight;
+    PRUint32 uvFrameSize = yFrameSize / 4;
+    memcpy(data, aData, yFrameSize);
+
+    PRUint8* uFrame = data + yFrameSize;
+    PRUint8* vFrame = data + yFrameSize + uvFrameSize;
+    const PRUint8* yFrame = aData + yFrameSize;
+    for (PRUint32 i = 0; i < uvFrameSize; i++) {
+      uFrame[i] = yFrame[2 * i + 1];
+      vFrame[i] = yFrame[2 * i];
+    }
+
+    aData = data;
+#endif
   }
 
   const PRUint8 lumaBpp = 8;

@@ -121,6 +121,10 @@ ifdef MOZ_B2G_BT #{
 STATIC_LIBS += mozdbus_s
 endif #}
 
+ifdef MOZ_B2G_CAMERA #{
+OS_LIBS += -lstagefright -lstagefright_omx
+endif #}
+
 ifdef MOZ_IPDL_TESTS
 STATIC_LIBS += ipdlunittest_s
 endif
