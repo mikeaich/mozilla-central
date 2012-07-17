@@ -77,7 +77,8 @@ DoGetCamera::Run()
 
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
-  if (NS_FAILED(NS_DispatchToMainThread(new GetCameraResult(cameraControl, mOnSuccessCb)))) {
+  nsresult rv = NS_DispatchToMainThread(new GetCameraResult(cameraControl, mOnSuccessCb));
+  if (NS_FAILED(rv)) {
     NS_WARNING("Failed to dispatch getCamera() onSuccess callback to main thread!");
   }
   return NS_OK;

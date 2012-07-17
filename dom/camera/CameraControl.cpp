@@ -582,7 +582,8 @@ nsCameraControl::AutoFocusComplete(bool aSuccess)
 
   nsCOMPtr<nsIRunnable> autoFocusResult = new AutoFocusResult(aSuccess, mAutoFocusOnSuccessCb);
 
-  if (NS_FAILED(NS_DispatchToMainThread(autoFocusResult))) {
+  nsresult rv = NS_DispatchToMainThread(autoFocusResult);
+  if (NS_FAILED(rv)) {
     NS_WARNING("Failed to dispatch autoFocus() onSuccess callback to main thread!");
   }
 }
@@ -599,7 +600,8 @@ nsCameraControl::TakePictureComplete(PRUint8* aData, PRUint32 aLength)
   nsIDOMBlob *blob = new nsDOMMemoryFile((void*)data, (PRUint64)aLength, NS_LITERAL_STRING("image/jpeg"));
   nsCOMPtr<nsIRunnable> takePictureResult = new TakePictureResult(blob, mTakePictureOnSuccessCb);
 
-  if (NS_FAILED(NS_DispatchToMainThread(takePictureResult))) {
+  nsresult rv = NS_DispatchToMainThread(takePictureResult);
+  if (NS_FAILED(rv)) {
     NS_WARNING("Failed to dispatch takePicture() onSuccess callback to main thread!");
   }
 }

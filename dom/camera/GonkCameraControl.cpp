@@ -415,31 +415,22 @@ nsGonkCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint3
     return;
   }
 
-  PRUint32 size = aLength * 31;
-  char *s = new char[size];
-  char *p = s;
-  PRUint32 n;
+  nsCString s;
 
   for (PRUint32 i = 0; i < aLength; ++i) {
     CameraRegion *r = &aRegions[i];
-    n = snprintf(p, size, "(%d,%d,%d,%d,%d),", r->mTop, r->mLeft, r->mBottom, r->mRight, r->mWeight);
-    if (n > size) {
-      DOM_CAMERA_LOGE("needed %d bytes for region, but only have %d bytes\n", n, size);
-      delete[] s;
-      return;
-    }
-    size -= n;
-    p += n;
+    s.AppendPrintf("(%d,%d,%d,%d,%d),", r->mTop, r->mLeft, r->mBottom, r->mRight, r->mWeight);
   }
 
-  *(p - 1) = '\0'; /* remove the trailing comma */
+  /* remove the trailing comma */
+  s.Trim(",", false, true, true);
+
   DOM_CAMERA_LOGI("camera region string '%s'\n", s);
 
   {
     RwAutoLockWrite lock(mRwLock);
-    mParams.set(key, s);
+    mParams.set(key, s.get());
   }
-  delete[] s;
   PushParameters();
 }
 
