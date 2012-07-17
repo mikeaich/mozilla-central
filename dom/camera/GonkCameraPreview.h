@@ -7,6 +7,8 @@
 
 
 #include "CameraPreview.h"
+
+#define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
 

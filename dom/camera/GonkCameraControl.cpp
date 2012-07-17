@@ -667,10 +667,10 @@ nsGonkCameraControl::SetupVideoMode()
   // eventually, will try to choose a profile which respects the settings from app
   mParams.setPreviewSize(mVideoFrameWidth, mVideoFrameHeight);
   mParams.setPreviewFrameRate(mVideoFrameRate);
-  snprintf(buffer, SIZE, "%dx%d",mVideoFrameWidth,mVideoFrameHeight);
+  snprintf(buffer, SIZE, "%dx%d", mVideoFrameWidth, mVideoFrameHeight);
   // TODO: "record-size" is probably deprecated in later ICS
   // might need to set "video-size" instead of "record-size"
-  mParams.set("record-size",buffer);
+  mParams.set("record-size", buffer);
   // this is picture during video, for now set the picture size same as video dimensions
   // ideally we should make sure it matches the supported picture sizes
   mParams.setPictureSize(mVideoFrameWidth, mVideoFrameHeight);

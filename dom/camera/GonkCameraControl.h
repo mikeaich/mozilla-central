@@ -21,8 +21,10 @@
 #include "prtypes.h"
 #include "prrwlock.h"
 #include "CameraControl.h"
-#include "CameraCommon.h"
 #include "GonkRecorder.h"
+
+#define DOM_CAMERA_LOG_LEVEL  3
+#include "CameraCommon.h"
 
 
 BEGIN_CAMERA_NAMESPACE
