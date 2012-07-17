@@ -28,56 +28,67 @@ GonkCameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
     mDiscardedFrameCount = 0;
   }
 
+  switch (mFormat) {
+    case GonkCameraHardware::PREVIEW_FORMAT_YUV420SP:
+      {
+        /* de-interlace the u and v planes */
+        uint8_t* y = aData;
+        uint32_t yN = mWidth * mHeight;
+        uint32_t uvN = yN / 4;
+        uint32_t* src = (uint32_t*)( y + yN );
+        uint32_t* d = new uint32_t[ uvN / 2 ];
+        uint32_t* u = d;
+        uint32_t* v = u + uvN / 4;
+
+        /* we're handling pairs of 32-bit words, so divide by 8 */
+        uvN /= 8;
+
+        while( uvN-- ) {
+          uint32_t src0 = *src++;
+          uint32_t src1 = *src++;
+
+          uint32_t u0;
+          uint32_t v0;
+          uint32_t u1;
+          uint32_t v1;
+
+#define DEINTERLACE( u, v, s0, s1 )                             \
+  u = ( (s0) & 0xFF00UL ) >> 8 | ( (s0) & 0xFF000000UL ) >> 16; \
+  u |= ( (s1) & 0xFF00UL ) << 8 | ( (s1) & 0xFF000000UL );      \
+  v = ( (s0) & 0xFFUL ) | ( (s0) & 0xFF0000UL ) >> 8;           \
+  v |= ( (s1) & 0xFFUL ) << 16 | ( (s1) & 0xFF0000UL ) << 8;
+
+          DEINTERLACE( u0, v0, src0, src1 );
+
+          src0 = *src++;
+          src1 = *src++;
+
+          DEINTERLACE( u1, v1, src0, src1 );
+
+          *u++ = u0;
+          *u++ = u1;
+          *v++ = v0;
+          *v++ = v1;
+        }
+
+        memcpy(y + yN, d, yN / 2);
+        delete[] d;
+      }
+      break;
+
+    case GonkCameraHardware::PREVIEW_FORMAT_YUV420P:
+      /* no transformating required */
+      break;
+
+    default:
+      /* in a format we don't handle, get out of here */
+      return;
+  }
+
   Image::Format format = Image::PLANAR_YCBCR;
   nsRefPtr<Image> image = mImageContainer->CreateImage(&format, 1);
   image->AddRef();
   PlanarYCbCrImage *videoImage = static_cast<PlanarYCbCrImage*>(image.get());
-
-  if (!mIs420p) {
-    uint8_t* y = aData;
-    uint32_t yN = mWidth * mHeight;
-    uint32_t uvN = yN / 4;
-    uint32_t* src = (uint32_t*)( y + yN );
-    uint32_t* d = new uint32_t[ uvN / 2 ];
-    uint32_t* u = d;
-    uint32_t* v = u + uvN / 4;
-
-    uint32_t u0;
-    uint32_t v0;
-    uint32_t u1;
-    uint32_t v1;
-
-    uint32_t src0;
-    uint32_t src1;
-
-    uvN /= 8;
-
-    while( uvN-- ) {
-      src0 = *src++;
-      src1 = *src++;
-
-      u0 = ( src0 & 0xFF00UL ) >> 8 | ( src0 & 0xFF000000UL ) >> 16;
-      u0 |= ( src1 & 0xFF00UL ) << 8 | ( src1 & 0xFF000000UL );
-      v0 = ( src0 & 0xFFUL ) | ( src0 & 0xFF0000UL ) >> 8;
-      v0 |= ( src1 & 0xFFUL ) << 16 | ( src1 & 0xFF0000UL ) << 8;
-
-      src0 = *src++;
-      src1 = *src++;
-
-      u1 = ( src0 & 0xFF00UL ) >> 8 | ( src0 & 0xFF000000UL ) >> 16;
-      u1 |= ( src1 & 0xFF00UL ) << 8 | ( src1 & 0xFF000000UL );
-      v1 = ( src0 & 0xFFUL ) | ( src0 & 0xFF0000UL ) >> 8;
-      v1 |= ( src1 & 0xFFUL ) << 16 | ( src1 & 0xFF0000UL ) << 8;
-
-      *u++ = u0;
-      *u++ = u1;
-      *v++ = v0;
-      *v++ = v1;
-    }
-
-    memcpy(y + yN, d, yN / 2);
-    delete[] d;
-  }
 
   const PRUint8 lumaBpp = 8;
   const PRUint8 chromaBpp = 4;
@@ -108,18 +119,15 @@ GonkCameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
 void
 GonkCameraPreview::Start()
 {
-  /*
-  mInput->EndTrack(TRACK_VIDEO);
-  mInput->Finish();
-  */
-
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
 
-  GonkCameraHardware::setCameraHardwarePreviewSize(mHwHandle, mWidth, mHeight);
-  GonkCameraHardware::getCameraHardwarePreviewSize(mHwHandle, &mWidth, &mHeight);
-  SetFrameRate(GonkCameraHardware::getCameraHardwareFps(mHwHandle));
-  if (GonkCameraHardware::doCameraHardwareStartPreview(mHwHandle) == OK) {
-    // mState = HW_STATE_PREVIEW;
+  mFormat = GonkCameraHardware::GetPreviewFormat(mHwHandle);
+
+  GonkCameraHardware::SetPreviewSize(mHwHandle, mWidth, mHeight);
+  GonkCameraHardware::GetPreviewSize(mHwHandle, &mWidth, &mHeight);
+  SetFrameRate(GonkCameraHardware::GetFps(mHwHandle));
+
+  if (GonkCameraHardware::StartPreview(mHwHandle) == OK) {
     DOM_CAMERA_LOGI("preview stream is (actually!) %d x %d (w x h), %d frames per second\n", mWidth, mHeight, mFramesPerSecond);
   } else {
     DOM_CAMERA_LOGE("%s: failed to start preview\n", __func__);
@@ -131,5 +139,7 @@ GonkCameraPreview::Stop()
 {
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
 
-  GonkCameraHardware::doCameraHardwareStopPreview(mHwHandle);
+  GonkCameraHardware::StopPreview(mHwHandle);
+  mInput->EndTrack(TRACK_VIDEO);
+  mInput->Finish();
 }

@@ -13,13 +13,13 @@
 
 
 #define BEGIN_CAMERA_NAMESPACE \
-  namespace mozilla { namespace dom { namespace camera {
+  namespace mozilla {
 
 #define END_CAMERA_NAMESPACE \
-  } /* namespace camera */ } /* namespace dom */ } /* namespace mozilla */
+  } /* namespace mozilla */
 
 #define USING_CAMERA_NAMESPACE \
-  using namespace mozilla::dom::camera;
+  using namespace mozilla;
 
 
 #define DOM_CAMERA_LOG( l, ... )       \

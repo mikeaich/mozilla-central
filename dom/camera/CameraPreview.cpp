@@ -68,7 +68,6 @@ CameraPreview::CameraPreview(PRUint32 aWidth, PRUint32 aHeight)
   , mWidth(aWidth)
   , mHeight(aHeight)
   , mFramesPerSecond(0)
-  , mIs420p(false)
   , mFrameCount(0)
 {
   DOM_CAMERA_LOGI("%s:%d : mWidth=%d, mHeight=%d : this=%p\n", __func__, __LINE__, mWidth, mHeight, this);

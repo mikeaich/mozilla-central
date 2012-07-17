@@ -11,14 +11,14 @@
 
 /* [implicit_jscontext] void getCamera ([optional] in jsval aOptions, in nsICameraGetCameraCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
 NS_IMETHODIMP
-nsDOMCameraManager::GetCamera(const JS::Value & aOptions, nsICameraGetCameraCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
+nsDOMCameraManager::GetCamera(const JS::Value & aOptions, nsICameraGetCameraCallback *onSuccess, nsICameraErrorCallback *onError, JSContext *cx)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* [implicit_jscontext] jsval getListOfCameras (); */
 NS_IMETHODIMP
-nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPARAM)
+nsDOMCameraManager::GetListOfCameras(JSContext *cx, JS::Value *_retval NS_OUTPARAM)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }

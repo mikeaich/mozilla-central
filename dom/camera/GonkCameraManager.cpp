@@ -29,8 +29,7 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
     DOM_CAMERA_LOGE("getListOfCameras : Could not create array object");
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  if (hw_get_module(CAMERA_HARDWARE_MODULE_ID,
-            (const hw_module_t **)&module) < 0) {
+  if (hw_get_module(CAMERA_HARDWARE_MODULE_ID, (const hw_module_t **)&module) < 0) {
     DOM_CAMERA_LOGE("getListOfCameras : Could not load camera HAL module");
     return NS_ERROR_NOT_AVAILABLE;
   }

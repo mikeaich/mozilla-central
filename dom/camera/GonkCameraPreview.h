@@ -19,6 +19,7 @@ public:
     : CameraPreview(aWidth, aHeight)
     , mHwHandle(aHwHandle)
     , mDiscardedFrameCount(0)
+    , mFormat(GonkCameraHardware::PREVIEW_FORMAT_UNKNOWN)
   { }
   ~GonkCameraPreview()
   {
@@ -33,6 +34,7 @@ public:
 protected:
   PRUint32 mHwHandle;
   PRUint32 mDiscardedFrameCount;
+  PRUint32 mFormat;
 
 private:
   GonkCameraPreview(const GonkCameraPreview&);

@@ -16,18 +16,6 @@ BEGIN_CAMERA_NAMESPACE
 
 class nsGonkCameraControl : public nsCameraControl
 {
- /*
-  friend class GetPreviewStreamTask;
-  friend class AutoFocusTask;
-  friend class TakePictureTask;
-  friend class StartRecordingTask;
-  friend class StopRecordingTask;
-  friend class SetParameterTask;
-  friend class GetParameterTask;
-  friend class PushParametersTask;
-  friend class PullParametersTask;
- */
-
 public:
   nsGonkCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread);
   ~nsGonkCameraControl();
@@ -54,17 +42,17 @@ protected:
   nsresult DoPullParameters(PullParametersTask *aPullParameters);
 
   PRUint32                        mHwHandle;
-  double                          mExpsoureCompensationMin;
-  double                          mExpsoureCompensationStep;
+  double                          mExposureCompensationMin;
+  double                          mExposureCompensationStep;
   bool                            mDeferConfigUpdate;
   PRRWLock*                       mRwLock;
   android::CameraParameters       mParams;
 };
 
 /* camera driver callbacks */
-void GonkCameraReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
-void GonkCameraAutoFocusComplete(nsGonkCameraControl* gc, bool success);
-void GonkCameraReceiveFrame(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
+void ReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
+void AutoFocusComplete(nsGonkCameraControl* gc, bool success);
+void ReceiveFrame(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
 
 END_CAMERA_NAMESPACE
 
