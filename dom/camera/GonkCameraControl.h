@@ -55,12 +55,12 @@ protected:
   nsresult DoPushParameters(PushParametersTask *aPushParameters);
   nsresult DoPullParameters(PullParametersTask *aPullParameters);
 
-  PRUint32                        mHwHandle;
-  double                          mExposureCompensationMin;
-  double                          mExposureCompensationStep;
-  bool                            mDeferConfigUpdate;
-  PRRWLock*                       mRwLock;
-  android::CameraParameters       mParams;
+  PRUint32                  mHwHandle;
+  double                    mExposureCompensationMin;
+  double                    mExposureCompensationStep;
+  bool                      mDeferConfigUpdate;
+  PRRWLock*                 mRwLock;
+  android::CameraParameters mParams;
 };
 
 /* camera driver callbacks */

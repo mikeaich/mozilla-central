@@ -95,7 +95,7 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, double *aValue)
   Helper for weighted regions.
 */
 static nsresult
-setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValue, JSContext *cx)
+setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValue, JSContext *cx, PRUint32 aLimit)
 {
   nsCameraControl::CameraRegion *parsedRegions;
   PRUint32 length = 0;
@@ -104,7 +104,10 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValu
     JSObject *regions = JSVAL_TO_OBJECT(aValue);
     if (JS_IsArrayObject(cx, regions)) {
       if (JS_GetArrayLength(cx, regions, &length)) {
-        DOM_CAMERA_LOGI("%s:%d : got %d regions\n", __func__, __LINE__, length);
+        DOM_CAMERA_LOGI("%s:%d : got %d regions (limited to %d)\n", __func__, __LINE__, length, aLimit);
+        if (length > aLimit) {
+          length = aLimit;
+        }
         parsedRegions = new nsCameraControl::CameraRegion[length];
         for (PRUint32 i = 0; i < length; ++i) {
           jsval v;
@@ -300,7 +303,7 @@ nsCameraControl::GetMeteringAreas(JSContext *cx, JS::Value *aMeteringAreas)
 NS_IMETHODIMP
 nsCameraControl::SetMeteringAreas(JSContext *cx, const JS::Value & aMeteringAreas)
 {
-  return setHelper(this, CAMERA_PARAM_METERINGAREAS, aMeteringAreas, cx);
+  return setHelper(this, CAMERA_PARAM_METERINGAREAS, aMeteringAreas, cx, mMaxMeteringAreas);
 }
 
 /* attribute jsval focusAreas; */
@@ -312,7 +315,7 @@ nsCameraControl::GetFocusAreas(JSContext *cx, JS::Value *aFocusAreas)
 NS_IMETHODIMP
 nsCameraControl::SetFocusAreas(JSContext *cx, const JS::Value & aFocusAreas)
 {
-  return setHelper(this, CAMERA_PARAM_FOCUSAREAS, aFocusAreas, cx);
+  return setHelper(this, CAMERA_PARAM_FOCUSAREAS, aFocusAreas, cx, mMaxFocusAreas);
 }
 
 /* readonly attribute double focalLength; */

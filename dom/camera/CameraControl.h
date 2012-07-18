@@ -91,6 +91,8 @@ public:
     , mCapabilities(nsnull)
     , mPreview(nsnull)
     , mFileFormat(nsnull)
+    , mMaxMeteringAreas(0)
+    , mMaxFocusAreas(0)
     , mAutoFocusOnSuccessCb(nsnull)
     , mAutoFocusOnErrorCb(nsnull)
     , mTakePictureOnSuccessCb(nsnull)
@@ -132,6 +134,8 @@ protected:
   PRUint32                        mPreviewHeight;
   nsCOMPtr<CameraPreview>         mPreview;
   const char*                     mFileFormat;
+  PRUint32                        mMaxMeteringAreas;
+  PRUint32                        mMaxFocusAreas;
 
   nsCOMPtr<nsICameraAutoFocusCallback>      mAutoFocusOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback>          mAutoFocusOnErrorCb;

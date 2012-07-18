@@ -91,9 +91,13 @@ nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread *aCameraT
   /* Grab any settings we'll need later */
   mExposureCompensationMin = mParams.getFloat(CameraParameters::KEY_MIN_EXPOSURE_COMPENSATION);
   mExposureCompensationStep = mParams.getFloat(CameraParameters::KEY_EXPOSURE_COMPENSATION_STEP);
+  mMaxMeteringAreas = mParams.getInt(CameraParameters::KEY_MAX_NUM_METERING_AREAS);
+  mMaxFocusAreas = mParams.getInt(CameraParameters::KEY_MAX_NUM_FOCUS_AREAS);
 
   DOM_CAMERA_LOGI("minimum exposure compensation = %f\n", mExposureCompensationMin);
   DOM_CAMERA_LOGI("exposure compensation step = %f\n", mExposureCompensationStep);
+  DOM_CAMERA_LOGI("maximum metering areas = %d\n", mMaxMeteringAreas);
+  DOM_CAMERA_LOGI("maximum focus areas = %d\n", mMaxFocusAreas);
 }
 
 nsGonkCameraControl::~nsGonkCameraControl()
