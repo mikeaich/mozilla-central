@@ -5,8 +5,6 @@
 #ifndef DOM_CAMERA_NSCAMERACONTROL_H
 #define DOM_CAMERA_NSCAMERACONTROL_H
 
-
-// #include "utils/StrongPointer.h"
 #include "camera/CameraParameters.h"
 #include "prtypes.h"
 #include "nsCOMPtr.h"
@@ -18,8 +16,7 @@
 #define DOM_CAMERA_LOG_LEVEL 3
 #include "CameraCommon.h"
 
-
-BEGIN_CAMERA_NAMESPACE
+namespace mozilla {
 
 class GetPreviewStreamTask;
 class AutoFocusTask;
@@ -32,9 +29,7 @@ class PushParametersTask;
 class PullParametersTask;
 class SwitchToVideoModeTask;
 
-/*
-  Main camera control.
-*/
+// Main camera control.
 class nsCameraControl : public nsICameraControl
 {
   friend class GetPreviewStreamTask;
@@ -115,14 +110,14 @@ public:
   void AutoFocusComplete(bool aSuccess);
 
 protected:
-  virtual nsresult DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream) = 0;
-  virtual nsresult DoAutoFocus(AutoFocusTask *aAutoFocus) = 0;
-  virtual nsresult DoTakePicture(TakePictureTask *aTakePicture) = 0;
-  virtual nsresult DoStartRecording(StartRecordingTask *aStartRecording) = 0;
-  virtual nsresult DoStopRecording(StopRecordingTask *aStopRecording) = 0;
-  virtual nsresult DoPushParameters(PushParametersTask *aPushParameters) = 0;
-  virtual nsresult DoPullParameters(PullParametersTask *aPullParameters) = 0;
-  virtual nsresult DoSwitchToVideoMode(SwitchToVideoModeTask *aSwitchToVideoMode) = 0;
+  virtual nsresult GetPreviewStreamImpl(GetPreviewStreamTask *aGetPreviewStream) = 0;
+  virtual nsresult AutoFocusImpl(AutoFocusTask *aAutoFocus) = 0;
+  virtual nsresult TakePictureImpl(TakePictureTask *aTakePicture) = 0;
+  virtual nsresult StartRecordingImpl(StartRecordingTask *aStartRecording) = 0;
+  virtual nsresult StopRecordingImpl(StopRecordingTask *aStopRecording) = 0;
+  virtual nsresult PushParametersImpl(PushParametersTask *aPushParameters) = 0;
+  virtual nsresult PullParametersImpl(PullParametersTask *aPullParameters) = 0;
+  virtual nsresult SwitchToVideoModeImpl(SwitchToVideoModeTask *aSwitchToVideoMode) = 0;
 
 private:
   nsCameraControl(const nsCameraControl&);
@@ -149,9 +144,7 @@ protected:
   nsCOMPtr<nsICameraShutterCallback>        mOnShutterCb;
 };
 
-/*
-  Return the resulting preview stream to JS.  Runs on the main thread.
-*/
+// Return the resulting preview stream to JS.  Runs on the main thread.
 class GetPreviewStreamResult : public nsRunnable
 {
 public:
@@ -175,9 +168,7 @@ protected:
   nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
 };
 
-/*
-  Get the desired preview stream.
-*/
+// Get the desired preview stream.
 class GetPreviewStreamTask : public nsRunnable
 {
 public:
@@ -191,13 +182,11 @@ public:
 
   NS_IMETHOD Run()
   {
-    nsresult rv = mCameraControl->DoGetPreviewStream(this);
+    nsresult rv = mCameraControl->GetPreviewStreamImpl(this);
 
     if (NS_FAILED(rv)) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
-      if (NS_FAILED(rv)) {
-        NS_WARNING("Failed to dispatch getPreviewStream() onError callback to main thread!");
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
     }
     return NS_OK;
   }
@@ -209,9 +198,7 @@ public:
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
 
-/*
-  Return the autofocus status to JS.  Runs on the main thread.
-*/
+// Return the autofocus status to JS.  Runs on the main thread.
 class AutoFocusResult : public nsRunnable
 {
 public:
@@ -235,9 +222,7 @@ protected:
   nsCOMPtr<nsICameraAutoFocusCallback> mOnSuccessCb;
 };
 
-/*
-  Autofocus the camera.
-*/
+// Autofocus the camera.
 class AutoFocusTask : public nsRunnable
 {
 public:
@@ -250,14 +235,12 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoAutoFocus(this);
+    nsresult rv = mCameraControl->AutoFocusImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv)) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
-      if (NS_FAILED(rv)) {
-        NS_WARNING("Failed to dispatch takePicture() onError callback to main thread!");
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
     }
     return NS_OK;
   }
@@ -267,9 +250,7 @@ public:
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
 
-/*
-  Return the captured picture to JS.  Runs on the main thread.
-*/
+// Return the captured picture to JS.  Runs on the main thread.
 class TakePictureResult : public nsRunnable
 {
 public:
@@ -293,9 +274,7 @@ protected:
   nsCOMPtr<nsICameraTakePictureCallback> mOnSuccessCb;
 };
 
-/*
-  Capture a still image with the camera.
-*/
+// Capture a still image with the camera.
 class TakePictureTask : public nsRunnable
 {
 public:
@@ -320,14 +299,12 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoTakePicture(this);
+    nsresult rv = mCameraControl->TakePictureImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv)) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
-      if (NS_FAILED(rv)) {
-        NS_WARNING("Failed to dispatch takePicture() onError callback to main thread!");
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
     }
     return NS_OK;
   }
@@ -349,9 +326,7 @@ public:
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
 
-/*
-  Return the resulting preview stream to JS.  Runs on the main thread.
-*/
+// Return the resulting preview stream to JS.  Runs on the main thread.
 class SwitchToVideoModeResult : public nsRunnable
 {
 public:
@@ -375,9 +350,7 @@ protected:
   nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
 };
 
-/*
-  Get the video mode preview stream.
-*/
+// Get the video mode preview stream.
 class SwitchToVideoModeTask : public nsRunnable
 {
 public:
@@ -389,7 +362,7 @@ public:
 
   NS_IMETHOD Run()
   {
-    nsresult rv = mCameraControl->DoSwitchToVideoMode(this);
+    nsresult rv = mCameraControl->SwitchToVideoModeImpl(this);
 
     if (NS_FAILED(rv)) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
@@ -405,9 +378,7 @@ public:
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
 
-/*
-  Return the captured video to JS.  Runs on the main thread.
-*/
+// Return the captured video to JS.  Runs on the main thread.
 class StartRecordingResult : public nsRunnable
 {
 public:
@@ -431,9 +402,7 @@ protected:
   nsCOMPtr<nsICameraStartRecordingCallback> mOnSuccessCb;
 };
 
-/*
-  Start video recording.
-*/
+// Start video recording.
 class StartRecordingTask : public nsRunnable
 {
 public:
@@ -449,14 +418,12 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoStartRecording(this);
+    nsresult rv = mCameraControl->StartRecordingImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv)) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
-      if (NS_FAILED(rv)) {
-        NS_WARNING("Failed to dispatch startRecording() onError callback to main thread!");
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
     }
     return NS_OK;
   }
@@ -469,9 +436,7 @@ public:
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
 
-/*
-  Stop video recording.
-*/
+// Stop video recording.
 class StopRecordingTask : public nsRunnable
 {
 public:
@@ -482,21 +447,17 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoStopRecording(this);
+    nsresult rv = mCameraControl->StopRecordingImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
-    if (NS_FAILED(rv)) {
-      NS_WARNING("Failed to dispatch stopRecording()!");
-    }
+    NS_ENSURE_SUCCESS(rv, rv);
     return NS_OK;
   }
 
   nsCOMPtr<nsCameraControl> mCameraControl;
 };
 
-/*
-  Pushes all camera parameters to the camera.
-*/
+// Pushes all camera parameters to the camera.
 class PushParametersTask : public nsRunnable
 {
 public:
@@ -507,21 +468,17 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoPushParameters(this);
+    nsresult rv = mCameraControl->PushParametersImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
-    if (NS_FAILED(rv)) {
-      NS_WARNING("Failed to dispatch setParameter() to camera!");
-    }
+    NS_ENSURE_SUCCESS(rv, rv);
     return NS_OK;
   }
 
   nsCOMPtr<nsCameraControl> mCameraControl;
 };
 
-/*
-  Get all camera parameters from the camera.
-*/
+// Get all camera parameters from the camera.
 class PullParametersTask : public nsRunnable
 {
 public:
@@ -532,19 +489,16 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoPullParameters(this);
+    nsresult rv = mCameraControl->PullParametersImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
-    if (NS_FAILED(rv)) {
-      NS_WARNING("Failed to dispatch getParameter() to camera!");
-    }
+    NS_ENSURE_SUCCESS(rv, rv);
     return NS_OK;
   }
 
   nsCOMPtr<nsCameraControl> mCameraControl;
 };
 
-END_CAMERA_NAMESPACE
-
+} // namespace mozilla
 
 #endif // DOM_CAMERA_NSCAMERACONTROL_H

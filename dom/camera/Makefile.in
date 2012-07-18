@@ -31,10 +31,10 @@ CPPSRCS += \
   GonkCameraControl.cpp \
   GonkCameraHwMgr.cpp \
   GonkCameraPreview.cpp \
-  CameraNativeWindow.cpp \
   GonkRecorder.cpp \
   GonkCameraSource.cpp \
   AudioParameter.cpp \
+  GonkNativeWindow.cpp \
   $(NULL)
 else
 CPPSRCS += \

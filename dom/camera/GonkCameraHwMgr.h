@@ -17,7 +17,6 @@
 #ifndef DOM_CAMERA_GONKCAMERAHWMGR_H
 #define DOM_CAMERA_GONKCAMERAHWMGR_H
 
-
 #include "libcameraservice/CameraHardwareInterface.h"
 #include "binder/IMemory.h"
 #include "mozilla/ReentrantMonitor.h"
@@ -33,11 +32,10 @@
 #define GIHM_TIMING_RECEIVEFRAME    0
 #define GIHM_TIMING_OVERALL         1
 
-
 using namespace mozilla;
 using namespace android;
 
-BEGIN_CAMERA_NAMESPACE
+namespace mozilla {
 
 typedef class nsGonkCameraControl GonkCamera;
 
@@ -48,15 +46,15 @@ protected:
   ~GonkCameraHardware();
   void init();
 
-  static void                   DataCallbackTimestamp(nsecs_t timestamp, int32_t aMsgType, const sp<IMemory> &aDataPtr, void* aUser);
-  static void                   DataCallback(int32_t aMsgType, const sp<IMemory> &aDataPtr, camera_frame_metadata_t *aMetadata, void* aUser);
-  static void                   NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2, void* aUser);
+  static void                   DataCallbackTimestamp(nsecs_t timestamp, int32_t aMsgType, const sp<IMemory> &aDataPtr, void *aUser);
+  static void                   DataCallback(int32_t aMsgType, const sp<IMemory> &aDataPtr, camera_frame_metadata_t *aMetadata, void *aUser);
+  static void                   NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2, void *aUser);
 
 public:
   static void                   ReleaseHandle(PRUint32 aHwHandle);
-  static PRUint32               GetHandle(GonkCamera* aTarget, PRUint32 aCamera);
+  static PRUint32               GetHandle(GonkCamera *aTarget, PRUint32 aCamera);
   static PRUint32               GetFps(PRUint32 aHwHandle);
-  static void                   GetPreviewSize(PRUint32 aHwHandle, PRUint32* aWidth, PRUint32* aHeight);
+  static void                   GetPreviewSize(PRUint32 aHwHandle, PRUint32 *aWidth, PRUint32 *aHeight);
   static void                   SetPreviewSize(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight);
   static int                    AutoFocus(PRUint32 aHwHandle);
   static void                   CancelAutoFocus(PRUint32 aHwHandle);
@@ -84,23 +82,22 @@ protected:
   static GonkCameraHardware*    sHw;
   static PRUint32               sHwHandle;
 
-  static GonkCameraHardware*    getCameraHardware(PRUint32 aHwHandle)
+  static GonkCameraHardware*    GetHardware(PRUint32 aHwHandle)
   {
     if (aHwHandle == sHwHandle) {
-      /*
-        In the initial case, sHw will be null and sHwHandle will be 0,
-        so even if this function is called with aHwHandle = 0, the
-        result will still be null.
-      */
+      /**
+       * In the initial case, sHw will be null and sHwHandle will be 0,
+       * so even if this function is called with aHwHandle = 0, the
+       * result will still be null.
+       */
       return sHw;
-    } else {
-      return nsnull;
     }
+    return nsnull;
   }
 
-  /* instance wrappers to make member function access easier */
-  void setPreviewSize(PRUint32 aWidth, PRUint32 aHeight);
-  int startPreview();
+  // Instance wrappers to make member function access easier.
+  void SetPreviewSize(PRUint32 aWidth, PRUint32 aHeight);
+  int StartPreview();
 
   PRUint32                      mCamera;
   PRUint32                      mWidth;
@@ -122,7 +119,7 @@ protected:
   sp<GonkCameraListener>        mListener;
   bool                          mInitialized;
 
-  bool initialized()
+  bool IsInitialized()
   {
     return mInitialized;
   }
@@ -132,7 +129,6 @@ private:
   GonkCameraHardware& operator=(const GonkCameraHardware&);
 };
 
-END_CAMERA_NAMESPACE
-
+} // namespace mozilla
 
 #endif // GONK_IMPL_HW_MGR_H

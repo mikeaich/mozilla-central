@@ -14,8 +14,7 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-
-USING_CAMERA_NAMESPACE
+using namespace mozilla;
 
 DOMCI_DATA(CameraControl, nsICameraControl)
 
@@ -28,9 +27,7 @@ NS_INTERFACE_MAP_END
 NS_IMPL_ADDREF(nsCameraControl)
 NS_IMPL_RELEASE(nsCameraControl)
 
-/*
-  Helpers for reading optional integer properties.
-*/
+//  Helpers for reading optional integer properties.
 static PRUint32
 getPropertyHelper(JSContext *cx, JSObject *o, const char *prop, PRUint32 aDefault)
 {
@@ -51,9 +48,7 @@ getPropertyHelper(JSContext *cx, JSObject *o, const char *prop, PRInt32 aDefault
   return aDefault;
 }
 
-/*
-  Helpers for string properties.
-*/
+// Helpers for string properties.
 static inline nsresult
 setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const nsAString& aValue)
 {
@@ -73,9 +68,7 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, nsAString& aValue)
   return NS_OK;
 }
 
-/*
-  Helpers for doubles.
-*/
+// Helpers for doubles.
 static inline nsresult
 setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, double aValue)
 {
@@ -91,9 +84,7 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, double *aValue)
   return NS_OK;
 }
 
-/*
-  Helper for weighted regions.
-*/
+// Helper for weighted regions.
 static nsresult
 setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValue, JSContext *cx, PRUint32 aLimit)
 {
@@ -120,7 +111,7 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValu
             nsCameraControl::CameraRegion* parsed = &parsedRegions[i];
             JSObject *r = JSVAL_TO_OBJECT(v);
 
-            /* TODO: move the Gonk-specific default values somewhere else */
+            // TODO: move the Gonk-specific default values somewhere else
             parsed->mTop = getPropertyHelper(cx, r, "top", PRInt32(-1000));
             parsed->mLeft = getPropertyHelper(cx, r, "left", PRInt32(-1000));
             parsed->mBottom = getPropertyHelper(cx, r, "bottom", PRInt32(1000));
@@ -555,10 +546,12 @@ nsCameraControl::SwitchToVideoMode(nsICameraPreviewStreamCallback *onSuccess, ns
 void
 nsCameraControl::AutoFocusComplete(bool aSuccess)
 {
-  /* Auto focusing can change some of the camera's parameters, so
-     we need to pull a new set before sending the result to the
-     main thread. */
-  DoPullParameters(nsnull);
+  /**
+   * Auto focusing can change some of the camera's parameters, so
+   * we need to pull a new set before sending the result to the
+   * main thread.
+   */
+  PullParametersImpl(nsnull);
 
   nsCOMPtr<nsIRunnable> autoFocusResult = new AutoFocusResult(aSuccess, mAutoFocusOnSuccessCb);
 
@@ -575,8 +568,10 @@ nsCameraControl::TakePictureComplete(PRUint8* aData, PRUint32 aLength)
 
   memcpy(data, aData, aLength);
 
-  /* TODO: pick up the actual specified picture format for the MIME type;
-     for now, assume we'll be using JPEGs. */
+  /**
+   * TODO: pick up the actual specified picture format for the MIME type;
+   * for now, assume we'll be using JPEGs.
+   */
   nsIDOMBlob *blob = new nsDOMMemoryFile((void*)data, (PRUint64)aLength, NS_LITERAL_STRING("image/jpeg"));
   nsCOMPtr<nsIRunnable> takePictureResult = new TakePictureResult(blob, mTakePictureOnSuccessCb);
 

@@ -1,5 +1,22 @@
-#ifndef __CAMERA_NATIVE_WINDOW_H
-#define __CAMERA_NATIVE_WINDOW_H
+/*
+ * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (C) 2012 Mozilla Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef DOM_CAMERA_GONKNATIVEWINDOW_H
+#define DOM_CAMERA_GONKNATIVEWINDOW_H
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -16,18 +33,15 @@
 
 namespace android {
 
-class CameraNativeWindow
-    : public EGLNativeBase<ANativeWindow, CameraNativeWindow, RefBase>
+class GonkNativeWindow : public EGLNativeBase<ANativeWindow, GonkNativeWindow, RefBase>
 {
 public:
     enum { MIN_UNDEQUEUED_BUFFERS = 2 };
-    enum {
-        MIN_BUFFER_SLOTS  = MIN_UNDEQUEUED_BUFFERS
-    };
+    enum { MIN_BUFFER_SLOTS = MIN_UNDEQUEUED_BUFFERS };
     enum { NUM_BUFFER_SLOTS = 32 };
 
-    CameraNativeWindow();
-    ~CameraNativeWindow(); // this class cannot be overloaded
+    GonkNativeWindow();
+    ~GonkNativeWindow(); // this class cannot be overloaded
 
     // ANativeWindow hooks
     static int hook_cancelBuffer(ANativeWindow* window, ANativeWindowBuffer* buffer);
@@ -39,7 +53,6 @@ public:
     static int hook_setSwapInterval(ANativeWindow* window, int interval);
 
 protected:
-
     virtual int cancelBuffer(ANativeWindowBuffer* buffer);
     virtual int dequeueBuffer(ANativeWindowBuffer** buffer);
     virtual int lockBuffer(ANativeWindowBuffer* buffer);
@@ -176,4 +189,4 @@ private:
 
 }; // namespace android
 
-#endif // __CAMERA_NATIVE_WINDOW_H
+#endif // DOM_CAMERA_GONKNATIVEWINDOW_H

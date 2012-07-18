@@ -17,7 +17,6 @@
 #ifndef DOM_CAMERA_GONKCAMERACONTROL_H
 #define DOM_CAMERA_GONKCAMERACONTROL_H
 
-
 #include "prtypes.h"
 #include "prrwlock.h"
 #include "CameraControl.h"
@@ -26,8 +25,7 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-
-BEGIN_CAMERA_NAMESPACE
+namespace mozilla {
 
 class nsGonkCameraControl : public nsCameraControl
 {
@@ -51,14 +49,14 @@ public:
   void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
 
 protected:
-  nsresult DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream);
-  nsresult DoAutoFocus(AutoFocusTask *aAutoFocus);
-  nsresult DoTakePicture(TakePictureTask *aTakePicture);
-  nsresult DoStartRecording(StartRecordingTask *aStartRecording);
-  nsresult DoStopRecording(StopRecordingTask *aStopRecording);
-  nsresult DoPushParameters(PushParametersTask *aPushParameters);
-  nsresult DoPullParameters(PullParametersTask *aPullParameters);
-  nsresult DoSwitchToVideoMode(SwitchToVideoModeTask *aSwitchToVideoMode);
+  nsresult GetPreviewStreamImpl(GetPreviewStreamTask *aGetPreviewStream);
+  nsresult AutoFocusImpl(AutoFocusTask *aAutoFocus);
+  nsresult TakePictureImpl(TakePictureTask *aTakePicture);
+  nsresult StartRecordingImpl(StartRecordingTask *aStartRecording);
+  nsresult StopRecordingImpl(StopRecordingTask *aStopRecording);
+  nsresult PushParametersImpl(PushParametersTask *aPushParameters);
+  nsresult PullParametersImpl(PullParametersTask *aPullParameters);
+  nsresult SwitchToVideoModeImpl(SwitchToVideoModeTask *aSwitchToVideoMode);
 
   PRUint32                  mHwHandle;
   double                    mExposureCompensationMin;
@@ -89,13 +87,11 @@ protected:
   int mAudioChannels;
 };
 
-
-/* camera driver callbacks */
+// camera driver callbacks
 void ReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
 void AutoFocusComplete(nsGonkCameraControl* gc, bool success);
 void ReceiveFrame(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
 
-END_CAMERA_NAMESPACE
-
+} // namespace mozilla
 
 #endif // DOM_CAMERA_GONKCAMERACONTROL_H

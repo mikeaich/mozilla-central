@@ -5,7 +5,6 @@
 #ifndef DOM_CAMERA_CAMERAPREVIEW_H
 #define DOM_CAMERA_CAMERAPREVIEW_H
 
-
 #include "MediaStreamGraph.h"
 #include "StreamBuffer.h"
 #include "nsDOMMediaStream.h"
@@ -13,14 +12,10 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-
 using namespace mozilla;
 using namespace mozilla::layers;
 
-BEGIN_CAMERA_NAMESPACE
-
-static const TrackID TRACK_AUDIO = 1;
-static const TrackID TRACK_VIDEO = 2;
+namespace mozilla {
 
 class CameraPreview : public nsDOMMediaStream
                     , public MediaStreamListener
@@ -50,12 +45,13 @@ protected:
   VideoSegment mVideoSegment;
   PRUint32 mFrameCount;
 
+  enum { TRACK_VIDEO = 1 };
+
 private:
   CameraPreview(const CameraPreview&);
   CameraPreview& operator=(const CameraPreview&);
 };
 
-END_CAMERA_NAMESPACE
-
+} // namespace mozilla
 
 #endif // DOM_CAMERA_CAMERAPREVIEW_H

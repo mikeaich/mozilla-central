@@ -5,12 +5,10 @@
 #ifndef DOM_CAMERA_NSCAMERACAPABILITIES_H
 #define DOM_CAMERA_NSCAMERACAPABILITIES_H
 
-
 #include "CameraControl.h"
 #include "nsAutoPtr.h"
 
-
-BEGIN_CAMERA_NAMESPACE
+namespace mozilla {
 
 class nsCameraCapabilities : public nsICameraCapabilities
 {
@@ -45,7 +43,6 @@ protected:
   nsCOMPtr<nsCameraControl> mCamera;
 };
 
-END_CAMERA_NAMESPACE
-
+} // namespace mozilla
 
 #endif // DOM_CAMERA_NSCAMERACAPABILITIES_H

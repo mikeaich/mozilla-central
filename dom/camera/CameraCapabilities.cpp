@@ -13,10 +13,8 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-
 using namespace android;
-
-USING_CAMERA_NAMESPACE
+using namespace mozilla;
 
 DOMCI_DATA(CameraCapabilities, nsICameraCapabilities)
 

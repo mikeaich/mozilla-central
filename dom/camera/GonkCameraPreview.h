@@ -17,14 +17,12 @@
 #ifndef DOM_CAMERA_GONKCAMERAPREVIEW_H
 #define DOM_CAMERA_GONKCAMERAPREVIEW_H
 
-
 #include "CameraPreview.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-
-BEGIN_CAMERA_NAMESPACE
+namespace mozilla {
 
 class GonkCameraPreview : public CameraPreview
 {
@@ -55,8 +53,7 @@ private:
   GonkCameraPreview& operator=(const GonkCameraPreview&);
 };
 
-END_CAMERA_NAMESPACE
-
+} // namespace mozilla
 
 #endif // DOM_CAMERA_GONKCAMERAPREVIEW_H
  

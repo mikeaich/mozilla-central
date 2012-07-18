@@ -16,16 +16,12 @@
 
 #include "nsDebug.h"
 #include "GonkCameraHwMgr.h"
-
-
-// config
-#define GIHM_STUB_NATIVEWINDOW      0
+#include "GonkNativeWindow.h"
 
 #define DOM_CAMERA_LOG_LEVEL        3
 #include "CameraCommon.h"
 
-
-USING_CAMERA_NAMESPACE
+using namespace mozilla;
 
 #if GIHM_TIMING_RECEIVEFRAME
 #define INCLUDE_TIME_H                  1
@@ -37,7 +33,7 @@ USING_CAMERA_NAMESPACE
 #if INCLUDE_TIME_H
 #include <time.h>
 
-static __inline void timespecSubtract(struct timespec* a, struct timespec* b)
+static __inline void timespecSubtract(struct timespec *a, struct timespec *b)
 {
   // a = b - a
   if (b->tv_nsec < a->tv_nsec) {
@@ -49,49 +45,7 @@ static __inline void timespecSubtract(struct timespec* a, struct timespec* b)
 }
 #endif
 
-
-#if GIHM_STUB_NATIVEWINDOW
-// to be replaced by GonkNativeWindow.(h|cpp)
-int WindowSetSwapInterval(struct ANativeWindow* window, int interval) {
-  return 0;
-}
-
-int WindowDequeueBuffer(struct ANativeWindow* window, struct ANativeWindowBuffer** buffer) {
-  return 0;
-}
-
-int WindowLockBuffer(struct ANativeWindow* window, struct ANativeWindowBuffer* buffer) {
-  return 0;
-}
-
-int WindowQueueBuffer(struct ANativeWindow* window, struct ANativeWindowBuffer* buffer) {
-  return 0;
-}
-
-int WindowQuery(const struct ANativeWindow* window, int what, int* value) {
-  return 0;
-}
-
-int WindowPerform(struct ANativeWindow* window, int operation, ... ) {
-  return 0;
-}
-
-int WindowCancelBuffer(struct ANativeWindow* window, struct ANativeWindowBuffer* buffer) {
-  return 0;
-}
-
-void WindowIncRef(struct android_native_base_t* base) {
-
-}
-
-void WindowDecRef(struct android_native_base_t* base) {
-
-}
-#else
-#include "CameraNativeWindow.h"
-#endif
-
-GonkCameraHardware::GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera)
+GonkCameraHardware::GonkCameraHardware(GonkCamera *aTarget, PRUint32 aCamera)
   : mCamera(aCamera)
   , mFps(30)
   , mPreviewFormat(PREVIEW_FORMAT_UNKNOWN)
@@ -101,15 +55,15 @@ GonkCameraHardware::GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera)
   , mTarget(aTarget)
   , mInitialized(false)
 {
-  DOM_CAMERA_LOGI( "%s: this = %p (aTarget = %p)\n", __func__, (void*)this, (void*)aTarget );
+  DOM_CAMERA_LOGI( "%s: this = %p (aTarget = %p)\n", __func__, (void *)this, (void *)aTarget );
   init();
 }
 
 // Android data callback
 void
-GonkCameraHardware::DataCallback(int32_t aMsgType, const sp<IMemory> &aDataPtr, camera_frame_metadata_t *aMetadata, void* aUser)
+GonkCameraHardware::DataCallback(int32_t aMsgType, const sp<IMemory> &aDataPtr, camera_frame_metadata_t *aMetadata, void *aUser)
 {
-  GonkCameraHardware* hw = getCameraHardware((PRUint32)aUser);
+  GonkCameraHardware *hw = GetHardware((PRUint32)aUser);
   if (!hw) {
     DOM_CAMERA_LOGW("%s:aUser = %d resolved to no camera hw\n", __func__, (PRUint32)aUser);
     return;
@@ -118,7 +72,7 @@ GonkCameraHardware::DataCallback(int32_t aMsgType, const sp<IMemory> &aDataPtr, 
     return;
   }
 
-  GonkCamera* camera = hw->mTarget;
+  GonkCamera *camera = hw->mTarget;
   if (camera) {
     switch (aMsgType) {
       case CAMERA_MSG_PREVIEW_FRAME:
@@ -143,7 +97,7 @@ void
 GonkCameraHardware::NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2, void* aUser)
 {
   bool bSuccess;
-  GonkCameraHardware* hw = getCameraHardware((PRUint32)aUser);
+  GonkCameraHardware *hw = GetHardware((PRUint32)aUser);
   if (!hw) {
     DOM_CAMERA_LOGW("%s:aUser = %d resolved to no camera hw\n", __func__, (PRUint32)aUser);
     return;
@@ -152,7 +106,7 @@ GonkCameraHardware::NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2,
     return;
   }
 
-  GonkCamera* camera = hw->mTarget;
+  GonkCamera *camera = hw->mTarget;
   if (!camera) {
     return;
   }
@@ -210,10 +164,9 @@ GonkCameraHardware::DataCallbackTimestamp(nsecs_t timestamp, int32_t aMsgType, c
 void
 GonkCameraHardware::init()
 {
-  DOM_CAMERA_LOGI( "%s: this = %p\n", __func__, (void*)this );
+  DOM_CAMERA_LOGI( "%s: this = %p\n", __func__, (void *)this );
 
-  if (hw_get_module(CAMERA_HARDWARE_MODULE_ID,
-            (const hw_module_t **)&mModule) < 0) {
+  if (hw_get_module(CAMERA_HARDWARE_MODULE_ID, (const hw_module_t **)&mModule) < 0) {
     return;
   }
   char cameraDeviceName[4];
@@ -224,21 +177,7 @@ GonkCameraHardware::init()
     return;
   }
 
-#if GIHM_STUB_NATIVEWINDOW
-  ANativeWindow* window = new ANativeWindow();
-  window->common.incRef = WindowIncRef;
-  window->common.decRef = WindowDecRef;
-  mWindow = window;
-  mWindow->setSwapInterval = WindowSetSwapInterval;
-  mWindow->dequeueBuffer = WindowDequeueBuffer;
-  mWindow->lockBuffer = WindowLockBuffer;
-  mWindow->queueBuffer = WindowQueueBuffer;
-  mWindow->query = WindowQuery;
-  mWindow->perform = WindowPerform;
-  mWindow->cancelBuffer = WindowCancelBuffer;
-#else
-  mWindow = new android::CameraNativeWindow();
-#endif
+  mWindow = new android::GonkNativeWindow();
 
   if (sHwHandle == 0) {
     sHwHandle = 1;  // don't use 0
@@ -265,7 +204,7 @@ PRUint32            GonkCameraHardware::sHwHandle   = 0;
 void
 GonkCameraHardware::ReleaseHandle(PRUint32 aHwHandle)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   DOM_CAMERA_LOGI("%s: aHwHandle = %d, hw = %p (sHwHandle = %d)\n", __func__, aHwHandle, (void*)hw, sHwHandle);
   if (!hw) {
     return;
@@ -282,13 +221,13 @@ GonkCameraHardware::ReleaseHandle(PRUint32 aHwHandle)
 }
 
 PRUint32
-GonkCameraHardware::GetHandle(GonkCamera* aTarget, PRUint32 aCamera)
+GonkCameraHardware::GetHandle(GonkCamera *aTarget, PRUint32 aCamera)
 {
   ReleaseHandle(sHwHandle);
 
   sHw = new GonkCameraHardware(aTarget, aCamera);
 
-  if (sHw->initialized()) {
+  if (sHw->IsInitialized()) {
     return sHwHandle;
   }
 
@@ -301,7 +240,7 @@ GonkCameraHardware::GetHandle(GonkCamera* aTarget, PRUint32 aCamera)
 PRUint32
 GonkCameraHardware::GetFps(PRUint32 aHwHandle)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   if (!hw) {
     return 0;
   }
@@ -310,9 +249,9 @@ GonkCameraHardware::GetFps(PRUint32 aHwHandle)
 }
 
 void
-GonkCameraHardware::GetPreviewSize(PRUint32 aHwHandle, PRUint32* aWidth, PRUint32* aHeight)
+GonkCameraHardware::GetPreviewSize(PRUint32 aHwHandle, PRUint32 *aWidth, PRUint32 *aHeight)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   if (!hw) {
     *aWidth = 0;
     *aHeight = 0;
@@ -323,7 +262,7 @@ GonkCameraHardware::GetPreviewSize(PRUint32 aHwHandle, PRUint32* aWidth, PRUint3
 }
 
 void
-GonkCameraHardware::setPreviewSize(PRUint32 aWidth, PRUint32 aHeight)
+GonkCameraHardware::SetPreviewSize(PRUint32 aWidth, PRUint32 aHeight)
 {
   Vector<Size> previewSizes;
   PRUint32 bestWidth = aWidth;
@@ -382,9 +321,9 @@ GonkCameraHardware::setPreviewSize(PRUint32 aWidth, PRUint32 aHeight)
 void
 GonkCameraHardware::SetPreviewSize(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   if (hw) {
-    hw->setPreviewSize(aWidth, aHeight);
+    hw->SetPreviewSize(aWidth, aHeight);
   }
 }
 
@@ -392,7 +331,7 @@ int
 GonkCameraHardware::AutoFocus(PRUint32 aHwHandle)
 {
   DOM_CAMERA_LOGI("%s: aHwHandle = %d\n", __func__, aHwHandle);
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   if (!hw) {
     return DEAD_OBJECT;
   }
@@ -405,7 +344,7 @@ void
 GonkCameraHardware::CancelAutoFocus(PRUint32 aHwHandle)
 {
   DOM_CAMERA_LOGI("%s: aHwHandle = %d\n", __func__, aHwHandle);
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   if (hw) {
     hw->mHardware->cancelAutoFocus();
   }
@@ -414,7 +353,7 @@ GonkCameraHardware::CancelAutoFocus(PRUint32 aHwHandle)
 int
 GonkCameraHardware::TakePicture(PRUint32 aHwHandle)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware* hw = GetHardware(aHwHandle);
   if (!hw) {
     return DEAD_OBJECT;
   }
@@ -428,7 +367,7 @@ GonkCameraHardware::StartRecording(PRUint32 aHwHandle)
 {
   DOM_CAMERA_LOGI("%s: aHwHandle = %d\n", __func__, aHwHandle);
   int result = OK;
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware* hw = GetHardware(aHwHandle);
   if (!hw) {
     return DEAD_OBJECT;
   }
@@ -459,7 +398,7 @@ int
 GonkCameraHardware::StopRecording(PRUint32 aHwHandle)
 {
   DOM_CAMERA_LOGI("%s: aHwHandle = %d\n", __func__, aHwHandle);
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   if (!hw) {
     return DEAD_OBJECT;
   }
@@ -472,7 +411,7 @@ GonkCameraHardware::StopRecording(PRUint32 aHwHandle)
 void
 GonkCameraHardware::CancelTakePicture(PRUint32 aHwHandle)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   if (hw) {
     hw->mHardware->cancelPicture();
   }
@@ -481,7 +420,7 @@ GonkCameraHardware::CancelTakePicture(PRUint32 aHwHandle)
 int
 GonkCameraHardware::PushParameters(PRUint32 aHwHandle, const CameraParameters& aParams)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   if (!hw) {
     return DEAD_OBJECT;
   }
@@ -492,14 +431,14 @@ GonkCameraHardware::PushParameters(PRUint32 aHwHandle, const CameraParameters& a
 void
 GonkCameraHardware::PullParameters(PRUint32 aHwHandle, CameraParameters& aParams)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   if (hw) {
     aParams = hw->mHardware->getParameters();
   }
 }
 
 int
-GonkCameraHardware::startPreview()
+GonkCameraHardware::StartPreview()
 {
   const char *format;
 
@@ -540,7 +479,7 @@ GonkCameraHardware::startPreview()
 int
 GonkCameraHardware::StartPreview(PRUint32 aHwHandle)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   DOM_CAMERA_LOGI("%s:%d : aHwHandle = %d, hw = %p\n", __func__, __LINE__, aHwHandle, hw);
   if (!hw) {
     return DEAD_OBJECT;
@@ -552,7 +491,7 @@ GonkCameraHardware::StartPreview(PRUint32 aHwHandle)
 void
 GonkCameraHardware::StopPreview(PRUint32 aHwHandle)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   if (hw) {
     hw->mHardware->stopPreview();
   }
@@ -593,7 +532,7 @@ GonkCameraHardware::StoreMetaDataInBuffers(PRUint32 aHwHandle, bool enabled)
 PRUint32
 GonkCameraHardware::GetPreviewFormat(PRUint32 aHwHandle)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware *hw = GetHardware(aHwHandle);
   if (!hw) {
     return PREVIEW_FORMAT_UNKNOWN;
   }

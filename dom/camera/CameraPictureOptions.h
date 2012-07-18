@@ -5,14 +5,12 @@
 #ifndef DOM_CAMERA_NSCAMERAPICTUREOPTIONS_H
 #define DOM_CAMERA_NSCAMERAPICTUREOPTIONS_H
 
-
 #include "nsIDOMCameraManager.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-
-BEGIN_CAMERA_NAMESPACE
+namespace mozilla {
 
 class nsCameraPictureOptions : public nsICameraPictureOptions
 {
@@ -29,7 +27,6 @@ protected:
   /* additional members */
 };
 
-END_CAMERA_NAMESPACE
-
+} // namespace mozilla
 
 #endif // DOM_CAMERA_NSCAMERAPICTUREOPTIONS_H
