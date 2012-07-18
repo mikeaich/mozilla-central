@@ -9,7 +9,6 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-
 USING_CAMERA_NAMESPACE
 
 DOMCI_DATA(CameraManager, nsIDOMCameraManager)
@@ -23,11 +22,11 @@ NS_INTERFACE_MAP_END
 NS_IMPL_ADDREF(nsDOMCameraManager)
 NS_IMPL_RELEASE(nsDOMCameraManager)
 
-/*
-  nsDOMCameraManager::GetListOfCameras
-  is implementation-specific, and can be found in (e.g.)
-  GonkCameraManager.cpp and FallbackCameraManager.cpp.
-*/
+/**
+ * nsDOMCameraManager::GetListOfCameras
+ * is implementation-specific, and can be found in (e.g.)
+ * GonkCameraManager.cpp and FallbackCameraManager.cpp.
+ */
 
 nsDOMCameraManager::nsDOMCameraManager(PRUint64 aWindowId)
   : mWindowId(aWindowId)
@@ -45,14 +44,14 @@ nsDOMCameraManager::~nsDOMCameraManager()
 void
 nsDOMCameraManager::OnNavigation(PRUint64 aWindowId)
 {
-  /* TODO: implement -- see getUserMedia() implementation */
+  // TODO: implement -- see getUserMedia() implementation
 }
 
-/* static creator */
+// static creator
 NS_IMETHODIMP
 nsDOMCameraManager::Create(PRUint64 aWindowId, nsDOMCameraManager * *aMozCameras)
 {
-  /* TODO: check for permissions here to access cameras */
+  // TODO: check for permissions here to access cameras
 
   nsRefPtr<nsDOMCameraManager> cameraManager = new nsDOMCameraManager(aWindowId);
   cameraManager.forget(aMozCameras);
@@ -64,12 +63,11 @@ NS_IMETHODIMP
 nsDOMCameraManager::GetCamera(const JS::Value & aOptions, nsICameraGetCameraCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
   nsresult rv;
-  PRUint32 cameraId = 0;  /* back (or forward-facing) camera by default */
+  PRUint32 cameraId = 0;  // back (or forward-facing) camera by default
 
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
 
   if (aOptions.isObject()) {
-    /* extract values from aOptions */
     JSObject *options = JSVAL_TO_OBJECT(aOptions);
     jsval v;
 
@@ -85,7 +83,7 @@ nsDOMCameraManager::GetCamera(const JS::Value & aOptions, nsICameraGetCameraCall
     }
   }
 
-  /* reuse the same camera thread to conserve resources */
+  // reuse the same camera thread to conserve resources
   if (!mCameraThread) {
     rv = NS_NewThread(getter_AddRefs(mCameraThread));
     NS_ENSURE_SUCCESS(rv, rv);

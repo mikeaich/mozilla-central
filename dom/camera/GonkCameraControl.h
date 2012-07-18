@@ -17,14 +17,12 @@
 #ifndef DOM_CAMERA_GONKCAMERACONTROL_H
 #define DOM_CAMERA_GONKCAMERACONTROL_H
 
-
 #include "prtypes.h"
 #include "prrwlock.h"
 #include "CameraControl.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
-
 
 BEGIN_CAMERA_NAMESPACE
 
@@ -63,12 +61,11 @@ protected:
   android::CameraParameters mParams;
 };
 
-/* camera driver callbacks */
+// camera driver callbacks
 void ReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
 void AutoFocusComplete(nsGonkCameraControl* gc, bool success);
 void ReceiveFrame(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
 
 END_CAMERA_NAMESPACE
-
 
 #endif // DOM_CAMERA_GONKCAMERACONTROL_H

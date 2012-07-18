@@ -17,12 +17,10 @@
 #ifndef DOM_CAMERA_GONKCAMERAPREVIEW_H
 #define DOM_CAMERA_GONKCAMERAPREVIEW_H
 
-
 #include "CameraPreview.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
-
 
 BEGIN_CAMERA_NAMESPACE
 
@@ -56,7 +54,6 @@ private:
 };
 
 END_CAMERA_NAMESPACE
-
 
 #endif // DOM_CAMERA_GONKCAMERAPREVIEW_H
  

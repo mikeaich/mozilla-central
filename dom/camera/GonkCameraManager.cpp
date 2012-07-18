@@ -22,10 +22,7 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-
-/*
-  From nsDOMCameraManager, but gonk-specific!
-*/
+// From nsDOMCameraManager, but gonk-specific!
 
 /* [implicit_jscontext] jsval getListOfCameras (); */
 NS_IMETHODIMP
@@ -35,7 +32,6 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
   camera_module_t* module;
   PRUint32 index = 0;
   PRUint32 count;
-  char d[32];
 
   if (!a) {
     DOM_CAMERA_LOGE("getListOfCameras : Could not create array object");
@@ -62,18 +58,25 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
         break;
 
       default:
-        /* TODO: handle extra cameras in getCamera() */
-        snprintf(d, sizeof(d), "extra-camera-%d", count);
-        v = JS_NewStringCopyZ(cx, d);
+        // TODO: handle extra cameras in getCamera().
+        {
+          nsCString s;
+          s.AppendPrintf("extra-camera-%d", count);
+          v = JS_NewStringCopyZ(cx, s.get());
+        }
         break;
     }
     if (!v) {
       DOM_CAMERA_LOGE("getListOfCameras : out of memory populating camera list");
-      /* TODO: clean up any partial objects? */
+      delete a;
       return NS_ERROR_NOT_AVAILABLE;
     }
     jv = STRING_TO_JSVAL(v);
-    JS_SetElement(cx, a, index++, &jv);
+    if (!JS_SetElement(cx, a, index++, &jv)) {
+      DOM_CAMERA_LOGE("getListOfCameras : failed building list of cameras");
+      delete a;
+      return NS_ERROR_NOT_AVAILABLE;
+    }
   }
 
   *_retval = OBJECT_TO_JSVAL(a);
@@ -89,9 +92,5 @@ DoGetCamera::Run()
 
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
-  nsresult rv = NS_DispatchToMainThread(new GetCameraResult(cameraControl, mOnSuccessCb));
-  if (NS_FAILED(rv)) {
-    NS_WARNING("Failed to dispatch getCamera() onSuccess callback to main thread!");
-  }
-  return NS_OK;
+  return NS_DispatchToMainThread(new GetCameraResult(cameraControl, mOnSuccessCb));
 }

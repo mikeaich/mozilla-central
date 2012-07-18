@@ -5,7 +5,6 @@
 #include "CameraPictureOptions.h"
 #include "CameraCommon.h"
 
-
 USING_CAMERA_NAMESPACE
 
 NS_IMPL_ISUPPORTS1(nsCameraPictureOptions, nsICameraPictureOptions)

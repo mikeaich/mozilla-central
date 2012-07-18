@@ -13,7 +13,6 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-
 using namespace android;
 
 USING_CAMERA_NAMESPACE

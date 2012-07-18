@@ -7,10 +7,8 @@
 #ifndef DOM_CAMERA_CAMERACOMMON_H
 #define DOM_CAMERA_CAMERACOMMON_H
 
-
 #include "nsThreadUtils.h"
 #include "nsIDOMCameraManager.h"
-
 
 #define BEGIN_CAMERA_NAMESPACE \
   namespace mozilla {
@@ -65,6 +63,5 @@ protected:
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
   const nsString mErrorMsg;
 };
-
 
 #endif // DOM_CAMERA_CAMERACOMMON_H

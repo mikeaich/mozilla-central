@@ -5,12 +5,10 @@
 #ifndef DOM_CAMERA_NSCAMERAPICTUREOPTIONS_H
 #define DOM_CAMERA_NSCAMERAPICTUREOPTIONS_H
 
-
 #include "nsIDOMCameraManager.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
-
 
 BEGIN_CAMERA_NAMESPACE
 
@@ -30,6 +28,5 @@ protected:
 };
 
 END_CAMERA_NAMESPACE
-
 
 #endif // DOM_CAMERA_NSCAMERAPICTUREOPTIONS_H

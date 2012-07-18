@@ -4,10 +4,7 @@
 
 #include "DOMCameraManager.h"
 
-
-/*
-  From nsDOMCameraManager.
-*/
+// From nsDOMCameraManager.
 
 /* [implicit_jscontext] void getCamera ([optional] in jsval aOptions, in nsICameraGetCameraCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
 NS_IMETHODIMP

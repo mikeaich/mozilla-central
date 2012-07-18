@@ -5,10 +5,8 @@
 #ifndef DOM_CAMERA_NSCAMERACAPABILITIES_H
 #define DOM_CAMERA_NSCAMERACAPABILITIES_H
 
-
 #include "CameraControl.h"
 #include "nsAutoPtr.h"
-
 
 BEGIN_CAMERA_NAMESPACE
 
@@ -46,6 +44,5 @@ protected:
 };
 
 END_CAMERA_NAMESPACE
-
 
 #endif // DOM_CAMERA_NSCAMERACAPABILITIES_H

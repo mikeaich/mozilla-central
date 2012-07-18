@@ -7,7 +7,6 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-
 USING_CAMERA_NAMESPACE
 
 NS_IMPL_ISUPPORTS1(CameraPreview, CameraPreview)
@@ -91,8 +90,9 @@ CameraPreview::~CameraPreview()
 {
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
 
-  /* We _must_ remember to call RemoveListener on this before destroying this,
-     else the media framework will trigger a double-free. */
-  // FIXME: mInput->RemoveListener(this);
+  /**
+   * We _must_ remember to call RemoveListener on this before destroying this,
+   * else the media framework will trigger a double-free.
+   */
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
 }

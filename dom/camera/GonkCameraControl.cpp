@@ -31,7 +31,6 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-
 USING_CAMERA_NAMESPACE
 
 static const char* getKeyText(PRUint32 aKey)
@@ -68,9 +67,7 @@ static const char* getKeyText(PRUint32 aKey)
   }
 }
 
-/*
-  Gonk-specific CameraControl implementation.
-*/
+// Gonk-specific CameraControl implementation.
 
 nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
   : nsCameraControl(aCameraId, aCameraThread)
@@ -79,16 +76,16 @@ nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread *aCameraT
   , mExposureCompensationStep(0.0)
   , mDeferConfigUpdate(false)
 {
-  /* Constructor runs on the camera thread--see DOMCameraManager.cpp::DoGetCamera(). */
+  // Constructor runs on the camera thread--see DOMCameraManager.cpp::DoGetCamera().
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
   mHwHandle = GonkCameraHardware::GetHandle(this, mCameraId);
   DOM_CAMERA_LOGI("%s:%d : this = %p, mHwHandle = %d\n", __func__, __LINE__, this, mHwHandle);
 
-  /* Initialize our camera configuration database. */
+  // Initialize our camera configuration database.
   mRwLock = PR_NewRWLock(PR_RWLOCK_RANK_NONE, "GonkCameraControl.Parameters.Lock");
   DoPullParameters(nsnull);
 
-  /* Grab any settings we'll need later */
+  // Grab any settings we'll need later.
   mExposureCompensationMin = mParams.getFloat(CameraParameters::KEY_MIN_EXPOSURE_COMPENSATION);
   mExposureCompensationStep = mParams.getFloat(CameraParameters::KEY_EXPOSURE_COMPENSATION_STEP);
   mMaxMeteringAreas = mParams.getInt(CameraParameters::KEY_MAX_NUM_METERING_AREAS);
@@ -160,12 +157,12 @@ const char*
 nsGonkCameraControl::GetParameterConstChar(PRUint32 aKey)
 {
   const char *key = getKeyText(aKey);
-  if (key) {
-    RwAutoLockRead lock(mRwLock);
-    return mParams.get(key);
-  } else {
+  if (!key) {
     return nsnull;
   }
+
+  RwAutoLockRead lock(mRwLock);
+  return mParams.get(key);
 }
 
 double
@@ -173,51 +170,43 @@ nsGonkCameraControl::GetParameterDouble(PRUint32 aKey)
 {
   double val;
   int index = 0;
+  double focusDistance[3];
   const char *s;
 
   const char *key = getKeyText(aKey);
-  if (key) {
-    RwAutoLockRead lock(mRwLock);
-    switch (aKey) {
-      case CAMERA_PARAM_ZOOM:
-        val = mParams.getInt(key);
-        return val / 100;
+  if (!key) {
+    // return 1x when zooming is not supported
+    return aKey == CAMERA_PARAM_ZOOM ? 1.0 : 0.0;
+  }
 
-      case CAMERA_PARAM_FOCUSDISTANCEFAR:
-        ++index;
-        /* intentional fallthrough */
+  RwAutoLockRead lock(mRwLock);
+  switch (aKey) {
+    case CAMERA_PARAM_ZOOM:
+      val = mParams.getInt(key);
+      return val / 100;
 
-      case CAMERA_PARAM_FOCUSDISTANCEOPTIMUM:
-        ++index;
-        /* intentional fallthrough */
+    /**
+     * The gonk camera parameters API only exposes one focus distance property
+     * that contains "Near,Optimum,Far" distances, in metres, where 'Far' may
+     * be 'Infinity'.
+     */
+    case CAMERA_PARAM_FOCUSDISTANCEFAR:
+      ++index;
+      // intentional fallthrough
 
-      case CAMERA_PARAM_FOCUSDISTANCENEAR:
-        s = mParams.get(key);
-        if (!s) {
-          return 0.0;
-        }
-        while (index) {
-          s = strchr(s, ',');
-          if (!s) {
-            return 0.0;
-          }
-          ++s;
-          --index;
-        }
-        return strtod(s, nsnull);
+    case CAMERA_PARAM_FOCUSDISTANCEOPTIMUM:
+      ++index;
+      // intentional fallthrough
 
-      default:
-        return mParams.getFloat(key);
-    }
-  } else {
-    switch (aKey) {
-      case CAMERA_PARAM_ZOOM:
-        /* return 1x when zooming is not supported */
-        return 1.0;
+    case CAMERA_PARAM_FOCUSDISTANCENEAR:
+      s = mParams.get(key);
+      if (sscanf(s, "%lf,%lf,%lf", &focusDistance[0], &focusDistance[1], &focusDistance[2]) == 3) {
+        return focusDistance[index];
+      }
+      return 0.0;
 
-      default:
-        return 0.0;
-    }
+    default:
+      return mParams.getFloat(key);
   }
 }
 
@@ -245,7 +234,7 @@ nsGonkCameraControl::GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint
     return;
   }
 
-  /* count the number of regions in the string */
+  // count the number of regions in the string
   while ((p = strstr(p, "),("))) {
     ++count;
     p += 3;
@@ -254,7 +243,7 @@ nsGonkCameraControl::GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint
   CameraRegion *regions = new CameraRegion[count];
   CameraRegion *r;
 
-  /* parse all of the region sets */
+  // parse all of the region sets
   char *end;
   p = value + 1;
   for (PRUint32 i = 0; i < count; ++i) {
@@ -263,7 +252,7 @@ nsGonkCameraControl::GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint
     for (PRUint32 field = 0; field < 5; ++field) {
       PRInt32 v;
       if (field != 4) {
-        /* dimension fields are signed */
+        // dimension fields are signed
         v = strtol(p, &end, 10);
       }
       switch (field) {
@@ -284,7 +273,7 @@ nsGonkCameraControl::GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint
           break;
 
         case 4:
-          /* weight value is unsigned */
+          // weight value is unsigned
           r->mWeight = strtoul(p, &end, 10);
           break;
 
@@ -296,10 +285,10 @@ nsGonkCameraControl::GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint
       switch (*p) {
         case ')':
           if (field == 4) {
-            /* end of this region */
+            // end of this region
             switch (*++p) {
               case ',':
-                /* there are more regions */
+                // there are more regions
                 if (*(p + 1) == '(') {
                   p += 2;
                   continue;
@@ -307,7 +296,7 @@ nsGonkCameraControl::GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint
                 break;
 
               case '\0':
-                /* end of string, we're done */
+                // end of string, we're done
                 if (i + 1 != count) {
                   DOM_CAMERA_LOGE("%s:%d : region list parsed short\n", __func__, __LINE__);
                   count = i;
@@ -315,7 +304,7 @@ nsGonkCameraControl::GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint
                 goto GetParameter_done;
             }
           }
-          /* intentional fallthrough */
+          // intentional fallthrough
 
         default:
           DOM_CAMERA_LOGE("%s:%d : malformed region '%s'\n", __func__, __LINE__, p);
@@ -352,8 +341,12 @@ nsGonkCameraControl::PushParameters()
 {
   if (!mDeferConfigUpdate) {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    /*  If we're already on the camera thread, call DoPushParameters()
-        directly, so that it executes synchronously. */
+    /**
+     * If we're already on the camera thread, call DoPushParameters()
+     * directly, so that it executes synchronously.  Some callers
+     * require this so that changes take effect immediately before
+     * we can proceed.
+     */
     if (NS_IsMainThread()) {
       nsCOMPtr<nsIRunnable> pushParametersTask = new PushParametersTask(this);
       mCameraThread->Dispatch(pushParametersTask, NS_DISPATCH_NORMAL);
@@ -400,17 +393,16 @@ nsGonkCameraControl::SetParameter(PRUint32 aKey, double aValue)
 
   {
     RwAutoLockWrite lock(mRwLock);
-    switch (aKey) {
-      case CAMERA_PARAM_EXPOSURECOMPENSATION:
-        /* convert from real value to a Gonk index, round to the nearest step; index is 1-based */
-        index = (aValue - mExposureCompensationMin + mExposureCompensationStep / 2) / mExposureCompensationStep + 1;
-        DOM_CAMERA_LOGI("compensation = %f --> index = %d\n", aValue, index);
-        mParams.set(key, index);
-        break;
-
-      default:
-        mParams.setFloat(key, aValue);
-        break;
+    if (aKey == CAMERA_PARAM_EXPOSURECOMPENSATION) {
+      /**
+       * Convert from real value to a Gonk index, round
+       * to the nearest step; index is 1-based.
+       */
+      index = (aValue - mExposureCompensationMin + mExposureCompensationStep / 2) / mExposureCompensationStep + 1;
+      DOM_CAMERA_LOGI("compensation = %f --> index = %d\n", aValue, index);
+      mParams.set(key, index);
+    } else {
+      mParams.setFloat(key, aValue);
     }
   }
   PushParameters();
@@ -425,7 +417,7 @@ nsGonkCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint3
   }
 
   if (!aLength) {
-    /* This tells the camera driver to revert to automatic regioning. */
+    // This tells the camera driver to revert to automatic regioning.
     mParams.set(key, "(0,0,0,0,0)");
     PushParameters();
     return;
@@ -438,10 +430,10 @@ nsGonkCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint3
     s.AppendPrintf("(%d,%d,%d,%d,%d),", r->mTop, r->mLeft, r->mBottom, r->mRight, r->mWeight);
   }
 
-  /* remove the trailing comma */
+  // remove the trailing comma
   s.Trim(",", false, true, true);
 
-  DOM_CAMERA_LOGI("camera region string '%s'\n", s);
+  DOM_CAMERA_LOGI("camera region string '%s'\n", s.get());
 
   {
     RwAutoLockWrite lock(mRwLock);
@@ -460,19 +452,13 @@ nsGonkCameraControl::DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream)
     preview = new GonkCameraPreview(mHwHandle, aGetPreviewStream->mWidth, aGetPreviewStream->mHeight);
     if (!preview) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(aGetPreviewStream->mOnErrorCb, NS_LITERAL_STRING("OUT_OF_MEMORY")));
-      if (NS_FAILED(rv)) {
-        NS_WARNING("Failed to dispatch getPreviewStream() onError callback to main thread!");
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
       return NS_ERROR_OUT_OF_MEMORY;
     }
   }
 
   mPreview = preview;
-  rv = NS_DispatchToMainThread(new GetPreviewStreamResult(preview.get(), aGetPreviewStream->mOnSuccessCb));
-  if (NS_FAILED(rv)) {
-    NS_WARNING("Failed to dispatch getPreviewStream() onSuccess callback to main thread!");
-  }
-  return NS_OK;
+  return NS_DispatchToMainThread(new GetPreviewStreamResult(preview.get(), aGetPreviewStream->mOnSuccessCb));
 }
 
 nsresult
@@ -480,15 +466,16 @@ nsGonkCameraControl::DoAutoFocus(AutoFocusTask *aAutoFocus)
 {
   nsCOMPtr<nsICameraAutoFocusCallback> cb = mAutoFocusOnSuccessCb;
   if (cb) {
-    /* we already have a callback, so someone has already called autoFocus() -- cancel it */
+    /**
+     * We already have a callback, so someone has already
+     * called autoFocus() -- cancel it.
+     */
     mAutoFocusOnSuccessCb = nsnull;
     nsCOMPtr<nsICameraErrorCallback> ecb = mAutoFocusOnErrorCb;
     mAutoFocusOnErrorCb = nsnull;
     if (ecb) {
       nsresult rv = NS_DispatchToMainThread(new CameraErrorResult(ecb, NS_LITERAL_STRING("CANCELLED")));
-      if (NS_FAILED(rv)) {
-        NS_WARNING("Failed to dispatch old autoFocus() onError callback to main thread!");
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
     }
 
     GonkCameraHardware::CancelAutoFocus(mHwHandle);
@@ -499,27 +486,25 @@ nsGonkCameraControl::DoAutoFocus(AutoFocusTask *aAutoFocus)
 
   if (GonkCameraHardware::AutoFocus(mHwHandle) == OK) {
     return NS_OK;
-  } else {
-    return NS_ERROR_FAILURE;
   }
+  return NS_ERROR_FAILURE;
 }
 
 nsresult
 nsGonkCameraControl::DoTakePicture(TakePictureTask *aTakePicture)
 {
-  char d[32];
-
-  nsCOMPtr<nsICameraTakePictureCallback> cb = mTakePictureOnSuccessCb;
+ nsCOMPtr<nsICameraTakePictureCallback> cb = mTakePictureOnSuccessCb;
   if (cb) {
-    /* we already have a callback, so someone has already called TakePicture() -- cancel it */
+    /**
+     * We already have a callback, so someone has already
+     * called TakePicture() -- cancel it.
+     */
     mTakePictureOnSuccessCb = nsnull;
     nsCOMPtr<nsICameraErrorCallback> ecb = mTakePictureOnErrorCb;
     mTakePictureOnErrorCb = nsnull;
     if (ecb) {
       nsresult rv = NS_DispatchToMainThread(new CameraErrorResult(ecb, NS_LITERAL_STRING("CANCELLED")));
-      if (NS_FAILED(rv)) {
-        NS_WARNING("Failed to dispatch old TakePicture() onError callback to main thread!");
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
     }
 
     GonkCameraHardware::CancelTakePicture(mHwHandle);
@@ -528,92 +513,75 @@ nsGonkCameraControl::DoTakePicture(TakePictureTask *aTakePicture)
   mTakePictureOnSuccessCb = aTakePicture->mOnSuccessCb;
   mTakePictureOnErrorCb = aTakePicture->mOnErrorCb;
 
-  /* batch-update camera configuration */
+  // batch-update camera configuration
   mDeferConfigUpdate = true;
 
-  /* height and width: some drivers are less friendly about getting one of
-     these set to zero, so if either is not specified, ignore both and go
-     with current or default settings. */
+  /**
+   * height and width: some drivers are less friendly about getting one of
+   * these set to zero, so if either is not specified, ignore both and go
+   * with current or default settings.
+   */
   if (aTakePicture->mWidth && aTakePicture->mHeight) {
-    if (snprintf(d, sizeof(d), "%dx%d", aTakePicture->mWidth, aTakePicture->mHeight) > 0) {
-      DOM_CAMERA_LOGI("setting picture size to %s\n", d);
-      SetParameter(CameraParameters::KEY_PICTURE_SIZE, d);
-    } else {
-      DOM_CAMERA_LOGE("failed to set picture size\n");
-      return NS_ERROR_INVALID_ARG;
-    }
+    nsCString s;
+    s.AppendPrintf("%dx%d", aTakePicture->mWidth, aTakePicture->mHeight);
+    DOM_CAMERA_LOGI("setting picture size to '%s'\n", s.get());
+    SetParameter(CameraParameters::KEY_PICTURE_SIZE, s.get());
   }
 
-  /* picture format */
+  // Picture format -- need to keep it for the callback.
   if (mFileFormat) {
     nsMemory::Free(const_cast<char*>(mFileFormat));
   }
   mFileFormat = ToNewCString(aTakePicture->mFileFormat);
-  if (mFileFormat) {
-    DOM_CAMERA_LOGI("setting picture file format to %s\n", mFileFormat);
-    SetParameter(CameraParameters::KEY_PICTURE_FORMAT, mFileFormat);
-  } else {
-    DOM_CAMERA_LOGE("failed to set picture format, out of memory\n");
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
+  NS_ENSURE_TRUE(!!mFileFormat, NS_ERROR_OUT_OF_MEMORY);
+  SetParameter(CameraParameters::KEY_PICTURE_FORMAT, mFileFormat);
 
-  /* convert 'rotation' to a positive value from 0..270 degrees, in steps of 90 */
+  // Convert 'rotation' to a positive value from 0..270 degrees, in steps of 90.
   PRUint32 r = static_cast<PRUint32>(aTakePicture->mRotation);
   r %= 360;
   r += 45;
   r /= 90;
   r *= 90;
-  if (snprintf(d, sizeof(d), "%d", r) > 0) {
+  {
+    nsCString s;
+    s.AppendPrintf("%d", r);
     DOM_CAMERA_LOGI("setting picture rotation to %d degrees (mapped from %d)\n", r, aTakePicture->mRotation);
-    SetParameter(CameraParameters::KEY_ROTATION, d);
-  } else {
-    DOM_CAMERA_LOGE("failed to set picture rotation\n");
-    return NS_ERROR_UNEXPECTED;
+    SetParameter(CameraParameters::KEY_ROTATION, s.get());
   }
 
-  /* add any specified positional information -- don't care if these fail */
+  // Add any specified positional information -- don't care if these fail.
   if (aTakePicture->mLatitudeSet) {
-    if (snprintf(d, sizeof(d), "%f", aTakePicture->mLatitude) > 0) {
-      DOM_CAMERA_LOGI("setting picture latitude to %s\n", d);
-      SetParameter(CameraParameters::KEY_GPS_LATITUDE, d);
-    } else {
-      DOM_CAMERA_LOGW("failed to set picture latitude\n");
-    }
+    nsCString s;
+    s.AppendPrintf("%f", aTakePicture->mLatitude);
+    DOM_CAMERA_LOGI("setting picture latitude to %s\n", s.get());
+    SetParameter(CameraParameters::KEY_GPS_LATITUDE, s.get());
   }
   if (aTakePicture->mLongitudeSet) {
-    if (snprintf(d, sizeof(d), "%f", aTakePicture->mLongitude) > 0) {
-      DOM_CAMERA_LOGI("setting picture longitude to %s\n", d);
-      SetParameter(CameraParameters::KEY_GPS_LONGITUDE, d);
-    } else {
-      DOM_CAMERA_LOGW("failed to set picture longitude\n");
-    }
+    nsCString s;
+    s.AppendPrintf("%f", aTakePicture->mLongitude);
+    DOM_CAMERA_LOGI("setting picture longitude to %s\n", s.get());
+    SetParameter(CameraParameters::KEY_GPS_LONGITUDE, s.get());
   }
   if (aTakePicture->mAltitudeSet) {
-    if (snprintf(d, sizeof(d), "%f", aTakePicture->mAltitude) > 0) {
-      DOM_CAMERA_LOGI("setting picture altitude to %s\n", d);
-      SetParameter(CameraParameters::KEY_GPS_ALTITUDE, d);
-    } else {
-      DOM_CAMERA_LOGW("failed to set picture altitude\n");
-    }
+    nsCString s;
+    s.AppendPrintf("%f", aTakePicture->mAltitude);
+    DOM_CAMERA_LOGI("setting picture altitude to %s\n", s.get());
+    SetParameter(CameraParameters::KEY_GPS_ALTITUDE, s.get());
   }
   if (aTakePicture->mTimestampSet) {
-    if (snprintf(d, sizeof(d), "%f", aTakePicture->mTimestamp) > 0) {
-      DOM_CAMERA_LOGI("setting picture timestamp to %s\n", d);
-      SetParameter(CameraParameters::KEY_GPS_TIMESTAMP, d);
-    } else {
-      DOM_CAMERA_LOGW("failed to set picture timestamp\n");
-    }
+    nsCString s;
+    s.AppendPrintf("%f", aTakePicture->mTimestamp);
+    DOM_CAMERA_LOGI("setting picture timestamp to %s\n", s.get());
+    SetParameter(CameraParameters::KEY_GPS_TIMESTAMP, s.get());
   }
 
   mDeferConfigUpdate = false;
   PushParameters();
 
   if (GonkCameraHardware::TakePicture(mHwHandle) == OK) {
-    // mPreview->Stop();
     return NS_OK;
-  } else {
-    return NS_ERROR_FAILURE;
   }
+  return NS_ERROR_FAILURE;
 }
 
 nsresult
@@ -622,9 +590,9 @@ nsGonkCameraControl::DoPushParameters(PushParametersTask *aPushParameters)
   RwAutoLockRead lock(mRwLock);
   if (GonkCameraHardware::PushParameters(mHwHandle, mParams) == OK) {
     return NS_OK;
-  } else {
-    return NS_ERROR_FAILURE;
   }
+
+  return NS_ERROR_FAILURE;
 }
 
 nsresult
@@ -654,17 +622,12 @@ nsGonkCameraControl::ReceiveFrame(PRUint8* aData, PRUint32 aLength)
 
   if (preview) {
     GonkCameraPreview *p = static_cast<GonkCameraPreview *>(preview.get());
-    if (p) {
-      p->ReceiveFrame(aData, aLength);
-    } else {
-      DOM_CAMERA_LOGE("%s:%d : weird pointer problem happened\n");
-    }
+    MOZ_ASSERT(p);
+    p->ReceiveFrame(aData, aLength);
   }
 }
 
-/*
-  Gonk callback handlers.
-*/
+// Gonk callback handlers.
 BEGIN_CAMERA_NAMESPACE
 
 void

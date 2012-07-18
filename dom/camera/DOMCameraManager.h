@@ -7,13 +7,11 @@
 #ifndef DOM_CAMERA_DOMCAMERAMANAGER_H
 #define DOM_CAMERA_DOMCAMERAMANAGER_H
 
-
 #include "nsCOMPtr.h"
 #include "nsAutoPtr.h"
 #include "nsIThread.h"
 #include "nsThreadUtils.h"
 #include "nsIDOMCameraManager.h"
-
 
 class nsDOMCameraManager : public nsIDOMCameraManager
 {
@@ -69,7 +67,7 @@ public:
   {
     MOZ_ASSERT(NS_IsMainThread());
 
-    /* TODO: window management stuff */
+    // TODO: window management stuff
     if (mOnSuccessCb) {
       mOnSuccessCb->HandleEvent(mCameraControl);
     }
@@ -80,6 +78,5 @@ protected:
   nsCOMPtr<nsICameraControl> mCameraControl;
   nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
 };
-
 
 #endif // DOM_CAMERA_DOMCAMERAMANAGER_H
