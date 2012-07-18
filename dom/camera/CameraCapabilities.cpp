@@ -14,8 +14,7 @@
 #include "CameraCommon.h"
 
 using namespace android;
-
-USING_CAMERA_NAMESPACE
+using namespace mozilla;
 
 DOMCI_DATA(CameraCapabilities, nsICameraCapabilities)
 

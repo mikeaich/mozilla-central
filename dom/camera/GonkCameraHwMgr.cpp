@@ -16,14 +16,12 @@
 
 #include "nsDebug.h"
 #include "GonkCameraHwMgr.h"
-
-// config
-#define GIHM_STUB_NATIVEWINDOW      0
+#include "CameraNativeWindow.h"
 
 #define DOM_CAMERA_LOG_LEVEL        3
 #include "CameraCommon.h"
 
-USING_CAMERA_NAMESPACE
+using namespace mozilla;
 
 #if GIHM_TIMING_RECEIVEFRAME
 #define INCLUDE_TIME_H                  1
@@ -45,48 +43,6 @@ static __inline void timespecSubtract(struct timespec *a, struct timespec *b)
   a->tv_nsec = b->tv_nsec - a->tv_nsec;
   a->tv_sec = b->tv_sec - a->tv_sec;
 }
-#endif
-
-
-#if GIHM_STUB_NATIVEWINDOW
-// to be replaced by GonkNativeWindow.(h|cpp)
-int WindowSetSwapInterval(struct ANativeWindow *window, int interval) {
-  return 0;
-}
-
-int WindowDequeueBuffer(struct ANativeWindow *window, struct ANativeWindowBuffer* *buffer) {
-  return 0;
-}
-
-int WindowLockBuffer(struct ANativeWindow *window, struct ANativeWindowBuffer *buffer) {
-  return 0;
-}
-
-int WindowQueueBuffer(struct ANativeWindow *window, struct ANativeWindowBuffer *buffer) {
-  return 0;
-}
-
-int WindowQuery(const struct ANativeWindow *window, int what, int *value) {
-  return 0;
-}
-
-int WindowPerform(struct ANativeWindow *window, int operation, ... ) {
-  return 0;
-}
-
-int WindowCancelBuffer(struct ANativeWindow *window, struct ANativeWindowBuffer *buffer) {
-  return 0;
-}
-
-void WindowIncRef(struct android_native_base_t *base) {
-
-}
-
-void WindowDecRef(struct android_native_base_t* base) {
-
-}
-#else
-#include "CameraNativeWindow.h"
 #endif
 
 GonkCameraHardware::GonkCameraHardware(GonkCamera *aTarget, PRUint32 aCamera)
@@ -193,21 +149,7 @@ GonkCameraHardware::init()
     return;
   }
 
-#if GIHM_STUB_NATIVEWINDOW
-  ANativeWindow *window = new ANativeWindow();
-  window->common.incRef = WindowIncRef;
-  window->common.decRef = WindowDecRef;
-  mWindow = window;
-  mWindow->setSwapInterval = WindowSetSwapInterval;
-  mWindow->dequeueBuffer = WindowDequeueBuffer;
-  mWindow->lockBuffer = WindowLockBuffer;
-  mWindow->queueBuffer = WindowQueueBuffer;
-  mWindow->query = WindowQuery;
-  mWindow->perform = WindowPerform;
-  mWindow->cancelBuffer = WindowCancelBuffer;
-#else
   mWindow = new android::CameraNativeWindow();
-#endif
 
   if (sHwHandle == 0) {
     sHwHandle = 1;  // don't use 0

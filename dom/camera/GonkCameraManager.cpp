@@ -83,7 +83,7 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
   return NS_OK;
 }
 
-USING_CAMERA_NAMESPACE
+using namespace mozilla;
 
 NS_IMETHODIMP
 DoGetCamera::Run()

@@ -24,7 +24,7 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-BEGIN_CAMERA_NAMESPACE
+namespace mozilla {
 
 class nsGonkCameraControl : public nsCameraControl
 {
@@ -66,6 +66,6 @@ void ReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
 void AutoFocusComplete(nsGonkCameraControl* gc, bool success);
 void ReceiveFrame(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
 
-END_CAMERA_NAMESPACE
+} // namespace mozilla
 
 #endif // DOM_CAMERA_GONKCAMERACONTROL_H

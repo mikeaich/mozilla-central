@@ -5,7 +5,7 @@
 #include "CameraPictureOptions.h"
 #include "CameraCommon.h"
 
-USING_CAMERA_NAMESPACE
+using namespace mozilla;
 
 NS_IMPL_ISUPPORTS1(nsCameraPictureOptions, nsICameraPictureOptions)
 

@@ -15,7 +15,7 @@
 using namespace mozilla;
 using namespace mozilla::layers;
 
-BEGIN_CAMERA_NAMESPACE
+namespace mozilla {
 
 class CameraPreview : public nsDOMMediaStream
                     , public MediaStreamListener
@@ -52,6 +52,6 @@ private:
   CameraPreview& operator=(const CameraPreview&);
 };
 
-END_CAMERA_NAMESPACE
+} // namespace mozilla
 
 #endif // DOM_CAMERA_CAMERAPREVIEW_H

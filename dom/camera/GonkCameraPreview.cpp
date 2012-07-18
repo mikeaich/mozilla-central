@@ -21,7 +21,7 @@
 #define DOM_CAMERA_LOG_LEVEL  2
 #include "CameraCommon.h"
 
-USING_CAMERA_NAMESPACE
+using namespace mozilla;
 
 /**
  * This big macro takes two 32-bit input blocks of interlaced u and

@@ -10,16 +10,6 @@
 #include "nsThreadUtils.h"
 #include "nsIDOMCameraManager.h"
 
-#define BEGIN_CAMERA_NAMESPACE \
-  namespace mozilla {
-
-#define END_CAMERA_NAMESPACE \
-  } /* namespace mozilla */
-
-#define USING_CAMERA_NAMESPACE \
-  using namespace mozilla;
-
-
 #define DOM_CAMERA_LOG( l, ... )       \
   do {                                  \
     if ( DOM_CAMERA_LOG_LEVEL >= (l) ) {  \
@@ -39,7 +29,6 @@ enum {
 #define DOM_CAMERA_LOGI( ... )        DOM_CAMERA_LOG( DOM_CAMERA_LOG_INFO,  __VA_ARGS__ )
 #define DOM_CAMERA_LOGW( ... )        DOM_CAMERA_LOG( DOM_CAMERA_LOG_WARNING, __VA_ARGS__ )
 #define DOM_CAMERA_LOGE( ... )        DOM_CAMERA_LOG( DOM_CAMERA_LOG_ERROR, __VA_ARGS__ )
-
 
 class CameraErrorResult : public nsRunnable
 {

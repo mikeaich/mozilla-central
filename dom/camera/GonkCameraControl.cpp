@@ -31,7 +31,7 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-USING_CAMERA_NAMESPACE
+using namespace mozilla;
 
 static const char* getKeyText(PRUint32 aKey)
 {
@@ -628,7 +628,7 @@ nsGonkCameraControl::ReceiveFrame(PRUint8* aData, PRUint32 aLength)
 }
 
 // Gonk callback handlers.
-BEGIN_CAMERA_NAMESPACE
+namespace mozilla {
 
 void
 ReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength)
@@ -648,4 +648,4 @@ ReceiveFrame(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength)
   gc->ReceiveFrame(aData, aLength);
 }
 
-END_CAMERA_NAMESPACE
+} // namespace mozilla

@@ -4,6 +4,8 @@
 
 #include "CameraControl.h"
 
+using namespace mozilla;
+
 DOMCI_DATA(CameraControl, nsICameraControl)
 
 NS_INTERFACE_MAP_BEGIN(nsCameraControl)

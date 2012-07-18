@@ -7,7 +7,7 @@
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
-USING_CAMERA_NAMESPACE
+using namespace mozilla;
 
 NS_IMPL_ISUPPORTS1(CameraPreview, CameraPreview)
 

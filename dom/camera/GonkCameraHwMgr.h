@@ -33,7 +33,7 @@
 using namespace mozilla;
 using namespace android;
 
-BEGIN_CAMERA_NAMESPACE
+namespace mozilla {
 
 typedef class nsGonkCameraControl GonkCamera;
 
@@ -120,6 +120,6 @@ private:
   GonkCameraHardware& operator=(const GonkCameraHardware&);
 };
 
-END_CAMERA_NAMESPACE
+} // namespace mozilla
 
 #endif // GONK_IMPL_HW_MGR_H
