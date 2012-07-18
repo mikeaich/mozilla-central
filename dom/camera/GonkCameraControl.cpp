@@ -22,6 +22,7 @@
 #include "nsMemory.h"
 #include "jsapi.h"
 #include "nsThread.h"
+#include "nsPrintfCString.h"
 #include "DOMCameraManager.h"
 #include "GonkCameraHwMgr.h"
 #include "CameraCapabilities.h"
@@ -83,7 +84,7 @@ nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread *aCameraT
 
   // Initialize our camera configuration database.
   mRwLock = PR_NewRWLock(PR_RWLOCK_RANK_NONE, "GonkCameraControl.Parameters.Lock");
-  DoPullParameters(nsnull);
+  PullParametersImpl(nsnull);
 
   // Grab any settings we'll need later.
   mExposureCompensationMin = mParams.getFloat(CameraParameters::KEY_MIN_EXPOSURE_COMPENSATION);
@@ -244,94 +245,21 @@ nsGonkCameraControl::GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint
   CameraRegion *r;
 
   // parse all of the region sets
-  char *end;
-  p = value + 1;
-  for (PRUint32 i = 0; i < count; ++i) {
+  PRUint32 i;
+  for (i = 0, p = value; p && i < count; ++i, p = strchr(p + 1, '(')) {
     r = &regions[i];
-
-    for (PRUint32 field = 0; field < 5; ++field) {
-      PRInt32 v;
-      if (field != 4) {
-        // dimension fields are signed
-        v = strtol(p, &end, 10);
-      }
-      switch (field) {
-        case 0:
-          r->mTop = v;
-          break;
-
-        case 1:
-          r->mLeft = v;
-          break;
-
-        case 2:
-          r->mBottom = v;
-          break;
-
-        case 3:
-          r->mRight = v;
-          break;
-
-        case 4:
-          // weight value is unsigned
-          r->mWeight = strtoul(p, &end, 10);
-          break;
-
-        default:
-          DOM_CAMERA_LOGE("%s:%d : should never reach here\n", __func__, __LINE__);
-          goto GetParameter_error;
-      }
-      p = end;
-      switch (*p) {
-        case ')':
-          if (field == 4) {
-            // end of this region
-            switch (*++p) {
-              case ',':
-                // there are more regions
-                if (*(p + 1) == '(') {
-                  p += 2;
-                  continue;
-                }
-                break;
-
-              case '\0':
-                // end of string, we're done
-                if (i + 1 != count) {
-                  DOM_CAMERA_LOGE("%s:%d : region list parsed short\n", __func__, __LINE__);
-                  count = i;
-                }
-                goto GetParameter_done;
-            }
-          }
-          // intentional fallthrough
-
-        default:
-          DOM_CAMERA_LOGE("%s:%d : malformed region '%s'\n", __func__, __LINE__, p);
-          goto GetParameter_error;
-
-        case '\0':
-          DOM_CAMERA_LOGE("%s:%d : abnormally short region group\n", __func__, __LINE__);
-          goto GetParameter_error;
-
-        case ',':
-          if (field != 4) {
-            ++p;
-            break;
-          }
-          DOM_CAMERA_LOGE("%s:%d : abnormally long region group\n", __func__, __LINE__);
-          goto GetParameter_error;
-      }
+    if (sscanf(p, "(%d,%d,%d,%d,%u)", &r->mTop, &r->mLeft, &r->mBottom, &r->mRight, &r->mWeight) != 5) {
+      DOM_CAMERA_LOGE("%s:%d : region tuple has bad format: '%s'\n", __func__, __LINE__, p);
+      goto GetParameter_error;
     }
   }
 
-GetParameter_done:
   *aRegions = regions;
   *aLength = count;
   return;
 
 GetParameter_error:
-  delete[] *aRegions;
+  delete[] regions;
   *aRegions = nsnull;
   *aLength = 0;
 }
@@ -342,7 +270,7 @@ nsGonkCameraControl::PushParameters()
   if (!mDeferConfigUpdate) {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
     /**
-     * If we're already on the camera thread, call DoPushParameters()
+     * If we're already on the camera thread, call PushParametersImpl()
      * directly, so that it executes synchronously.  Some callers
      * require this so that changes take effect immediately before
      * we can proceed.
@@ -351,7 +279,7 @@ nsGonkCameraControl::PushParameters()
       nsCOMPtr<nsIRunnable> pushParametersTask = new PushParametersTask(this);
       mCameraThread->Dispatch(pushParametersTask, NS_DISPATCH_NORMAL);
     } else {
-      DoPushParameters(nsnull);
+      PushParametersImpl(nsnull);
     }
   }
 }
@@ -542,37 +470,25 @@ nsGonkCameraControl::TakePictureImpl(TakePictureTask *aTakePicture)
   r += 45;
   r /= 90;
   r *= 90;
-  {
-    nsCString s;
-    s.AppendPrintf("%d", r);
-    DOM_CAMERA_LOGI("setting picture rotation to %d degrees (mapped from %d)\n", r, aTakePicture->mRotation);
-    SetParameter(CameraParameters::KEY_ROTATION, s.get());
-  }
+  DOM_CAMERA_LOGI("setting picture rotation to %d degrees (mapped from %d)\n", r, aTakePicture->mRotation);
+  SetParameter(CameraParameters::KEY_ROTATION, nsPrintfCString("%u", r).get());
 
   // Add any specified positional information -- don't care if these fail.
   if (aTakePicture->mLatitudeSet) {
-    nsCString s;
-    s.AppendPrintf("%f", aTakePicture->mLatitude);
-    DOM_CAMERA_LOGI("setting picture latitude to %s\n", s.get());
-    SetParameter(CameraParameters::KEY_GPS_LATITUDE, s.get());
+    DOM_CAMERA_LOGI("setting picture latitude to %lf\n", aTakePicture->mLatitude);
+    SetParameter(CameraParameters::KEY_GPS_LATITUDE, nsPrintfCString("%lf", aTakePicture->mLatitude).get());
   }
   if (aTakePicture->mLongitudeSet) {
-    nsCString s;
-    s.AppendPrintf("%f", aTakePicture->mLongitude);
-    DOM_CAMERA_LOGI("setting picture longitude to %s\n", s.get());
-    SetParameter(CameraParameters::KEY_GPS_LONGITUDE, s.get());
+    DOM_CAMERA_LOGI("setting picture longitude to %lf\n", aTakePicture->mLongitude);
+    SetParameter(CameraParameters::KEY_GPS_LONGITUDE, nsPrintfCString("%lf", aTakePicture->mLongitude).get());
   }
   if (aTakePicture->mAltitudeSet) {
-    nsCString s;
-    s.AppendPrintf("%f", aTakePicture->mAltitude);
-    DOM_CAMERA_LOGI("setting picture altitude to %s\n", s.get());
-    SetParameter(CameraParameters::KEY_GPS_ALTITUDE, s.get());
+    DOM_CAMERA_LOGI("setting picture altitude to %lf\n", aTakePicture->mAltitude);
+    SetParameter(CameraParameters::KEY_GPS_ALTITUDE, nsPrintfCString("%lf", aTakePicture->mAltitude).get());
   }
   if (aTakePicture->mTimestampSet) {
-    nsCString s;
-    s.AppendPrintf("%f", aTakePicture->mTimestamp);
-    DOM_CAMERA_LOGI("setting picture timestamp to %s\n", s.get());
-    SetParameter(CameraParameters::KEY_GPS_TIMESTAMP, s.get());
+    DOM_CAMERA_LOGI("setting picture timestamp to %lf\n", aTakePicture->mTimestamp);
+    SetParameter(CameraParameters::KEY_GPS_TIMESTAMP, nsPrintfCString("%lf", aTakePicture->mTimestamp).get());
   }
 
   mDeferConfigUpdate = false;

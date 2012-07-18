@@ -536,7 +536,7 @@ nsCameraControl::AutoFocusComplete(bool aSuccess)
    * we need to pull a new set before sending the result to the
    * main thread.
    */
-  DoPullParameters(nsnull);
+  PullParametersImpl(nsnull);
 
   nsCOMPtr<nsIRunnable> autoFocusResult = new AutoFocusResult(aSuccess, mAutoFocusOnSuccessCb);
 
