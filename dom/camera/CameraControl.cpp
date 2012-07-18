@@ -97,6 +97,11 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, double *aValue)
 static nsresult
 setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValue, JSContext *cx, PRUint32 aLimit)
 {
+  if (aLimit == 0) {
+    DOM_CAMERA_LOGI("%s:%d : aLimit = 0, nothing to do\n", __func__, __LINE__);
+    return NS_OK;
+  }
+
   nsCameraControl::CameraRegion *parsedRegions;
   PRUint32 length = 0;
 
