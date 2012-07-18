@@ -452,7 +452,7 @@ nsGonkCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint3
   /* remove the trailing comma */
   s.Trim(",", false, true, true);
 
-  DOM_CAMERA_LOGI("camera region string '%s'\n", s);
+  DOM_CAMERA_LOGI("camera region string '%s'\n", s.get());
 
   {
     RwAutoLockWrite lock(mRwLock);
@@ -688,38 +688,40 @@ nsGonkCameraControl::SetupVideoMode()
 }
 
 nsresult
-nsGonkCameraControl::DoToggleMode(ToggleModeTask *aToggleMode)
+nsGonkCameraControl::DoSwitchToVideoMode(SwitchToVideoModeTask *aSwitchToVideoMode)
 {
-  nsresult result;
-  nsCOMPtr<CameraPreview> preview;  // FIXME
+  nsresult rv;
+  nsCOMPtr<CameraPreview> preview;
 
   // stop preview
   mPreview->Stop();
 
   // setup video mode
-  if ((result = SetupVideoMode()) != NS_OK) {
-    goto bailout;
+  if ((rv = SetupVideoMode()) != NS_OK) {
+    goto DoSwitchToVideoMode_fail;
   }
   
   // restart preview
   preview = new GonkCameraPreview(mHwHandle, mVideoFrameWidth, mVideoFrameHeight);
   if (!preview) {
-    result = NS_ERROR_OUT_OF_MEMORY;
-    goto bailout;
+    rv = NS_ERROR_OUT_OF_MEMORY;
+    goto DoSwitchToVideoMode_fail;
   }
   mPreview = preview;
 
   // dispatch success
-  if (NS_FAILED(NS_DispatchToMainThread(new ToggleModeResult(preview.get(), aToggleMode->mOnSuccessCb)))) {
+  rv = NS_DispatchToMainThread(new SwitchToVideoModeResult(preview.get(), aSwitchToVideoMode->mOnSuccessCb));
+  if (NS_FAILED(rv)) {
     NS_WARNING("Failed to dispatch SwitchToVideoMode() onSuccess callback to main thread!");
   }
   return NS_OK;
 
-bailout:
-  if (NS_FAILED(NS_DispatchToMainThread(new CameraErrorResult(aToggleMode->mOnErrorCb, NS_LITERAL_STRING("OUT_OF_MEMORY"))))) {
+DoSwitchToVideoMode_fail:
+  nsresult rv2 = NS_DispatchToMainThread(new CameraErrorResult(aSwitchToVideoMode->mOnErrorCb, NS_LITERAL_STRING("OUT_OF_MEMORY")));
+  if (NS_FAILED(rv2)) {
     NS_WARNING("Failed to dispatch SwitchToVideoMode() onError callback to main thread!");
   }
-  return result;
+  return rv;
 }
 
 static int

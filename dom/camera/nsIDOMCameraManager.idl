@@ -257,7 +257,7 @@ interface nsICameraControl : nsISupports
 
     /* toggle between the (initial) still-picture mode and video recording mode. */
     [implicit_jscontext]
-    void toggleMode(in nsICameraPreviewStreamCallback onSuccess, [optional] in nsICameraErrorCallback onError);
+    void switchToVideoMode(in nsICameraPreviewStreamCallback onSuccess, [optional] in nsICameraErrorCallback onError);
 
     /* start recording video; 'aOptions' define the frame size of to
        capture, chosen from capabilities.videoSizes, e.g.:

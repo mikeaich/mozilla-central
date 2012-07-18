@@ -30,7 +30,7 @@ class SetParameterTask;
 class GetParameterTask;
 class PushParametersTask;
 class PullParametersTask;
-class ToggleModeTask;
+class SwitchToVideoModeTask;
 
 /*
   Main camera control.
@@ -46,7 +46,7 @@ class nsCameraControl : public nsICameraControl
   friend class GetParameterTask;
   friend class PushParametersTask;
   friend class PullParametersTask;
-  friend class ToggleModeTask;
+  friend class SwitchToVideoModeTask;
 
 public:
   NS_DECL_ISUPPORTS
@@ -122,7 +122,7 @@ protected:
   virtual nsresult DoStopRecording(StopRecordingTask *aStopRecording) = 0;
   virtual nsresult DoPushParameters(PushParametersTask *aPushParameters) = 0;
   virtual nsresult DoPullParameters(PullParametersTask *aPullParameters) = 0;
-  virtual nsresult DoToggleMode(ToggleModeTask *aToggleMode) = 0;
+  virtual nsresult DoSwitchToVideoMode(SwitchToVideoModeTask *aSwitchToVideoMode) = 0;
 
 private:
   nsCameraControl(const nsCameraControl&);
@@ -352,10 +352,10 @@ public:
 /*
   Return the resulting preview stream to JS.  Runs on the main thread.
 */
-class ToggleModeResult : public nsRunnable
+class SwitchToVideoModeResult : public nsRunnable
 {
 public:
-  ToggleModeResult(nsIDOMMediaStream *aStream, nsICameraPreviewStreamCallback *onSuccess)
+  SwitchToVideoModeResult(nsIDOMMediaStream *aStream, nsICameraPreviewStreamCallback *onSuccess)
      : mStream(aStream)
      , mOnSuccessCb(onSuccess)
   { }
@@ -378,10 +378,10 @@ protected:
 /*
   Get the video mode preview stream.
 */
-class ToggleModeTask : public nsRunnable
+class SwitchToVideoModeTask : public nsRunnable
 {
 public:
-  ToggleModeTask(nsCameraControl *aCameraControl, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError)
+  SwitchToVideoModeTask(nsCameraControl *aCameraControl, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError)
     : mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
@@ -389,11 +389,12 @@ public:
 
   NS_IMETHOD Run()
   {
-    nsresult rv = mCameraControl->DoToggleMode(this);
+    nsresult rv = mCameraControl->DoSwitchToVideoMode(this);
 
     if (NS_FAILED(rv)) {
-      if (NS_FAILED(NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE"))))) {
-        NS_WARNING("Failed to dispatch ToggleMode() onError callback to main thread!");
+      rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
+      if (NS_FAILED(rv)) {
+        NS_WARNING("Failed to dispatch SwitchToVideoMode() onError callback to main thread!");
       }
     }
     return NS_OK;

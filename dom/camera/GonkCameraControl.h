@@ -58,11 +58,11 @@ protected:
   nsresult DoStopRecording(StopRecordingTask *aStopRecording);
   nsresult DoPushParameters(PushParametersTask *aPushParameters);
   nsresult DoPullParameters(PullParametersTask *aPullParameters);
-  nsresult DoToggleMode(ToggleModeTask *aToggleMode);
+  nsresult DoSwitchToVideoMode(SwitchToVideoModeTask *aSwitchToVideoMode);
 
   PRUint32                  mHwHandle;
-  double                    mExpsoureCompensationMin;
-  double                    mExpsoureCompensationStep;
+  double                    mExposureCompensationMin;
+  double                    mExposureCompensationStep;
   bool                      mDeferConfigUpdate;
   PRRWLock*                 mRwLock;
   android::CameraParameters mParams;

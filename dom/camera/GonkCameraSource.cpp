@@ -333,7 +333,7 @@ status_t GonkCameraSource::configureCamera(
 
     if (isCameraParamChanged) {
         // Either frame rate or frame size needs to be changed.
-        if (OK != GonkCameraHardware::doCameraHardwarePushParameters(mCameraHandle,*params)) {
+        if (OK != GonkCameraHardware::PushParameters(mCameraHandle,*params)) {
             LOGE("Could not change settings."
                  " Someone else is using camera ?");
             return -EBUSY;
@@ -447,7 +447,7 @@ status_t GonkCameraSource::init(
 #endif
 
     CameraParameters params;
-    GonkCameraHardware::doCameraHardwarePullParameters(mCameraHandle, params);
+    GonkCameraHardware::PullParameters(mCameraHandle, params);
     if ((err = isCameraColorFormatSupported(params)) != OK) {
         return err;
     }
@@ -462,7 +462,7 @@ status_t GonkCameraSource::init(
 
     // Check on video frame size and frame rate.
     CameraParameters newCameraParams;
-    GonkCameraHardware::doCameraHardwarePullParameters(mCameraHandle, newCameraParams);
+    GonkCameraHardware::PullParameters(mCameraHandle, newCameraParams);
     if ((err = checkVideoSize(newCameraParams,
                 videoSize.width, videoSize.height)) != OK) {
         return err;
@@ -473,9 +473,9 @@ status_t GonkCameraSource::init(
 
     // By default, do not store metadata in video buffers
     mIsMetaDataStoredInVideoBuffers = false;
-    GonkCameraHardware::storeMetaDataInBuffers(mCameraHandle, false);
+    GonkCameraHardware::StoreMetaDataInBuffers(mCameraHandle, false);
     if (storeMetaDataInVideoBuffers) {
-        if (OK == GonkCameraHardware::storeMetaDataInBuffers(mCameraHandle, true)) {
+        if (OK == GonkCameraHardware::StoreMetaDataInBuffers(mCameraHandle, true)) {
             mIsMetaDataStoredInVideoBuffers = true;
         }
     }
@@ -532,7 +532,7 @@ GonkCameraSource::~GonkCameraSource() {
 
 void GonkCameraSource::startCameraRecording() {
     LOGV("startCameraRecording");
-    CHECK_EQ(OK, GonkCameraHardware::doCameraHardwareStartRecording(mCameraHandle));
+    CHECK_EQ(OK, GonkCameraHardware::StartRecording(mCameraHandle));
 }
 
 status_t GonkCameraSource::start(MetaData *meta) {
@@ -556,8 +556,8 @@ status_t GonkCameraSource::start(MetaData *meta) {
         mStartTimeUs = startTimeUs;
     }
 
-    //Register a listener with GonkCameraHardware so that we can get callbacks
-    GonkCameraHardware::setListener(mCameraHandle, new GonkCameraSourceListener(this));
+    // Register a listener with GonkCameraHardware so that we can get callbacks
+    GonkCameraHardware::SetListener(mCameraHandle, new GonkCameraSourceListener(this));
 
     mStarted = true;
 
@@ -570,7 +570,7 @@ status_t GonkCameraSource::start(MetaData *meta) {
 
 void GonkCameraSource::stopCameraRecording() {
     LOGV("stopCameraRecording");
-    GonkCameraHardware::doCameraHardwareStopRecording(mCameraHandle);
+    GonkCameraHardware::StopRecording(mCameraHandle);
 }
 
 void GonkCameraSource::releaseCamera() {
@@ -634,7 +634,7 @@ status_t GonkCameraSource::stop() {
 
 void GonkCameraSource::releaseRecordingFrame(const sp<IMemory>& frame) {
     LOGV("releaseRecordingFrame");
-    GonkCameraHardware::releaseRecordingFrame(mCameraHandle, frame);
+    GonkCameraHardware::ReleaseRecordingFrame(mCameraHandle, frame);
 }
 
 void GonkCameraSource::releaseQueuedFrames() {

@@ -540,14 +540,14 @@ nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, nsICameraTakePic
   return NS_OK;
 }
 
-/* [implicit_jscontext] void ToggleMode (in nsICameraPreviewStreamCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
+/* [implicit_jscontext] void SwitchToVideoMode (in nsICameraPreviewStreamCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
 NS_IMETHODIMP
-nsCameraControl::ToggleMode(nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
+nsCameraControl::SwitchToVideoMode(nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
 
-  nsCOMPtr<nsIRunnable> toggleMode = new ToggleModeTask(this, onSuccess, onError);
-  mCameraThread->Dispatch(toggleMode, NS_DISPATCH_NORMAL);
+  nsCOMPtr<nsIRunnable> switchToVideoMode = new SwitchToVideoModeTask(this, onSuccess, onError);
+  mCameraThread->Dispatch(switchToVideoMode, NS_DISPATCH_NORMAL);
 
   return NS_OK;
 }

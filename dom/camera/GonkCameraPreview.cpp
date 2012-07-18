@@ -92,7 +92,6 @@ GonkCameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
         PRUint8* data = new PRUint8[ aLength ];
         if (!data) {
           DOM_CAMERA_LOGE("Couldn't allocate de-interlacing buffer\n");
-          delete image;
           return;
         }
 
