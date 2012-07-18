@@ -18,13 +18,6 @@ using namespace android;
 
 USING_CAMERA_NAMESPACE
 
-#define CHECK_CAMERA_PTR(c)         \
-  if (!c) {                         \
-    return NS_ERROR_NOT_AVAILABLE;  \
-  }
-
-// NS_IMPL_ISUPPORTS1(nsCameraCapabilities, nsICameraCapabilities)
-
 DOMCI_DATA(CameraCapabilities, nsICameraCapabilities)
 
 NS_INTERFACE_MAP_BEGIN(nsCameraCapabilities)
@@ -47,10 +40,7 @@ nsCameraCapabilities::nsCameraCapabilities(nsCameraControl *aCamera) :
 nsCameraCapabilities::~nsCameraCapabilities()
 {
   /* destructor code */
-  // DOM_CAMERA_LOGI("%s:%d - |mCamera = nsnull| removed\n", __func__, __LINE__);
   DOM_CAMERA_LOGI("%s:%d : this=%p, mCamera=%p\n", __func__, __LINE__, this, mCamera.get());
-  mCamera = nsnull;
-  DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
 }
 
 static nsresult
@@ -137,7 +127,7 @@ parseDimensionItemAndAdd(JSContext *cx, JSObject *array, PRUint32 index, const c
 nsresult
 nsCameraCapabilities::parameterListToNewArray(JSContext *cx, JSObject **array, const char *key, nsresult (*parseItemAndAdd)(JSContext *cx, JSObject *array, PRUint32 index, const char *start,  char **end))
 {
-  CHECK_CAMERA_PTR(mCamera);
+  NS_ENSURE_TRUE(mCamera, NS_ERROR_NOT_AVAILABLE);
 
   PRUint32 index = 0;
   const char *value;
@@ -258,7 +248,7 @@ nsCameraCapabilities::GetFocusModes(JSContext* cx, JS::Value *aFocusModes)
 NS_IMETHODIMP
 nsCameraCapabilities::GetMaxFocusAreas(JSContext* cx, PRInt32 *aMaxFocusAreas)
 {
-  CHECK_CAMERA_PTR(mCamera);
+  NS_ENSURE_TRUE(mCamera, NS_ERROR_NOT_AVAILABLE);
 
   const char* value = mCamera->GetParameter(CameraParameters::KEY_MAX_NUM_FOCUS_AREAS);
   if (!value) {
@@ -275,7 +265,7 @@ nsCameraCapabilities::GetMaxFocusAreas(JSContext* cx, PRInt32 *aMaxFocusAreas)
 NS_IMETHODIMP
 nsCameraCapabilities::GetMinExposureCompensation(JSContext* cx, double *aMinExposureCompensation)
 {
-  CHECK_CAMERA_PTR(mCamera);
+  NS_ENSURE_TRUE(mCamera, NS_ERROR_NOT_AVAILABLE);
 
   const char* value = mCamera->GetParameter(CameraParameters::KEY_MIN_EXPOSURE_COMPENSATION);
   if (!value) {
@@ -292,7 +282,7 @@ nsCameraCapabilities::GetMinExposureCompensation(JSContext* cx, double *aMinExpo
 NS_IMETHODIMP
 nsCameraCapabilities::GetMaxExposureCompensation(JSContext* cx, double *aMaxExposureCompensation)
 {
-  CHECK_CAMERA_PTR(mCamera);
+  NS_ENSURE_TRUE(mCamera, NS_ERROR_NOT_AVAILABLE);
 
   const char* value = mCamera->GetParameter(CameraParameters::KEY_MAX_EXPOSURE_COMPENSATION);
   if (!value) {
@@ -309,7 +299,7 @@ nsCameraCapabilities::GetMaxExposureCompensation(JSContext* cx, double *aMaxExpo
 NS_IMETHODIMP
 nsCameraCapabilities::GetStepExposureCompensation(JSContext* cx, double *aStepExposureCompensation)
 {
-  CHECK_CAMERA_PTR(mCamera);
+  NS_ENSURE_TRUE(mCamera, NS_ERROR_NOT_AVAILABLE);
 
   const char* value = mCamera->GetParameter(CameraParameters::KEY_EXPOSURE_COMPENSATION_STEP);
   if (!value) {
@@ -326,7 +316,7 @@ nsCameraCapabilities::GetStepExposureCompensation(JSContext* cx, double *aStepEx
 NS_IMETHODIMP
 nsCameraCapabilities::GetMaxMeteringAreas(JSContext* cx, PRInt32 *aMaxMeteringAreas)
 {
-  CHECK_CAMERA_PTR(mCamera);
+  NS_ENSURE_TRUE(mCamera, NS_ERROR_NOT_AVAILABLE);
 
   const char* value = mCamera->GetParameter(CameraParameters::KEY_MAX_NUM_METERING_AREAS);
   if (!value) {
@@ -343,7 +333,7 @@ nsCameraCapabilities::GetMaxMeteringAreas(JSContext* cx, PRInt32 *aMaxMeteringAr
 NS_IMETHODIMP
 nsCameraCapabilities::GetZoomRatios(JSContext* cx, JS::Value *aZoomRatios)
 {
-  CHECK_CAMERA_PTR(mCamera);
+  NS_ENSURE_TRUE(mCamera, NS_ERROR_NOT_AVAILABLE);
 
   const char* value;
   JSObject* array;

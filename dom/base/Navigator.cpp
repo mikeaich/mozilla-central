@@ -184,9 +184,7 @@ Navigator::Invalidate()
 #endif
 
 #ifdef MOZ_B2G_CAMERA
-  if (mCameraManager) {
-    mCameraManager = nsnull;
-  }
+  mCameraManager = nsnull;
 #endif
 
 #ifdef MOZ_SYS_MSG

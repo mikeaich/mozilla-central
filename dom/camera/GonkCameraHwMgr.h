@@ -53,25 +53,32 @@ protected:
   static void                   NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2, void* aUser);
 
 public:
-  static void                   releaseCameraHardwareHandle(PRUint32 aHwHandle);
-  static PRUint32               getCameraHardwareHandle(GonkCamera* aTarget, PRUint32 aCamera);
-  static PRUint32               getCameraHardwareFps(PRUint32 aHwHandle);
-  static void                   getCameraHardwarePreviewSize(PRUint32 aHwHandle, PRUint32* aWidth, PRUint32* aHeight);
-  static void                   setCameraHardwarePreviewSize(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight);
-  static int                    doCameraHardwareAutoFocus(PRUint32 aHwHandle);
-  static void                   doCameraHardwareCancelAutoFocus(PRUint32 aHwHandle);
-  static int                    doCameraHardwareTakePicture(PRUint32 aHwHandle);
-  static void                   doCameraHardwareCancelTakePicture(PRUint32 aHwHandle);
-  static int                    doCameraHardwareStartPreview(PRUint32 aHwHandle);
-  static void                   doCameraHardwareStopPreview(PRUint32 aHwHandle);
-  static int                    doCameraHardwarePushParameters(PRUint32 aHwHandle, const CameraParameters& aParams);
-  static void                   doCameraHardwarePullParameters(PRUint32 aHwHandle, CameraParameters& aParams);
-  static int                    doCameraHardwareStartRecording(PRUint32 aHwHandle);
-  static int                    doCameraHardwareStopRecording(PRUint32 aHwHandle);
-  static int                    setListener(PRUint32 aHwHandle, const sp<GonkCameraListener>& listener);
-  static void                   releaseRecordingFrame(PRUint32 aHwHandle, const sp<IMemory>& frame);
-  static int                    storeMetaDataInBuffers(PRUint32 aHwHandle, bool enabled);
+  static void                   ReleaseHandle(PRUint32 aHwHandle);
+  static PRUint32               GetHandle(GonkCamera* aTarget, PRUint32 aCamera);
+  static PRUint32               GetFps(PRUint32 aHwHandle);
+  static void                   GetPreviewSize(PRUint32 aHwHandle, PRUint32* aWidth, PRUint32* aHeight);
+  static void                   SetPreviewSize(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight);
+  static int                    AutoFocus(PRUint32 aHwHandle);
+  static void                   CancelAutoFocus(PRUint32 aHwHandle);
+  static int                    TakePicture(PRUint32 aHwHandle);
+  static void                   CancelTakePicture(PRUint32 aHwHandle);
+  static int                    StartPreview(PRUint32 aHwHandle);
+  static void                   StopPreview(PRUint32 aHwHandle);
+  static int                    PushParameters(PRUint32 aHwHandle, const CameraParameters& aParams);
+  static void                   PullParameters(PRUint32 aHwHandle, CameraParameters& aParams);
+  static int                    StartRecording(PRUint32 aHwHandle);
+  static int                    StopRecording(PRUint32 aHwHandle);
+  static int                    SetListener(PRUint32 aHwHandle, const sp<GonkCameraListener>& listener);
+  static void                   ReleaseRecordingFrame(PRUint32 aHwHandle, const sp<IMemory>& frame);
+  static int                    StoreMetaDataInBuffers(PRUint32 aHwHandle, bool enabled);
 
+  enum {
+    PREVIEW_FORMAT_UNKNOWN,
+    PREVIEW_FORMAT_YUV420P,
+    PREVIEW_FORMAT_YUV420SP
+  };
+  // GetPreviewFormat() MUST be called only after StartPreview().
+  static PRUint32               GetPreviewFormat(PRUint32 aHwHandle);
 
 protected:
   static GonkCameraHardware*    sHw;
@@ -99,7 +106,7 @@ protected:
   PRUint32                      mWidth;
   PRUint32                      mHeight;
   PRUint32                      mFps;
-  bool                          mIs420p;
+  PRUint32                      mPreviewFormat;
   bool                          mClosing;
   mozilla::ReentrantMonitor     mMonitor;
   PRUint32                      mNumFrames;

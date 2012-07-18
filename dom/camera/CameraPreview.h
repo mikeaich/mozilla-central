@@ -45,7 +45,6 @@ protected:
   PRUint32 mWidth;
   PRUint32 mHeight;
   PRUint32 mFramesPerSecond;
-  bool mIs420p;
   SourceMediaStream *mInput;
   nsRefPtr<mozilla::layers::ImageContainer> mImageContainer;
   VideoSegment mVideoSegment;

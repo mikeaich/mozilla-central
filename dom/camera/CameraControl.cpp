@@ -29,19 +29,36 @@ NS_IMPL_ADDREF(nsCameraControl)
 NS_IMPL_RELEASE(nsCameraControl)
 
 /*
+  Helpers for reading optional integer properties.
+*/
+static PRUint32
+getPropertyHelper(JSContext *cx, JSObject *o, const char *prop, PRUint32 aDefault)
+{
+  jsval p;
+  if (JS_GetProperty(cx, o, prop, &p) && JSVAL_IS_INT(p)) {
+    return JSVAL_TO_INT(p);
+  }
+  return aDefault;
+}
+
+static PRInt32
+getPropertyHelper(JSContext *cx, JSObject *o, const char *prop, PRInt32 aDefault)
+{
+  jsval p;
+  if (JS_GetProperty(cx, o, prop, &p) && JSVAL_IS_INT(p)) {
+    return JSVAL_TO_INT(p);
+  }
+  return aDefault;
+}
+
+/*
   Helpers for string properties.
 */
-static nsresult
+static inline nsresult
 setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const nsAString& aValue)
 {
-  const char *v = ToNewCString(aValue);
-  if (v) {
-    aCameraContol->SetParameter(aKey, v);
-    nsMemory::Free(const_cast<char*>(v));
-    return NS_OK;
-  } else {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
+  aCameraContol->SetParameter(aKey, NS_ConvertUTF16toUTF8(aValue).get());
+  return NS_OK;
 }
 
 static nsresult
@@ -49,40 +66,42 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, nsAString& aValue)
 {
   const char *value = aCameraControl->GetParameterConstChar(aKey);
   if (value) {
-    aValue.AssignASCII(value);
-    return NS_OK;
-  } else {
     return NS_ERROR_FAILURE;
   }
+
+  aValue.AssignASCII(value);
+  return NS_OK;
 }
 
 /*
   Helpers for doubles.
 */
-static nsresult
+static inline nsresult
 setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, double aValue)
 {
   aCameraContol->SetParameter(aKey, aValue);
   return NS_OK;
 }
 
-static nsresult
+static inline nsresult
 getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, double *aValue)
 {
-  if (aValue) {
-    *aValue = aCameraControl->GetParameterDouble(aKey);
-    return NS_OK;
-  } else {
-    return NS_ERROR_UNEXPECTED;
-  }
+  MOZ_ASSERT(aValue);
+  *aValue = aCameraControl->GetParameterDouble(aKey);
+  return NS_OK;
 }
 
 /*
   Helper for weighted regions.
 */
 static nsresult
-setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValue, JSContext *cx)
+setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValue, JSContext *cx, PRUint32 aLimit)
 {
+  if (aLimit == 0) {
+    DOM_CAMERA_LOGI("%s:%d : aLimit = 0, nothing to do\n", __func__, __LINE__);
+    return NS_OK;
+  }
+
   nsCameraControl::CameraRegion *parsedRegions;
   PRUint32 length = 0;
 
@@ -90,62 +109,32 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValu
     JSObject *regions = JSVAL_TO_OBJECT(aValue);
     if (JS_IsArrayObject(cx, regions)) {
       if (JS_GetArrayLength(cx, regions, &length)) {
-        DOM_CAMERA_LOGI("%s:%d : got %d regions\n", __func__, __LINE__, length);
+        DOM_CAMERA_LOGI("%s:%d : got %d regions (limited to %d)\n", __func__, __LINE__, length, aLimit);
+        if (length > aLimit) {
+          length = aLimit;
+        }
         parsedRegions = new nsCameraControl::CameraRegion[length];
         for (PRUint32 i = 0; i < length; ++i) {
           jsval v;
-          if (JS_GetElement(cx, regions, i, &v)) {
-            if (v.isObject()) {
-              nsCameraControl::CameraRegion* parsed = &parsedRegions[i];
-              JSObject *r = JSVAL_TO_OBJECT(v);
-              jsval p;
+          if (JS_GetElement(cx, regions, i, &v) && v.isObject()) {
+            nsCameraControl::CameraRegion* parsed = &parsedRegions[i];
+            JSObject *r = JSVAL_TO_OBJECT(v);
 
-              /* TODO: move these Gonk-specific values somewhere else */
-              PRInt32 top     = -1000;
-              PRInt32 left    = -1000;
-              PRInt32 bottom  =  1000;
-              PRInt32 right   =  1000;
-              PRUint32 weight =  1;
+            /* TODO: move the Gonk-specific default values somewhere else */
+            parsed->mTop = getPropertyHelper(cx, r, "top", PRInt32(-1000));
+            parsed->mLeft = getPropertyHelper(cx, r, "left", PRInt32(-1000));
+            parsed->mBottom = getPropertyHelper(cx, r, "bottom", PRInt32(1000));
+            parsed->mRight = getPropertyHelper(cx, r, "right", PRInt32(1000));
+            parsed->mWeight = getPropertyHelper(cx, r, "weight", PRUint32(1000));
 
-              if (JS_GetProperty(cx, r, "top", &p)) {
-                if (JSVAL_IS_INT(p)) {
-                  top = JSVAL_TO_INT(p);
-                }
-              }
-              if (JS_GetProperty(cx, r, "left", &p)) {
-                if (JSVAL_IS_INT(p)) {
-                  left = JSVAL_TO_INT(p);
-                }
-              }
-              if (JS_GetProperty(cx, r, "bottom", &p)) {
-                if (JSVAL_IS_INT(p)) {
-                  bottom = JSVAL_TO_INT(p);
-                }
-              }
-              if (JS_GetProperty(cx, r, "right", &p)) {
-                if (JSVAL_IS_INT(p)) {
-                  right = JSVAL_TO_INT(p);
-                }
-              }
-              if (JS_GetProperty(cx, r, "weight", &p)) {
-                if (JSVAL_IS_INT(p)) {
-                  weight = JSVAL_TO_INT(p);
-                }
-              }
-              DOM_CAMERA_LOGI("region %d: top=%d, left=%d, bottom=%d, right=%d, weight=%d\n",
-                i,
-                top,
-                left,
-                bottom,
-                right,
-                weight
-              );
-              parsed->mTop = top;
-              parsed->mLeft = left;
-              parsed->mBottom = bottom;
-              parsed->mRight = right;
-              parsed->mWeight = weight;
-            }
+            DOM_CAMERA_LOGI("region %d: top=%d, left=%d, bottom=%d, right=%d, weight=%d\n",
+              i,
+              parsed->mTop,
+              parsed->mLeft,
+              parsed->mBottom,
+              parsed->mRight,
+              parsed->mWeight
+            );
           }
         }
       }
@@ -231,6 +220,7 @@ nsCameraControl::GetCapabilities(nsICameraCapabilities * *aCapabilities)
     if (!capabilities) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
+    mCapabilities = capabilities;
   }
 
   capabilities.forget(aCapabilities);
@@ -318,7 +308,7 @@ nsCameraControl::GetMeteringAreas(JSContext *cx, JS::Value *aMeteringAreas)
 NS_IMETHODIMP
 nsCameraControl::SetMeteringAreas(JSContext *cx, const JS::Value & aMeteringAreas)
 {
-  return setHelper(this, CAMERA_PARAM_METERINGAREAS, aMeteringAreas, cx);
+  return setHelper(this, CAMERA_PARAM_METERINGAREAS, aMeteringAreas, cx, mMaxMeteringAreas);
 }
 
 /* attribute jsval focusAreas; */
@@ -330,7 +320,7 @@ nsCameraControl::GetFocusAreas(JSContext *cx, JS::Value *aFocusAreas)
 NS_IMETHODIMP
 nsCameraControl::SetFocusAreas(JSContext *cx, const JS::Value & aFocusAreas)
 {
-  return setHelper(this, CAMERA_PARAM_FOCUSAREAS, aFocusAreas, cx);
+  return setHelper(this, CAMERA_PARAM_FOCUSAREAS, aFocusAreas, cx, mMaxFocusAreas);
 }
 
 /* readonly attribute double focalLength; */
@@ -368,10 +358,12 @@ nsCameraControl::SetExposureCompensation(const JS::Value & aCompensation)
   if (JSVAL_IS_DOUBLE(aCompensation)) {
     double compensation = JSVAL_TO_DOUBLE(aCompensation);
     return setHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, compensation);
-  } else if(JSVAL_IS_INT(aCompensation)) {
+  }
+  if (JSVAL_IS_INT(aCompensation)) {
     PRUint32 compensation = JSVAL_TO_INT(aCompensation);
     return setHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, compensation);
-  } else if(JSVAL_IS_NULL(aCompensation) || JSVAL_IS_VOID(aCompensation)) {
+  }
+  if (JSVAL_IS_NULL(aCompensation) || JSVAL_IS_VOID(aCompensation)) {
     /* use NaN to switch the camera back into auto mode */
     return setHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, NAN);
   }
@@ -412,23 +404,10 @@ nsCameraControl::StartRecording(const JS::Value & aOptions, nsICameraStartRecord
 
   if (aOptions.isObject()) {
     JSObject *options = JSVAL_TO_OBJECT(aOptions);
-    jsval v;
 
-    if (JS_GetProperty(cx, options, "width", &v)) {
-      if (JSVAL_IS_INT(v)) {
-        width = JSVAL_TO_INT(v);
-      }
-    }
-    if (JS_GetProperty(cx, options, "height", &v)) {
-      if (JSVAL_IS_INT(v)) {
-        height = JSVAL_TO_INT(v);
-      }
-    }
-    if (JS_GetProperty(cx, options, "rotation", &v)) {
-      if (JSVAL_IS_INT(v)) {
-        rotation = JSVAL_TO_INT(v);
-      }
-    }
+    width = getPropertyHelper(cx, options, "width", width);
+    height = getPropertyHelper(cx, options, "height", height);
+    rotation = getPropertyHelper(cx, options, "rotation", rotation);
   }
 
   nsCOMPtr<nsIRunnable> startRecordingTask = new StartRecordingTask(this, width, height, rotation, onSuccess, onError);
@@ -459,18 +438,9 @@ nsCameraControl::GetPreviewStream(const JS::Value & aOptions, nsICameraPreviewSt
 
   if (aOptions.isObject()) {
     JSObject *options = JSVAL_TO_OBJECT(aOptions);
-    jsval v;
 
-    if (JS_GetProperty(cx, options, "width", &v)) {
-      if (JSVAL_IS_INT(v)) {
-        width = JSVAL_TO_INT(v);
-      }
-    }
-    if (JS_GetProperty(cx, options, "height", &v)) {
-      if (JSVAL_IS_INT(v)) {
-        height = JSVAL_TO_INT(v);
-      }
-    }
+    width = getPropertyHelper(cx, options, "width", width);
+    height = getPropertyHelper(cx, options, "height", height);
   }
 
   nsCOMPtr<nsIRunnable> getPreviewStreamTask = new GetPreviewStreamTask(this, width, height, onSuccess, onError);
@@ -515,18 +485,9 @@ nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, nsICameraTakePic
   NS_ENSURE_SUCCESS(rv, rv);
   if (pictureSize.isObject()) {
     JSObject* options = JSVAL_TO_OBJECT(pictureSize);
-    jsval v;
 
-    if (JS_GetProperty(cx, options, "width", &v)) {
-      if (JSVAL_IS_INT(v)) {
-        width = JSVAL_TO_INT(v);
-      }
-    }
-    if (JS_GetProperty(cx, options, "height", &v)) {
-      if (JSVAL_IS_INT(v)) {
-        height = JSVAL_TO_INT(v);
-      }
-    }
+    width = getPropertyHelper(cx, options, "width", width);
+    height = getPropertyHelper(cx, options, "height", height);
   }
 
   nsString fileFormat;
@@ -601,7 +562,8 @@ nsCameraControl::AutoFocusComplete(bool aSuccess)
 
   nsCOMPtr<nsIRunnable> autoFocusResult = new AutoFocusResult(aSuccess, mAutoFocusOnSuccessCb);
 
-  if (NS_FAILED(NS_DispatchToMainThread(autoFocusResult))) {
+  nsresult rv = NS_DispatchToMainThread(autoFocusResult);
+  if (NS_FAILED(rv)) {
     NS_WARNING("Failed to dispatch autoFocus() onSuccess callback to main thread!");
   }
 }
@@ -618,7 +580,8 @@ nsCameraControl::TakePictureComplete(PRUint8* aData, PRUint32 aLength)
   nsIDOMBlob *blob = new nsDOMMemoryFile((void*)data, (PRUint64)aLength, NS_LITERAL_STRING("image/jpeg"));
   nsCOMPtr<nsIRunnable> takePictureResult = new TakePictureResult(blob, mTakePictureOnSuccessCb);
 
-  if (NS_FAILED(NS_DispatchToMainThread(takePictureResult))) {
+  nsresult rv = NS_DispatchToMainThread(takePictureResult);
+  if (NS_FAILED(rv)) {
     NS_WARNING("Failed to dispatch takePicture() onSuccess callback to main thread!");
   }
 }

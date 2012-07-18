@@ -91,9 +91,9 @@ protected:
 
 
 /* camera driver callbacks */
-void GonkCameraReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
-void GonkCameraAutoFocusComplete(nsGonkCameraControl* gc, bool success);
-void GonkCameraReceiveFrame(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
+void ReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
+void AutoFocusComplete(nsGonkCameraControl* gc, bool success);
+void ReceiveFrame(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
 
 END_CAMERA_NAMESPACE
 

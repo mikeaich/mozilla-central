@@ -93,6 +93,8 @@ public:
     , mCapabilities(nsnull)
     , mPreview(nsnull)
     , mFileFormat(nsnull)
+    , mMaxMeteringAreas(0)
+    , mMaxFocusAreas(0)
     , mAutoFocusOnSuccessCb(nsnull)
     , mAutoFocusOnErrorCb(nsnull)
     , mTakePictureOnSuccessCb(nsnull)
@@ -135,6 +137,8 @@ protected:
   PRUint32                        mPreviewHeight;
   nsCOMPtr<CameraPreview>         mPreview;
   const char*                     mFileFormat;
+  PRUint32                        mMaxMeteringAreas;
+  PRUint32                        mMaxFocusAreas;
 
   nsCOMPtr<nsICameraAutoFocusCallback>      mAutoFocusOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback>          mAutoFocusOnErrorCb;
@@ -190,7 +194,8 @@ public:
     nsresult rv = mCameraControl->DoGetPreviewStream(this);
 
     if (NS_FAILED(rv)) {
-      if (NS_FAILED(NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE"))))) {
+      rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
+      if (NS_FAILED(rv)) {
         NS_WARNING("Failed to dispatch getPreviewStream() onError callback to main thread!");
       }
     }
@@ -249,7 +254,8 @@ public:
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv)) {
-      if (NS_FAILED(NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE"))))) {
+      rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
+      if (NS_FAILED(rv)) {
         NS_WARNING("Failed to dispatch takePicture() onError callback to main thread!");
       }
     }
@@ -300,12 +306,12 @@ public:
     , mRotation(aRotation)
     , mFileFormat(aFileFormat)
     , mLatitude(aLatitude)
-    , mLatitudeSet(aLatitudeSet)
     , mLongitude(aLongitude)
-    , mLongitudeSet(aLongitudeSet)
     , mAltitude(aAltitude)
-    , mAltitudeSet(aAltitudeSet)
     , mTimestamp(aTimestamp)
+    , mLatitudeSet(aLatitudeSet)
+    , mLongitudeSet(aLongitudeSet)
+    , mAltitudeSet(aAltitudeSet)
     , mTimestampSet(aTimestampSet)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
@@ -318,7 +324,8 @@ public:
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv)) {
-      if (NS_FAILED(NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE"))))) {
+      rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
+      if (NS_FAILED(rv)) {
         NS_WARNING("Failed to dispatch takePicture() onError callback to main thread!");
       }
     }
@@ -331,12 +338,12 @@ public:
   PRInt32 mRotation;
   nsString mFileFormat;
   double mLatitude;
-  bool mLatitudeSet;
   double mLongitude;
-  bool mLongitudeSet;
   double mAltitude;
-  bool mAltitudeSet;
   double mTimestamp;
+  bool mLatitudeSet;
+  bool mLongitudeSet;
+  bool mAltitudeSet;
   bool mTimestampSet;
   nsCOMPtr<nsICameraTakePictureCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
@@ -445,7 +452,8 @@ public:
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv)) {
-      if (NS_FAILED(NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE"))))) {
+      rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
+      if (NS_FAILED(rv)) {
         NS_WARNING("Failed to dispatch startRecording() onError callback to main thread!");
       }
     }
