@@ -1,12 +1,24 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+/*
+ * Copyright (C) 2012 Mozilla Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include "VideoUtils.h"
 #include "GonkCameraHwMgr.h"
 #include "GonkCameraPreview.h"
 
-#define DOM_CAMERA_LOG_LEVEL  3
+#define DOM_CAMERA_LOG_LEVEL  2
 #include "CameraCommon.h"
 
 
@@ -121,14 +133,13 @@ GonkCameraPreview::Start()
 {
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
 
-  mFormat = GonkCameraHardware::GetPreviewFormat(mHwHandle);
-
   GonkCameraHardware::SetPreviewSize(mHwHandle, mWidth, mHeight);
   GonkCameraHardware::GetPreviewSize(mHwHandle, &mWidth, &mHeight);
   SetFrameRate(GonkCameraHardware::GetFps(mHwHandle));
 
   if (GonkCameraHardware::StartPreview(mHwHandle) == OK) {
-    DOM_CAMERA_LOGI("preview stream is (actually!) %d x %d (w x h), %d frames per second\n", mWidth, mHeight, mFramesPerSecond);
+    mFormat = GonkCameraHardware::GetPreviewFormat(mHwHandle);
+    DOM_CAMERA_LOGI("preview stream is (actually!) %d x %d (w x h), %d frames per second, format %d\n", mWidth, mHeight, mFramesPerSecond, mFormat);
   } else {
     DOM_CAMERA_LOGE("%s: failed to start preview\n", __func__);
   }

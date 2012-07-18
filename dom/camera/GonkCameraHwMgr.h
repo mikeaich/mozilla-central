@@ -1,6 +1,18 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+/*
+ * Copyright (C) 2012 Mozilla Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef DOM_CAMERA_GONKCAMERAHWMGR_H
 #define DOM_CAMERA_GONKCAMERAHWMGR_H
@@ -11,6 +23,8 @@
 #include "mozilla/ReentrantMonitor.h"
 
 #include "GonkCameraControl.h"
+
+#define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
 // config
@@ -55,6 +69,7 @@ public:
     PREVIEW_FORMAT_YUV420P,
     PREVIEW_FORMAT_YUV420SP
   };
+  // GetPreviewFormat() MUST be called only after StartPreview().
   static PRUint32               GetPreviewFormat(PRUint32 aHwHandle);
 
 protected:

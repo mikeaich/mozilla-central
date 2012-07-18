@@ -31,7 +31,6 @@
 
 #define DOM_CAMERA_LOGA( ... )        DOM_CAMERA_LOG( 0, __VA_ARGS__ )
 
-#if DOM_CAMERA_LOG_LEVEL
 enum {
   DOM_CAMERA_LOG_NOTHING,
   DOM_CAMERA_LOG_ERROR,
@@ -42,11 +41,6 @@ enum {
 #define DOM_CAMERA_LOGI( ... )        DOM_CAMERA_LOG( DOM_CAMERA_LOG_INFO,  __VA_ARGS__ )
 #define DOM_CAMERA_LOGW( ... )        DOM_CAMERA_LOG( DOM_CAMERA_LOG_WARNING, __VA_ARGS__ )
 #define DOM_CAMERA_LOGE( ... )        DOM_CAMERA_LOG( DOM_CAMERA_LOG_ERROR, __VA_ARGS__ )
-#else
-#define DOM_CAMERA_LOGI( ... )
-#define DOM_CAMERA_LOGW( ... )
-#define DOM_CAMERA_LOGE( ... )
-#endif
 
 
 class CameraErrorResult : public nsRunnable

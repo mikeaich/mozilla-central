@@ -22,7 +22,6 @@ public:
   NS_DECL_NSIDOMCAMERAMANAGER
 
   static NS_IMETHODIMP Create(PRUint64 aWindowId, nsDOMCameraManager * *aMozCameras);
-  static nsRefPtr<nsDOMCameraManager> sCameraManager;
 
   void OnNavigation(PRUint64 aWindowId);
 
@@ -70,7 +69,7 @@ public:
   {
     MOZ_ASSERT(NS_IsMainThread());
 
-    /* TO DO: window management stuff */
+    /* TODO: window management stuff */
     if (mOnSuccessCb) {
       mOnSuccessCb->HandleEvent(mCameraControl);
     }
