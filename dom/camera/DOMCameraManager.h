@@ -36,10 +36,10 @@ protected:
 };
 
 
-class DoGetCamera : public nsRunnable
+class GetCameraTask : public nsRunnable
 {
 public:
-  DoGetCamera(PRUint32 aCameraId, nsICameraGetCameraCallback *onSuccess, nsICameraErrorCallback *onError, nsIThread *aCameraThread)
+  GetCameraTask(PRUint32 aCameraId, nsICameraGetCameraCallback *onSuccess, nsICameraErrorCallback *onError, nsIThread *aCameraThread)
     : mCameraId(aCameraId)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)

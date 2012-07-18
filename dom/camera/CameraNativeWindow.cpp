@@ -1,4 +1,20 @@
-#include "CameraNativeWindow.h"
+/*
+ * Copyright (C) 2010 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "GonkNativeWindow.h"
 #include "nsDebug.h"
 
 // enable debug logging by setting to 1
@@ -13,18 +29,17 @@
 
 using namespace android;
 
-
-CameraNativeWindow::CameraNativeWindow()
+GonkNativeWindow::GonkNativeWindow()
 {
-    CameraNativeWindow::init();
+    GonkNativeWindow::init();
 }
 
-CameraNativeWindow::~CameraNativeWindow()
+GonkNativeWindow::~GonkNativeWindow()
 {
     freeAllBuffersLocked();
 }
 
-void CameraNativeWindow::init()
+void GonkNativeWindow::init()
 {
     // Initialize the ANativeWindow function pointers.
     ANativeWindow::setSwapInterval  = hook_setSwapInterval;
@@ -45,56 +60,56 @@ void CameraNativeWindow::init()
 }
 
 
-int CameraNativeWindow::hook_setSwapInterval(ANativeWindow* window, int interval)
+int GonkNativeWindow::hook_setSwapInterval(ANativeWindow* window, int interval)
 {
-    CameraNativeWindow* c = getSelf(window);
+    GonkNativeWindow* c = getSelf(window);
     return c->setSwapInterval(interval);
 }
 
-int CameraNativeWindow::hook_dequeueBuffer(ANativeWindow* window,
+int GonkNativeWindow::hook_dequeueBuffer(ANativeWindow* window,
         ANativeWindowBuffer** buffer)
 {
-    CameraNativeWindow* c = getSelf(window);
+    GonkNativeWindow* c = getSelf(window);
     return c->dequeueBuffer(buffer);
 }
 
-int CameraNativeWindow::hook_cancelBuffer(ANativeWindow* window,
+int GonkNativeWindow::hook_cancelBuffer(ANativeWindow* window,
         ANativeWindowBuffer* buffer)
 {
-    CameraNativeWindow* c = getSelf(window);
+    GonkNativeWindow* c = getSelf(window);
     return c->cancelBuffer(buffer);
 }
 
-int CameraNativeWindow::hook_lockBuffer(ANativeWindow* window,
+int GonkNativeWindow::hook_lockBuffer(ANativeWindow* window,
         ANativeWindowBuffer* buffer)
 {
-    CameraNativeWindow* c = getSelf(window);
+    GonkNativeWindow* c = getSelf(window);
     return c->lockBuffer(buffer);
 }
 
-int CameraNativeWindow::hook_queueBuffer(ANativeWindow* window,
+int GonkNativeWindow::hook_queueBuffer(ANativeWindow* window,
         ANativeWindowBuffer* buffer)
 {
-    CameraNativeWindow* c = getSelf(window);
+    GonkNativeWindow* c = getSelf(window);
     return c->queueBuffer(buffer);
 }
 
-int CameraNativeWindow::hook_query(const ANativeWindow* window,
+int GonkNativeWindow::hook_query(const ANativeWindow* window,
                                 int what, int* value)
 {
-    const CameraNativeWindow* c = getSelf(window);
+    const GonkNativeWindow* c = getSelf(window);
     return c->query(what, value);
 }
 
-int CameraNativeWindow::hook_perform(ANativeWindow* window, int operation, ...)
+int GonkNativeWindow::hook_perform(ANativeWindow* window, int operation, ...)
 {
     va_list args;
     va_start(args, operation);
-    CameraNativeWindow* c = getSelf(window);
+    GonkNativeWindow* c = getSelf(window);
     return c->perform(operation, args);
 }
 
-void CameraNativeWindow::freeBufferLocked(int i)
+void GonkNativeWindow::freeBufferLocked(int i)
 {
     if (mSlots[i].mGraphicBuffer != NULL) {
         mSlots[i].mGraphicBuffer.clear();
@@ -103,14 +118,14 @@ void CameraNativeWindow::freeBufferLocked(int i)
     mSlots[i].mBufferState = BufferSlot::FREE;
 }
 
-void CameraNativeWindow::freeAllBuffersLocked()
+void GonkNativeWindow::freeAllBuffersLocked()
 {
     for (int i = 0; i < NUM_BUFFER_SLOTS; i++) {
         freeBufferLocked(i);
     }
 }
 
-int CameraNativeWindow::setBufferCount(int bufferCount) {
+int GonkNativeWindow::setBufferCount(int bufferCount) {
     CNW_LOGD("setBufferCount: count=%d", bufferCount);
     Mutex::Autolock lock(mMutex);
 
@@ -154,7 +169,7 @@ int CameraNativeWindow::setBufferCount(int bufferCount) {
     return OK;
 }
 
-int CameraNativeWindow::dequeueBuffer(android_native_buffer_t** buffer)
+int GonkNativeWindow::dequeueBuffer(android_native_buffer_t** buffer)
 {
     Mutex::Autolock lock(mMutex);
 
@@ -185,25 +200,6 @@ int CameraNativeWindow::dequeueBuffer(android_native_buffer_t** buffer)
                 }
             }
         }
-
-#if 0 //XXX: Not sure if we need to do this check
-
-        // See whether a buffer has been queued since the last
-        // setBufferCount so we know whether to perform the
-        // MIN_UNDEQUEUED_BUFFERS check below.
-        if (dequeuedCount>0) {
-            // make sure the client is not trying to dequeue more buffers
-            // than allowed.
-            const int avail = mBufferCount - (dequeuedCount);
-            if (avail < MIN_UNDEQUEUED_BUFFERS) {
-                CNW_LOGE("dequeueBuffer: MIN_UNDEQUEUED_BUFFERS=%d exceeded "
-                    "(dequeued=%d)",
-                    MIN_UNDEQUEUED_BUFFERS,
-                    dequeuedCount);
-                return -EBUSY;
-            }
-        }
-#endif
 
         // we're in synchronous mode and didn't find a buffer, we need to
         // wait for some buffers to be consumed
@@ -245,7 +241,7 @@ int CameraNativeWindow::dequeueBuffer(android_native_buffer_t** buffer)
     return NO_ERROR;
 }
 
-int CameraNativeWindow::getSlotFromBufferLocked(
+int GonkNativeWindow::getSlotFromBufferLocked(
         android_native_buffer_t* buffer) const
 {
     if (buffer == NULL) {
@@ -262,7 +258,7 @@ int CameraNativeWindow::getSlotFromBufferLocked(
     return BAD_VALUE;
 }
 
-int CameraNativeWindow::queueBuffer(ANativeWindowBuffer* buffer)
+int GonkNativeWindow::queueBuffer(ANativeWindowBuffer* buffer)
 {
     Mutex::Autolock lock(mMutex);
     CNW_LOGD("queueBuffer: E");
@@ -285,10 +281,8 @@ int CameraNativeWindow::queueBuffer(ANativeWindowBuffer* buffer)
         timestamp = mTimestamp;
     }
 
-    //XXX:
-    //mSlots[buf].mBufferState = BufferSlot::QUEUED;
-    //Set the state to FREE as there are no operations on the queued buffer
-    //And, so that the buffer can be dequeued when needed.
+    // Set the state to FREE as there are no operations on the queued buffer
+    // And, so that the buffer can be dequeued when needed.
     mSlots[buf].mBufferState = BufferSlot::FREE;
     mSlots[buf].mTimestamp = timestamp;
     mFrameCounter++;
@@ -300,15 +294,14 @@ int CameraNativeWindow::queueBuffer(ANativeWindowBuffer* buffer)
     return OK;
 }
 
-int CameraNativeWindow::lockBuffer(ANativeWindowBuffer* buffer)
+int GonkNativeWindow::lockBuffer(ANativeWindowBuffer* buffer)
 {
-    CNW_LOGD("CameraNativeWindow::lockBuffer");
+    CNW_LOGD("GonkNativeWindow::lockBuffer");
     Mutex::Autolock lock(mMutex);
-    //TODO: Need to implement this.
     return OK;
 }
 
-int CameraNativeWindow::cancelBuffer(ANativeWindowBuffer* buffer)
+int GonkNativeWindow::cancelBuffer(ANativeWindowBuffer* buffer)
 {
     Mutex::Autolock lock(mMutex);
     int buf = getSlotFromBufferLocked(buffer);
@@ -319,7 +312,7 @@ int CameraNativeWindow::cancelBuffer(ANativeWindowBuffer* buffer)
                 mBufferCount, buf);
         return -EINVAL;
     } else if (mSlots[buf].mBufferState != BufferSlot::DEQUEUED) {
-        printf_stderr("cancelBuffer: slot %d is not owned by the client (state=%d)",
+        CNW_LOGE("cancelBuffer: slot %d is not owned by the client (state=%d)",
                 buf, mSlots[buf].mBufferState);
         return -EINVAL;
     }
@@ -329,7 +322,7 @@ int CameraNativeWindow::cancelBuffer(ANativeWindowBuffer* buffer)
     return OK;
 }
 
-int CameraNativeWindow::perform(int operation, va_list args)
+int GonkNativeWindow::perform(int operation, va_list args)
 {
     int res = NO_ERROR;
 
@@ -372,7 +365,7 @@ int CameraNativeWindow::perform(int operation, va_list args)
     return res;
 }
 
-int CameraNativeWindow::query(int what, int* outValue) const
+int GonkNativeWindow::query(int what, int* outValue) const
 {
     Mutex::Autolock lock(mMutex);
 
@@ -397,25 +390,24 @@ int CameraNativeWindow::query(int what, int* outValue) const
     return NO_ERROR;
 }
 
-int CameraNativeWindow::setSwapInterval(int interval)
+int GonkNativeWindow::setSwapInterval(int interval)
 {
     return NO_ERROR;
 }
 
-//================================================
-int CameraNativeWindow::dispatchSetUsage(va_list args)
+int GonkNativeWindow::dispatchSetUsage(va_list args)
 {
     int usage = va_arg(args, int);
     return setUsage(usage);
 }
 
-int CameraNativeWindow::dispatchSetBufferCount(va_list args)
+int GonkNativeWindow::dispatchSetBufferCount(va_list args)
 {
     size_t bufferCount = va_arg(args, size_t);
     return setBufferCount(bufferCount);
 }
 
-int CameraNativeWindow::dispatchSetBuffersGeometry(va_list args)
+int GonkNativeWindow::dispatchSetBuffersGeometry(va_list args)
 {
     int w = va_arg(args, int);
     int h = va_arg(args, int);
@@ -427,37 +419,36 @@ int CameraNativeWindow::dispatchSetBuffersGeometry(va_list args)
     return setBuffersFormat(f);
 }
 
-int CameraNativeWindow::dispatchSetBuffersDimensions(va_list args)
+int GonkNativeWindow::dispatchSetBuffersDimensions(va_list args)
 {
     int w = va_arg(args, int);
     int h = va_arg(args, int);
     return setBuffersDimensions(w, h);
 }
 
-int CameraNativeWindow::dispatchSetBuffersFormat(va_list args)
+int GonkNativeWindow::dispatchSetBuffersFormat(va_list args)
 {
     int f = va_arg(args, int);
     return setBuffersFormat(f);
 }
 
-int CameraNativeWindow::dispatchSetBuffersTimestamp(va_list args)
+int GonkNativeWindow::dispatchSetBuffersTimestamp(va_list args)
 {
     int64_t timestamp = va_arg(args, int64_t);
     return setBuffersTimestamp(timestamp);
 }
 
-//================================================
-int CameraNativeWindow::setUsage(uint32_t reqUsage)
+int GonkNativeWindow::setUsage(uint32_t reqUsage)
 {
-    CNW_LOGD("CameraNativeWindow::setUsage");
+    CNW_LOGD("GonkNativeWindow::setUsage");
     Mutex::Autolock lock(mMutex);
     mUsage = reqUsage;
     return OK;
 }
 
-int CameraNativeWindow::setBuffersDimensions(int w, int h)
+int GonkNativeWindow::setBuffersDimensions(int w, int h)
 {
-    CNW_LOGD("CameraNativeWindow::setBuffersDimensions");
+    CNW_LOGD("GonkNativeWindow::setBuffersDimensions");
     Mutex::Autolock lock(mMutex);
 
     if (w<0 || h<0)
@@ -472,9 +463,9 @@ int CameraNativeWindow::setBuffersDimensions(int w, int h)
     return OK;
 }
 
-int CameraNativeWindow::setBuffersFormat(int format)
+int GonkNativeWindow::setBuffersFormat(int format)
 {
-    CNW_LOGD("CameraNativeWindow::setBuffersFormat");
+    CNW_LOGD("GonkNativeWindow::setBuffersFormat");
     Mutex::Autolock lock(mMutex);
 
     if (format<0)
@@ -485,9 +476,9 @@ int CameraNativeWindow::setBuffersFormat(int format)
     return NO_ERROR;
 }
 
-int CameraNativeWindow::setBuffersTimestamp(int64_t timestamp)
+int GonkNativeWindow::setBuffersTimestamp(int64_t timestamp)
 {
-    CNW_LOGD("CameraNativeWindow::setBuffersTimestamp");
+    CNW_LOGD("GonkNativeWindow::setBuffersTimestamp");
     Mutex::Autolock lock(mMutex);
     mTimestamp = timestamp;
     return OK;

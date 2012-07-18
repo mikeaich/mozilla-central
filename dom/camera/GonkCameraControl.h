@@ -45,13 +45,13 @@ public:
   void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
 
 protected:
-  nsresult DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream);
-  nsresult DoAutoFocus(AutoFocusTask *aAutoFocus);
-  nsresult DoTakePicture(TakePictureTask *aTakePicture);
-  nsresult DoStartRecording(StartRecordingTask *aStartRecording);
-  nsresult DoStopRecording(StopRecordingTask *aStopRecording);
-  nsresult DoPushParameters(PushParametersTask *aPushParameters);
-  nsresult DoPullParameters(PullParametersTask *aPullParameters);
+  nsresult GetPreviewStreamImpl(GetPreviewStreamTask *aGetPreviewStream);
+  nsresult AutoFocusImpl(AutoFocusTask *aAutoFocus);
+  nsresult TakePictureImpl(TakePictureTask *aTakePicture);
+  nsresult StartRecordingImpl(StartRecordingTask *aStartRecording);
+  nsresult StopRecordingImpl(StopRecordingTask *aStopRecording);
+  nsresult PushParametersImpl(PushParametersTask *aPushParameters);
+  nsresult PullParametersImpl(PullParametersTask *aPullParameters);
 
   PRUint32                  mHwHandle;
   double                    mExposureCompensationMin;

@@ -108,13 +108,13 @@ public:
   void AutoFocusComplete(bool aSuccess);
 
 protected:
-  virtual nsresult DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream) = 0;
-  virtual nsresult DoAutoFocus(AutoFocusTask *aAutoFocus) = 0;
-  virtual nsresult DoTakePicture(TakePictureTask *aTakePicture) = 0;
-  virtual nsresult DoStartRecording(StartRecordingTask *aStartRecording) = 0;
-  virtual nsresult DoStopRecording(StopRecordingTask *aStopRecording) = 0;
-  virtual nsresult DoPushParameters(PushParametersTask *aPushParameters) = 0;
-  virtual nsresult DoPullParameters(PullParametersTask *aPullParameters) = 0;
+  virtual nsresult GetPreviewStreamImpl(GetPreviewStreamTask *aGetPreviewStream) = 0;
+  virtual nsresult AutoFocusImpl(AutoFocusTask *aAutoFocus) = 0;
+  virtual nsresult TakePictureImpl(TakePictureTask *aTakePicture) = 0;
+  virtual nsresult StartRecordingImpl(StartRecordingTask *aStartRecording) = 0;
+  virtual nsresult StopRecordingImpl(StopRecordingTask *aStopRecording) = 0;
+  virtual nsresult PushParametersImpl(PushParametersTask *aPushParameters) = 0;
+  virtual nsresult PullParametersImpl(PullParametersTask *aPullParameters) = 0;
 
 private:
   nsCameraControl(const nsCameraControl&);
@@ -179,7 +179,7 @@ public:
 
   NS_IMETHOD Run()
   {
-    nsresult rv = mCameraControl->DoGetPreviewStream(this);
+    nsresult rv = mCameraControl->GetPreviewStreamImpl(this);
 
     if (NS_FAILED(rv)) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
@@ -232,7 +232,7 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoAutoFocus(this);
+    nsresult rv = mCameraControl->AutoFocusImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv)) {
@@ -296,7 +296,7 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoTakePicture(this);
+    nsresult rv = mCameraControl->TakePictureImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv)) {
@@ -362,7 +362,7 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoStartRecording(this);
+    nsresult rv = mCameraControl->StartRecordingImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv)) {
@@ -390,7 +390,7 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoStopRecording(this);
+    nsresult rv = mCameraControl->StopRecordingImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     NS_ENSURE_SUCCESS(rv, rv);
@@ -411,7 +411,7 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoPushParameters(this);
+    nsresult rv = mCameraControl->PushParametersImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     NS_ENSURE_SUCCESS(rv, rv);
@@ -432,7 +432,7 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->DoPullParameters(this);
+    nsresult rv = mCameraControl->PullParametersImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     NS_ENSURE_SUCCESS(rv, rv);

@@ -86,7 +86,7 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
 using namespace mozilla;
 
 NS_IMETHODIMP
-DoGetCamera::Run()
+GetCameraTask::Run()
 {
   nsCOMPtr<nsICameraControl> cameraControl = new nsGonkCameraControl(mCameraId, mCameraThread);
 

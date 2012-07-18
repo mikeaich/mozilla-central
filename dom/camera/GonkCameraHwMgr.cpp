@@ -16,7 +16,7 @@
 
 #include "nsDebug.h"
 #include "GonkCameraHwMgr.h"
-#include "CameraNativeWindow.h"
+#include "GonkNativeWindow.h"
 
 #define DOM_CAMERA_LOG_LEVEL        3
 #include "CameraCommon.h"
@@ -149,7 +149,7 @@ GonkCameraHardware::init()
     return;
   }
 
-  mWindow = new android::CameraNativeWindow();
+  mWindow = new android::GonkNativeWindow();
 
   if (sHwHandle == 0) {
     sHwHandle = 1;  // don't use 0

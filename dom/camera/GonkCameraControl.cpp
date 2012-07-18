@@ -76,7 +76,7 @@ nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread *aCameraT
   , mExposureCompensationStep(0.0)
   , mDeferConfigUpdate(false)
 {
-  // Constructor runs on the camera thread--see DOMCameraManager.cpp::DoGetCamera().
+  // Constructor runs on the camera thread--see DOMCameraManager.cpp::GetCameraImpl().
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
   mHwHandle = GonkCameraHardware::GetHandle(this, mCameraId);
   DOM_CAMERA_LOGI("%s:%d : this = %p, mHwHandle = %d\n", __func__, __LINE__, this, mHwHandle);
@@ -443,7 +443,7 @@ nsGonkCameraControl::SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint3
 }
 
 nsresult
-nsGonkCameraControl::DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream)
+nsGonkCameraControl::GetPreviewStreamImpl(GetPreviewStreamTask *aGetPreviewStream)
 {
   nsCOMPtr<CameraPreview> preview = mPreview;
   nsresult rv;
@@ -462,7 +462,7 @@ nsGonkCameraControl::DoGetPreviewStream(GetPreviewStreamTask *aGetPreviewStream)
 }
 
 nsresult
-nsGonkCameraControl::DoAutoFocus(AutoFocusTask *aAutoFocus)
+nsGonkCameraControl::AutoFocusImpl(AutoFocusTask *aAutoFocus)
 {
   nsCOMPtr<nsICameraAutoFocusCallback> cb = mAutoFocusOnSuccessCb;
   if (cb) {
@@ -484,14 +484,14 @@ nsGonkCameraControl::DoAutoFocus(AutoFocusTask *aAutoFocus)
   mAutoFocusOnSuccessCb = aAutoFocus->mOnSuccessCb;
   mAutoFocusOnErrorCb = aAutoFocus->mOnErrorCb;
 
-  if (GonkCameraHardware::AutoFocus(mHwHandle) == OK) {
-    return NS_OK;
+  if (GonkCameraHardware::AutoFocus(mHwHandle) != OK) {
+    return NS_ERROR_FAILURE;
   }
-  return NS_ERROR_FAILURE;
+  return NS_OK;
 }
 
 nsresult
-nsGonkCameraControl::DoTakePicture(TakePictureTask *aTakePicture)
+nsGonkCameraControl::TakePictureImpl(TakePictureTask *aTakePicture)
 {
  nsCOMPtr<nsICameraTakePictureCallback> cb = mTakePictureOnSuccessCb;
   if (cb) {
@@ -578,25 +578,25 @@ nsGonkCameraControl::DoTakePicture(TakePictureTask *aTakePicture)
   mDeferConfigUpdate = false;
   PushParameters();
 
-  if (GonkCameraHardware::TakePicture(mHwHandle) == OK) {
-    return NS_OK;
+  if (GonkCameraHardware::TakePicture(mHwHandle) != OK) {
+    return NS_ERROR_FAILURE;
   }
-  return NS_ERROR_FAILURE;
+  return NS_OK;
 }
 
 nsresult
-nsGonkCameraControl::DoPushParameters(PushParametersTask *aPushParameters)
+nsGonkCameraControl::PushParametersImpl(PushParametersTask *aPushParameters)
 {
   RwAutoLockRead lock(mRwLock);
-  if (GonkCameraHardware::PushParameters(mHwHandle, mParams) == OK) {
-    return NS_OK;
+  if (GonkCameraHardware::PushParameters(mHwHandle, mParams) != OK) {
+    return NS_ERROR_FAILURE;
   }
 
-  return NS_ERROR_FAILURE;
+  return NS_OK;
 }
 
 nsresult
-nsGonkCameraControl::DoPullParameters(PullParametersTask *aPullParameters)
+nsGonkCameraControl::PullParametersImpl(PullParametersTask *aPullParameters)
 {
   RwAutoLockWrite lock(mRwLock);
   GonkCameraHardware::PullParameters(mHwHandle, mParams);
@@ -604,13 +604,13 @@ nsGonkCameraControl::DoPullParameters(PullParametersTask *aPullParameters)
 }
 
 nsresult
-nsGonkCameraControl::DoStartRecording(StartRecordingTask *aStartRecording)
+nsGonkCameraControl::StartRecordingImpl(StartRecordingTask *aStartRecording)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsresult
-nsGonkCameraControl::DoStopRecording(StopRecordingTask *aStopRecording)
+nsGonkCameraControl::StopRecordingImpl(StopRecordingTask *aStopRecording)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
