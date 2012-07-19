@@ -84,7 +84,7 @@ GonkCameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
         NS_ASSERTION(uvN & 0x7 == 0, "Invalid image dimensions!");
         uvN /= 8;
 
-        while( uvN-- ) {
+        while (uvN--) {
           uint32_t src0 = *src++;
           uint32_t src1 = *src++;
 
