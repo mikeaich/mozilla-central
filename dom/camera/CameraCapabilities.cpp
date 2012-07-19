@@ -18,15 +18,24 @@ using namespace mozilla;
 
 DOMCI_DATA(CameraCapabilities, nsICameraCapabilities)
 
-NS_INTERFACE_MAP_BEGIN(nsCameraCapabilities)
+NS_IMPL_CYCLE_COLLECTION_CLASS(nsCameraCapabilities)
+
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(nsCameraCapabilities)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mCamera)
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
+
+NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(nsCameraCapabilities)
+  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mCamera)
+NS_IMPL_CYCLE_COLLECTION_UNLINK_END
+
+NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsCameraCapabilities)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
   NS_INTERFACE_MAP_ENTRY(nsICameraCapabilities)
   NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(CameraCapabilities)
 NS_INTERFACE_MAP_END
 
-NS_IMPL_ADDREF(nsCameraCapabilities)
-NS_IMPL_RELEASE(nsCameraCapabilities)
-
+NS_IMPL_CYCLE_COLLECTING_ADDREF(nsCameraCapabilities)
+NS_IMPL_CYCLE_COLLECTING_RELEASE(nsCameraCapabilities)
 
 nsCameraCapabilities::nsCameraCapabilities(nsCameraControl *aCamera) :
   mCamera(aCamera)

@@ -11,6 +11,7 @@
 #include "nsThread.h"
 #include "nsDOMFile.h"
 #include "CameraPreview.h"
+#include "nsCycleCollectionParticipant.h"
 #include "nsIDOMCameraManager.h"
 
 #define DOM_CAMERA_LOG_LEVEL 3
@@ -42,7 +43,8 @@ class nsCameraControl : public nsICameraControl
   friend class PullParametersTask;
 
 public:
-  NS_DECL_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTION_CLASS(nsCameraControl)
   NS_DECL_NSICAMERACONTROL
 
   class CameraRegion
@@ -95,13 +97,16 @@ public:
     , mStartRecordingOnSuccessCb(nsnull)
     , mStartRecordingOnErrorCb(nsnull)
     , mOnShutterCb(nsnull)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   virtual ~nsCameraControl()
   {
     if (mFileFormat) {
       nsMemory::Free(const_cast<char*>(mFileFormat));
     }
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
   }
 
   void TakePictureComplete(PRUint8 *aData, PRUint32 aLength);
@@ -148,7 +153,14 @@ public:
   GetPreviewStreamResult(nsIDOMMediaStream *aStream, nsICameraPreviewStreamCallback *onSuccess)
     : mStream(aStream)
     , mOnSuccessCb(onSuccess)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~GetPreviewStreamResult()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
@@ -175,7 +187,14 @@ public:
     , mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~GetPreviewStreamTask()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
