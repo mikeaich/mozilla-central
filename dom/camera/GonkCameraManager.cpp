@@ -45,24 +45,35 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
   count = module->get_number_of_cameras();
   DOM_CAMERA_LOGI("getListOfCameras : get_number_of_cameras() returned %d\n", count);
   while (count--) {
+    struct camera_info info;
+    int rv = module->get_camera_info(count, &info);
+    if (rv != 0) {
+      DOM_CAMERA_LOGE("getListOfCameras : get_camera_info(%d) failed: %d\n", count, rv);
+      continue;
+    }
+
     JSString* v;
     jsval jv;
 
-    switch (count) {
-      case 0:
+    switch (info.facing) {
+      case CAMERA_FACING_BACK:
         v = JS_NewStringCopyZ(cx, "back");
+        index = 0;
         break;
 
-      case 1:
+      case CAMERA_FACING_FRONT:
         v = JS_NewStringCopyZ(cx, "front");
+        index = 1;
         break;
 
       default:
         // TODO: handle extra cameras in getCamera().
         {
+          static PRUint32 extraIndex = 2;
           nsCString s;
           s.AppendPrintf("extra-camera-%d", count);
           v = JS_NewStringCopyZ(cx, s.get());
+          index = extraIndex++;
         }
         break;
     }
@@ -72,7 +83,7 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value *_retval NS_OUTPAR
       return NS_ERROR_NOT_AVAILABLE;
     }
     jv = STRING_TO_JSVAL(v);
-    if (!JS_SetElement(cx, a, index++, &jv)) {
+    if (!JS_SetElement(cx, a, index, &jv)) {
       DOM_CAMERA_LOGE("getListOfCameras : failed building list of cameras");
       delete a;
       return NS_ERROR_NOT_AVAILABLE;
