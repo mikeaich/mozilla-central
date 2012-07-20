@@ -31,9 +31,11 @@ NS_IMPL_RELEASE(nsCameraControl)
 static PRUint32
 getPropertyHelper(JSContext *cx, JSObject *o, const char *prop, PRUint32 aDefault)
 {
-  jsval p;
-  if (JS_GetProperty(cx, o, prop, &p) && JSVAL_IS_INT(p)) {
-    return JSVAL_TO_INT(p);
+  PRUint32 u;
+  jsval v;
+
+  if (JS_GetProperty(cx, o, prop, &v) && JS_ValueToECMAUint32(cx, v, &u)) {
+    return u;
   }
   return aDefault;
 }
@@ -41,9 +43,11 @@ getPropertyHelper(JSContext *cx, JSObject *o, const char *prop, PRUint32 aDefaul
 static PRInt32
 getPropertyHelper(JSContext *cx, JSObject *o, const char *prop, PRInt32 aDefault)
 {
-  jsval p;
-  if (JS_GetProperty(cx, o, prop, &p) && JSVAL_IS_INT(p)) {
-    return JSVAL_TO_INT(p);
+  PRInt32 i;
+  jsval v;
+
+  if (JS_GetProperty(cx, o, prop, &v) && JS_ValueToECMAInt32(cx, v, &i)) {
+    return i;
   }
   return aDefault;
 }
@@ -60,7 +64,7 @@ static nsresult
 getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, nsAString& aValue)
 {
   const char *value = aCameraControl->GetParameterConstChar(aKey);
-  if (value) {
+  if (!value) {
     return NS_ERROR_FAILURE;
   }
 
@@ -98,35 +102,33 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValu
 
   if (aValue.isObject()) {
     JSObject *regions = JSVAL_TO_OBJECT(aValue);
-    if (JS_IsArrayObject(cx, regions)) {
-      if (JS_GetArrayLength(cx, regions, &length)) {
-        DOM_CAMERA_LOGI("%s:%d : got %d regions (limited to %d)\n", __func__, __LINE__, length, aLimit);
-        if (length > aLimit) {
-          length = aLimit;
-        }
-        parsedRegions = new nsCameraControl::CameraRegion[length];
-        for (PRUint32 i = 0; i < length; ++i) {
-          jsval v;
-          if (JS_GetElement(cx, regions, i, &v) && v.isObject()) {
-            nsCameraControl::CameraRegion* parsed = &parsedRegions[i];
-            JSObject *r = JSVAL_TO_OBJECT(v);
+    if (JS_IsArrayObject(cx, regions) && JS_GetArrayLength(cx, regions, &length)) {
+      DOM_CAMERA_LOGI("%s:%d : got %d regions (limited to %d)\n", __func__, __LINE__, length, aLimit);
+      if (length > aLimit) {
+        length = aLimit;
+      }
+      parsedRegions = new nsCameraControl::CameraRegion[length];
+      for (PRUint32 i = 0; i < length; ++i) {
+        jsval v;
+        if (JS_GetElement(cx, regions, i, &v) && v.isObject()) {
+          nsCameraControl::CameraRegion* parsed = &parsedRegions[i];
+          JSObject *r = JSVAL_TO_OBJECT(v);
 
-            // TODO: move the Gonk-specific default values somewhere else
-            parsed->mTop = getPropertyHelper(cx, r, "top", PRInt32(-1000));
-            parsed->mLeft = getPropertyHelper(cx, r, "left", PRInt32(-1000));
-            parsed->mBottom = getPropertyHelper(cx, r, "bottom", PRInt32(1000));
-            parsed->mRight = getPropertyHelper(cx, r, "right", PRInt32(1000));
-            parsed->mWeight = getPropertyHelper(cx, r, "weight", PRUint32(1000));
+          // TODO: move the Gonk-specific default values somewhere else
+          parsed->mTop = getPropertyHelper(cx, r, "top", PRInt32(-1000));
+          parsed->mLeft = getPropertyHelper(cx, r, "left", PRInt32(-1000));
+          parsed->mBottom = getPropertyHelper(cx, r, "bottom", PRInt32(1000));
+          parsed->mRight = getPropertyHelper(cx, r, "right", PRInt32(1000));
+          parsed->mWeight = getPropertyHelper(cx, r, "weight", PRUint32(1000));
 
-            DOM_CAMERA_LOGI("region %d: top=%d, left=%d, bottom=%d, right=%d, weight=%d\n",
-              i,
-              parsed->mTop,
-              parsed->mLeft,
-              parsed->mBottom,
-              parsed->mRight,
-              parsed->mWeight
-            );
-          }
+          DOM_CAMERA_LOGI("region %d: top=%d, left=%d, bottom=%d, right=%d, weight=%d\n",
+            i,
+            parsed->mTop,
+            parsed->mLeft,
+            parsed->mBottom,
+            parsed->mRight,
+            parsed->mWeight
+          );
         }
       }
     }
@@ -208,9 +210,6 @@ nsCameraControl::GetCapabilities(nsICameraCapabilities * *aCapabilities)
 
   if (!capabilities) {
     capabilities = new nsCameraCapabilities(this);
-    if (!capabilities) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
     mCapabilities = capabilities;
   }
 

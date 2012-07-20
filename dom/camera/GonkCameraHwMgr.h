@@ -42,7 +42,7 @@ typedef class nsGonkCameraControl GonkCamera;
 class GonkCameraHardware
 {
 protected:
-  GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera);
+  GonkCameraHardware(GonkCamera *aTarget, PRUint32 aCamera);
   ~GonkCameraHardware();
   void init();
 
