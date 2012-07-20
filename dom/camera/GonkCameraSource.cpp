@@ -30,7 +30,7 @@
 #include <cutils/properties.h>
 
 
-USING_CAMERA_NAMESPACE
+using namespace mozilla;
 
 namespace android {
 

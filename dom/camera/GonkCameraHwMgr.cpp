@@ -137,7 +137,7 @@ void
 GonkCameraHardware::DataCallbackTimestamp(nsecs_t timestamp, int32_t aMsgType, const sp<IMemory> &aDataPtr, void* aUser)
 {
   DOM_CAMERA_LOGI("%s",__func__);
-  GonkCameraHardware* hw = getCameraHardware((PRUint32)aUser);
+  GonkCameraHardware* hw = GetHardware((PRUint32)aUser);
   if (!hw) {
     DOM_CAMERA_LOGE("%s:aUser = %d resolved to no camera hw\n", __func__, (PRUint32)aUser);
     return;
@@ -485,7 +485,7 @@ GonkCameraHardware::StartPreview(PRUint32 aHwHandle)
     return DEAD_OBJECT;
   }
 
-  return hw->startPreview();
+  return hw->StartPreview();
 }
 
 void
@@ -500,7 +500,7 @@ GonkCameraHardware::StopPreview(PRUint32 aHwHandle)
 int
 GonkCameraHardware::SetListener(PRUint32 aHwHandle, const sp<GonkCameraListener>& listener)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware* hw = GetHardware(aHwHandle);
   if (!hw) {
     return DEAD_OBJECT;
   }
@@ -512,7 +512,7 @@ GonkCameraHardware::SetListener(PRUint32 aHwHandle, const sp<GonkCameraListener>
 void
 GonkCameraHardware::ReleaseRecordingFrame(PRUint32 aHwHandle, const sp<IMemory>& frame)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware* hw = GetHardware(aHwHandle);
   if (hw) {
     hw->mHardware->releaseRecordingFrame(frame);
   }
@@ -521,7 +521,7 @@ GonkCameraHardware::ReleaseRecordingFrame(PRUint32 aHwHandle, const sp<IMemory>&
 int
 GonkCameraHardware::StoreMetaDataInBuffers(PRUint32 aHwHandle, bool enabled)
 {
-  GonkCameraHardware* hw = getCameraHardware(aHwHandle);
+  GonkCameraHardware* hw = GetHardware(aHwHandle);
   if (!hw) {
     return DEAD_OBJECT;
   }
