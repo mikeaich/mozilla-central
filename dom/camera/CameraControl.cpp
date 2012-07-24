@@ -27,19 +27,7 @@ NS_INTERFACE_MAP_END
 NS_IMPL_ADDREF(nsCameraControl)
 NS_IMPL_RELEASE(nsCameraControl)
 
-//  Helpers for reading optional integer properties.
-static PRUint32
-getPropertyHelper(JSContext *cx, JSObject *o, const char *prop, PRUint32 aDefault)
-{
-  PRUint32 u;
-  jsval v;
-
-  if (JS_GetProperty(cx, o, prop, &v) && JS_ValueToECMAUint32(cx, v, &u)) {
-    return u;
-  }
-  return aDefault;
-}
-
+//  Helper for reading optional integer properties.
 static PRInt32
 getPropertyHelper(JSContext *cx, JSObject *o, const char *prop, PRInt32 aDefault)
 {
@@ -97,17 +85,16 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValu
     return NS_OK;
   }
 
-  nsCameraControl::CameraRegion *parsedRegions;
   PRUint32 length = 0;
 
   if (aValue.isObject()) {
     JSObject *regions = JSVAL_TO_OBJECT(aValue);
-    if (JS_IsArrayObject(cx, regions) && JS_GetArrayLength(cx, regions, &length)) {
+    if (JS_GetArrayLength(cx, regions, &length)) {
       DOM_CAMERA_LOGI("%s:%d : got %d regions (limited to %d)\n", __func__, __LINE__, length, aLimit);
       if (length > aLimit) {
         length = aLimit;
       }
-      parsedRegions = new nsCameraControl::CameraRegion[length];
+      nsCameraControl::CameraRegion *parsedRegions = new nsCameraControl::CameraRegion[length];
       for (PRUint32 i = 0; i < length; ++i) {
         jsval v;
         if (JS_GetElement(cx, regions, i, &v) && v.isObject()) {
@@ -131,11 +118,11 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValu
           );
         }
       }
+      aCameraContol->SetParameter(aKey, parsedRegions, length);
+      delete[] parsedRegions;
     }
   }
 
-  aCameraContol->SetParameter(aKey, parsedRegions, length);
-  delete[] parsedRegions;
   return NS_OK;
 }
 
@@ -491,32 +478,36 @@ NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, ns
     JSObject* options = JSVAL_TO_OBJECT(position);
     jsval v;
 
-    if (JS_GetProperty(cx, options, "latitude", &v)) {
-      if (JSVAL_IS_NUMBER(v)) {
-        if (JS_ValueToNumber(cx, v, &latitude)) {
-          latitudeSet = true;
-        }
+    if (!JS_GetProperty(cx, options, "latitude", &v)) {
+      return NS_ERROR_FAILURE;
+    }
+    if (JSVAL_IS_NUMBER(v)) {
+      if (JS_ValueToNumber(cx, v, &latitude)) {
+        latitudeSet = true;
       }
     }
-    if (JS_GetProperty(cx, options, "longitude", &v)) {
-      if (JSVAL_IS_NUMBER(v)) {
-        if (JS_ValueToNumber(cx, v, &longitude)) {
-          longitudeSet = true;
-        }
+    if (!JS_GetProperty(cx, options, "longitude", &v)) {
+      return NS_ERROR_FAILURE;
+    }
+    if (JSVAL_IS_NUMBER(v)) {
+      if (JS_ValueToNumber(cx, v, &longitude)) {
+        longitudeSet = true;
       }
     }
-    if (JS_GetProperty(cx, options, "altitude", &v)) {
-      if (JSVAL_IS_NUMBER(v)) {
-        if (JS_ValueToNumber(cx, v, &altitude)) {
-          altitudeSet = true;
-        }
+    if (!JS_GetProperty(cx, options, "altitude", &v)) {
+      return NS_ERROR_FAILURE;
+    }
+    if (JSVAL_IS_NUMBER(v)) {
+      if (JS_ValueToNumber(cx, v, &altitude)) {
+        altitudeSet = true;
       }
     }
-    if (JS_GetProperty(cx, options, "timestamp", &v)) {
-      if (JSVAL_IS_NUMBER(v)) {
-        if (JS_ValueToNumber(cx, v, &timestamp)) {
-          timestampSet = true;
-        }
+    if (!JS_GetProperty(cx, options, "timestamp", &v)) {
+      return NS_ERROR_FAILURE;
+    }
+    if (JSVAL_IS_NUMBER(v)) {
+      if (JS_ValueToNumber(cx, v, &timestamp)) {
+        timestampSet = true;
       }
     }
   }

@@ -139,6 +139,9 @@ nsCameraCapabilities::parameterListToNewArray(JSContext *cx, JSObject **array, c
   }
 
   *array = JS_NewArrayObject(cx, 0, nsnull);
+  if (!*array) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
 
   const char* p = value;
   char* q;
@@ -146,9 +149,7 @@ nsCameraCapabilities::parameterListToNewArray(JSContext *cx, JSObject **array, c
     q = strchr(p, ',');
     if (q != p) { /* skip consecutive delimiters, just in case */
       rv = parseItemAndAdd(cx, *array, index, p, &q);
-      if (rv != NS_OK) {
-        return rv;
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
       index += 1;
     }
     p = q;
@@ -157,7 +158,11 @@ nsCameraCapabilities::parameterListToNewArray(JSContext *cx, JSObject **array, c
     }
   }
 
-  return NS_OK;
+  if (JS_FreezeObject(cx, *array)) {
+    return NS_OK;
+  } else {
+    return NS_ERROR_FAILURE;
+  }
 }
 
 nsresult

@@ -180,7 +180,6 @@ int GonkNativeWindow::dequeueBuffer(android_native_buffer_t** buffer)
 
     CNW_LOGD("dequeueBuffer: E");
     while (tryAgain) {
-
         // look for a free buffer to give to the client
         found = INVALID_BUFFER_SLOT;
         dequeuedCount = 0;
@@ -325,45 +324,35 @@ int GonkNativeWindow::cancelBuffer(ANativeWindowBuffer* buffer)
 
 int GonkNativeWindow::perform(int operation, va_list args)
 {
-    int res = NO_ERROR;
-
     switch (operation) {
-    case NATIVE_WINDOW_CONNECT:
-        // deprecated. must return NO_ERROR.
-        break;
-    case NATIVE_WINDOW_DISCONNECT:
-        // deprecated. must return NO_ERROR.
-        break;
-    case NATIVE_WINDOW_SET_USAGE:
-        res = dispatchSetUsage(args);
-        break;
-    case NATIVE_WINDOW_SET_BUFFER_COUNT:
-        res = dispatchSetBufferCount(args);
-        break;
-    case NATIVE_WINDOW_SET_BUFFERS_GEOMETRY:
-        res = dispatchSetBuffersGeometry(args);
-        break;
-    case NATIVE_WINDOW_SET_BUFFERS_TIMESTAMP:
-        res = dispatchSetBuffersTimestamp(args);
-        break;
-    case NATIVE_WINDOW_SET_BUFFERS_DIMENSIONS:
-        res = dispatchSetBuffersDimensions(args);
-        break;
-    case NATIVE_WINDOW_SET_BUFFERS_FORMAT:
-        res = dispatchSetBuffersFormat(args);
-        break;
-    case NATIVE_WINDOW_SET_CROP:
-    case NATIVE_WINDOW_SET_BUFFERS_TRANSFORM:
-    case NATIVE_WINDOW_SET_SCALING_MODE:
-    case NATIVE_WINDOW_LOCK:
-    case NATIVE_WINDOW_UNLOCK_AND_POST:
-    case NATIVE_WINDOW_API_CONNECT:
-    case NATIVE_WINDOW_API_DISCONNECT:
-    default:
-        res = INVALID_OPERATION;
-        break;
+        case NATIVE_WINDOW_CONNECT:
+            // deprecated. must return NO_ERROR.
+            return NO_ERROR;
+        case NATIVE_WINDOW_DISCONNECT:
+            // deprecated. must return NO_ERROR.
+            return NO_ERROR;
+        case NATIVE_WINDOW_SET_USAGE:
+            return dispatchSetUsage(args);
+        case NATIVE_WINDOW_SET_BUFFER_COUNT:
+            return dispatchSetBufferCount(args);
+        case NATIVE_WINDOW_SET_BUFFERS_GEOMETRY:
+            return dispatchSetBuffersGeometry(args);
+        case NATIVE_WINDOW_SET_BUFFERS_TIMESTAMP:
+            return dispatchSetBuffersTimestamp(args);
+        case NATIVE_WINDOW_SET_BUFFERS_DIMENSIONS:
+            return dispatchSetBuffersDimensions(args);
+        case NATIVE_WINDOW_SET_BUFFERS_FORMAT:
+            return dispatchSetBuffersFormat(args);
+        case NATIVE_WINDOW_SET_CROP:
+        case NATIVE_WINDOW_SET_BUFFERS_TRANSFORM:
+        case NATIVE_WINDOW_SET_SCALING_MODE:
+        case NATIVE_WINDOW_LOCK:
+        case NATIVE_WINDOW_UNLOCK_AND_POST:
+        case NATIVE_WINDOW_API_CONNECT:
+        case NATIVE_WINDOW_API_DISCONNECT:
+        default:
+            return INVALID_OPERATION;
     }
-    return res;
 }
 
 int GonkNativeWindow::query(int what, int* outValue) const
