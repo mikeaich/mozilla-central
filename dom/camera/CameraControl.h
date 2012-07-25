@@ -10,6 +10,7 @@
 #include "nsCOMPtr.h"
 #include "nsThread.h"
 #include "nsDOMFile.h"
+#include "DictionaryHelpers.h"
 #include "CameraPreview.h"
 #include "nsIDOMCameraManager.h"
 
@@ -17,6 +18,8 @@
 #include "CameraCommon.h"
 
 namespace mozilla {
+
+using namespace dom;
 
 class GetPreviewStreamTask;
 class AutoFocusTask;
@@ -45,16 +48,6 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSICAMERACONTROL
 
-  class CameraRegion
-  {
-  public:
-    PRInt32 mTop;
-    PRInt32 mLeft;
-    PRInt32 mBottom;
-    PRInt32 mRight;
-    PRUint32 mWeight;
-  };
-
   enum {
     CAMERA_PARAM_EFFECT,
     CAMERA_PARAM_WHITEBALANCE,
@@ -73,11 +66,11 @@ public:
   virtual const char* GetParameter(const char *aKey) = 0;
   virtual const char* GetParameterConstChar(PRUint32 aKey) = 0;
   virtual double GetParameterDouble(PRUint32 aKey) = 0;
-  virtual void GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint32 *aLength) = 0;
+  virtual void GetParameter(PRUint32 aKey, nsTArray<CameraRegion>& aRegions) = 0;
   virtual void SetParameter(const char *aKey, const char *aValue) = 0;
   virtual void SetParameter(PRUint32 aKey, const char *aValue) = 0;
   virtual void SetParameter(PRUint32 aKey, double aValue) = 0;
-  virtual void SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aLength) = 0;
+  virtual void SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& aRegions) = 0;
   virtual void PushParameters() = 0;
 
   nsCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread)
@@ -169,9 +162,8 @@ protected:
 class GetPreviewStreamTask : public nsRunnable
 {
 public:
-  GetPreviewStreamTask(nsCameraControl *aCameraControl, PRUint32 aWidth, PRUint32 aHeight, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError)
-    : mWidth(aWidth)
-    , mHeight(aHeight)
+  GetPreviewStreamTask(nsCameraControl *aCameraControl, CameraSize aSize, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError)
+    : mSize(aSize)
     , mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
@@ -188,8 +180,7 @@ public:
     return NS_OK;
   }
 
-  PRUint32 mWidth;
-  PRUint32 mHeight;
+  CameraSize mSize;
   nsCOMPtr<nsCameraControl> mCameraControl;
   nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
@@ -275,20 +266,12 @@ protected:
 class TakePictureTask : public nsRunnable
 {
 public:
-  TakePictureTask(nsCameraControl *aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRInt32 aRotation, nsString aFileFormat, double aLatitude, bool aLatitudeSet, double aLongitude, bool aLongitudeSet, double aAltitude, bool aAltitudeSet, double aTimestamp, bool aTimestampSet, nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError)
+  TakePictureTask(nsCameraControl *aCameraControl, CameraSize aSize, PRInt32 aRotation, nsString aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError)
     : mCameraControl(aCameraControl)
-    , mWidth(aWidth)
-    , mHeight(aHeight)
+    , mSize(aSize)
     , mRotation(aRotation)
     , mFileFormat(aFileFormat)
-    , mLatitude(aLatitude)
-    , mLongitude(aLongitude)
-    , mAltitude(aAltitude)
-    , mTimestamp(aTimestamp)
-    , mLatitudeSet(aLatitudeSet)
-    , mLongitudeSet(aLongitudeSet)
-    , mAltitudeSet(aAltitudeSet)
-    , mTimestampSet(aTimestampSet)
+    , mPosition(aPosition)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
   { }
@@ -307,18 +290,10 @@ public:
   }
 
   nsCOMPtr<nsCameraControl> mCameraControl;
-  PRUint32 mWidth;
-  PRUint32 mHeight;
+  CameraSize mSize;
   PRInt32 mRotation;
   nsString mFileFormat;
-  double mLatitude;
-  double mLongitude;
-  double mAltitude;
-  double mTimestamp;
-  bool mLatitudeSet;
-  bool mLongitudeSet;
-  bool mAltitudeSet;
-  bool mTimestampSet;
+  CameraPosition mPosition;
   nsCOMPtr<nsICameraTakePictureCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
@@ -351,9 +326,8 @@ protected:
 class StartRecordingTask : public nsRunnable
 {
 public:
-  StartRecordingTask(nsCameraControl *aCameraControl, PRUint32 aWidth, PRUint32 aHeight, nsICameraStartRecordingCallback *onSuccess, nsICameraErrorCallback *onError)
-    : mWidth(aWidth)
-    , mHeight(aHeight)
+  StartRecordingTask(nsCameraControl *aCameraControl, CameraSize aSize, nsICameraStartRecordingCallback *onSuccess, nsICameraErrorCallback *onError)
+    : mSize(aSize)
     , mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
@@ -372,8 +346,7 @@ public:
     return NS_OK;
   }
 
-  PRUint32 mWidth;
-  PRUint32 mHeight;
+  CameraSize mSize;
   nsCOMPtr<nsCameraControl> mCameraControl;
   nsCOMPtr<nsICameraStartRecordingCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;

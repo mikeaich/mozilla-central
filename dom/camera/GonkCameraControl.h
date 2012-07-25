@@ -35,11 +35,11 @@ public:
   const char* GetParameter(const char *aKey);
   const char* GetParameterConstChar(PRUint32 aKey);
   double GetParameterDouble(PRUint32 aKey);
-  void GetParameter(PRUint32 aKey, CameraRegion **aRegions, PRUint32 *aLength);
+  void GetParameter(PRUint32 aKey, nsTArray<dom::CameraRegion>& aRegions);
   void SetParameter(const char *aKey, const char *aValue);
   void SetParameter(PRUint32 aKey, const char *aValue);
   void SetParameter(PRUint32 aKey, double aValue);
-  void SetParameter(PRUint32 aKey, CameraRegion *aRegions, PRUint32 aLength);
+  void SetParameter(PRUint32 aKey, const nsTArray<dom::CameraRegion>& aRegions);
   void PushParameters();
 
   void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);

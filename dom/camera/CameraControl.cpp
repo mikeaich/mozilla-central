@@ -15,6 +15,7 @@
 #include "CameraCommon.h"
 
 using namespace mozilla;
+using namespace dom;
 
 DOMCI_DATA(CameraControl, nsICameraControl)
 
@@ -26,19 +27,6 @@ NS_INTERFACE_MAP_END
 
 NS_IMPL_ADDREF(nsCameraControl)
 NS_IMPL_RELEASE(nsCameraControl)
-
-//  Helper for reading optional integer properties.
-static PRInt32
-getPropertyHelper(JSContext *cx, JSObject *o, const char *prop, PRInt32 aDefault)
-{
-  PRInt32 i;
-  jsval v;
-
-  if (JS_GetProperty(cx, o, prop, &v) && JS_ValueToECMAInt32(cx, v, &i)) {
-    return i;
-  }
-  return aDefault;
-}
 
 // Helpers for string properties.
 static inline nsresult
@@ -80,47 +68,62 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, double *aValue)
 static nsresult
 setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValue, JSContext *cx, PRUint32 aLimit)
 {
+#if 0
   if (aLimit == 0) {
     DOM_CAMERA_LOGI("%s:%d : aLimit = 0, nothing to do\n", __func__, __LINE__);
     return NS_OK;
   }
+#endif
 
   PRUint32 length = 0;
 
   if (aValue.isObject()) {
     JSObject *regions = JSVAL_TO_OBJECT(aValue);
-    if (JS_GetArrayLength(cx, regions, &length)) {
-      DOM_CAMERA_LOGI("%s:%d : got %d regions (limited to %d)\n", __func__, __LINE__, length, aLimit);
-      if (length > aLimit) {
-        length = aLimit;
-      }
-      nsCameraControl::CameraRegion *parsedRegions = new nsCameraControl::CameraRegion[length];
-      for (PRUint32 i = 0; i < length; ++i) {
-        jsval v;
-        if (JS_GetElement(cx, regions, i, &v) && v.isObject()) {
-          nsCameraControl::CameraRegion* parsed = &parsedRegions[i];
-          JSObject *r = JSVAL_TO_OBJECT(v);
-
-          // TODO: move the Gonk-specific default values somewhere else
-          parsed->mTop = getPropertyHelper(cx, r, "top", PRInt32(-1000));
-          parsed->mLeft = getPropertyHelper(cx, r, "left", PRInt32(-1000));
-          parsed->mBottom = getPropertyHelper(cx, r, "bottom", PRInt32(1000));
-          parsed->mRight = getPropertyHelper(cx, r, "right", PRInt32(1000));
-          parsed->mWeight = getPropertyHelper(cx, r, "weight", PRUint32(1000));
-
-          DOM_CAMERA_LOGI("region %d: top=%d, left=%d, bottom=%d, right=%d, weight=%d\n",
-            i,
-            parsed->mTop,
-            parsed->mLeft,
-            parsed->mBottom,
-            parsed->mRight,
-            parsed->mWeight
-          );
-        }
-      }
-      aCameraContol->SetParameter(aKey, parsedRegions, length);
-      delete[] parsedRegions;
+    if (!JS_GetArrayLength(cx, regions, &length)) {
+      return NS_ERROR_FAILURE;
     }
+
+    DOM_CAMERA_LOGI("%s:%d : got %d regions (limited to %d)\n", __func__, __LINE__, length, aLimit);
+#if 0
+    if (length > aLimit) {
+      length = aLimit;
+    }
+#endif
+      
+    nsTArray<CameraRegion> regionArray;
+    regionArray.SetCapacity(length);
+
+    for (PRUint32 i = 0; i < length; ++i) {
+      jsval v;
+
+      if (!JS_GetElement(cx, regions, i, &v)) {
+        return NS_ERROR_FAILURE;
+      }
+
+      CameraRegion *r = regionArray.AppendElement();
+      /**
+       * These are the default values.  We can remove these when the xpidl
+       * dictionary parser gains the ability to grok default values.
+       */
+      r->top = -1000;
+      r->left = -1000;
+      r->bottom = 1000;
+      r->right = 1000;
+      r->weight = 1000;
+
+      nsresult rv = r->Init(cx, &v);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      DOM_CAMERA_LOGI("region %d: top=%d, left=%d, bottom=%d, right=%d, weight=%d\n",
+        i,
+        r->top,
+        r->left,
+        r->bottom,
+        r->right,
+        r->weight
+      );
+    }
+    aCameraContol->SetParameter(aKey, regionArray);
   }
 
   return NS_OK;
@@ -129,23 +132,20 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValu
 static nsresult
 getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, JSContext *cx, JS::Value *aValue)
 {
-  nsAutoArrayPtr<nsCameraControl::CameraRegion> regions;
-  PRUint32 length = 0;
+  nsTArray<CameraRegion> regionArray;
 
-  aCameraControl->GetParameter(aKey, getter_Transfers(regions), &length);
-  if (!regions && length > 0) {
-    DOM_CAMERA_LOGE("%s:%d : got length %d, but no regions\n", __func__, __LINE__, length);
-    return NS_ERROR_UNEXPECTED;
-  }
+  aCameraControl->GetParameter(aKey, regionArray);
 
   JSObject *array = JS_NewArrayObject(cx, 0, nsnull);
   if (!array) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
   
+  PRUint32 length = regionArray.Length();
   DOM_CAMERA_LOGI("%s:%d : got %d regions\n", __func__, __LINE__, length);
 
   for (PRUint32 i = 0; i < length; ++i) {
+    CameraRegion *r = &regionArray[i];
     JS::Value v;
 
     JSObject *o = JS_NewObject(cx, nsnull, nsnull, nsnull);
@@ -153,28 +153,28 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, JSContext *cx, JS::Val
       return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    DOM_CAMERA_LOGI("mLeft=%d\n", regions[i].mTop);
-    v = INT_TO_JSVAL(regions[i].mTop);
+    DOM_CAMERA_LOGI("top=%d\n", r->top);
+    v = INT_TO_JSVAL(r->top);
     if (!JS_SetProperty(cx, o, "top", &v)) {
       return NS_ERROR_FAILURE;
     }
-    DOM_CAMERA_LOGI("mLeft=%d\n", regions[i].mLeft);
-    v = INT_TO_JSVAL(regions[i].mLeft);
+    DOM_CAMERA_LOGI("left=%d\n", r->left);
+    v = INT_TO_JSVAL(r->left);
     if (!JS_SetProperty(cx, o, "left", &v)) {
       return NS_ERROR_FAILURE;
     }
-    DOM_CAMERA_LOGI("mBottom=%d\n", regions[i].mBottom);
-    v = INT_TO_JSVAL(regions[i].mBottom);
+    DOM_CAMERA_LOGI("bottom=%d\n", r->bottom);
+    v = INT_TO_JSVAL(r->bottom);
     if (!JS_SetProperty(cx, o, "bottom", &v)) {
       return NS_ERROR_FAILURE;
     }
-    DOM_CAMERA_LOGI("mRight=%d\n", regions[i].mRight);
-    v = INT_TO_JSVAL(regions[i].mRight);
+    DOM_CAMERA_LOGI("right=%d\n", r->right);
+    v = INT_TO_JSVAL(r->right);
     if (!JS_SetProperty(cx, o, "right", &v)) {
       return NS_ERROR_FAILURE;
     }
-    DOM_CAMERA_LOGI("mWeight=%d\n", regions[i].mWeight);
-    v = INT_TO_JSVAL(regions[i].mWeight);
+    DOM_CAMERA_LOGI("weight=%d\n", r->weight);
+    v = INT_TO_JSVAL(r->weight);
     if (!JS_SetProperty(cx, o, "weight", &v)) {
       return NS_ERROR_FAILURE;
     }
@@ -372,20 +372,13 @@ nsCameraControl::SetOnShutter(nsICameraShutterCallback *aOnShutter)
 NS_IMETHODIMP
 nsCameraControl::StartRecording(const JS::Value & aOptions, nsICameraStartRecordingCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
-  /* 0 means not specified, use default value */
-  PRUint32 width = 0;
-  PRUint32 height = 0;
-
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
 
-  if (aOptions.isObject()) {
-    JSObject *options = JSVAL_TO_OBJECT(aOptions);
+  CameraSize size;
+  nsresult rv = size.Init(cx, &aOptions);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-    width = getPropertyHelper(cx, options, "width", width);
-    height = getPropertyHelper(cx, options, "height", height);
-  }
-
-  nsCOMPtr<nsIRunnable> startRecordingTask = new StartRecordingTask(this, width, height, onSuccess, onError);
+  nsCOMPtr<nsIRunnable> startRecordingTask = new StartRecordingTask(this, size, onSuccess, onError);
   mCameraThread->Dispatch(startRecordingTask, NS_DISPATCH_NORMAL);
 
   return NS_OK;
@@ -405,20 +398,13 @@ nsCameraControl::StopRecording()
 NS_IMETHODIMP
 nsCameraControl::GetPreviewStream(const JS::Value & aOptions, nsICameraPreviewStreamCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
-  /* 0 means not specified, use default value */
-  PRUint32 width = 0;
-  PRUint32 height = 0;
-
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
 
-  if (aOptions.isObject()) {
-    JSObject *options = JSVAL_TO_OBJECT(aOptions);
+  CameraSize size;
+  nsresult rv = size.Init(cx, &aOptions);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-    width = getPropertyHelper(cx, options, "width", width);
-    height = getPropertyHelper(cx, options, "height", height);
-  }
-
-  nsCOMPtr<nsIRunnable> getPreviewStreamTask = new GetPreviewStreamTask(this, width, height, onSuccess, onError);
+  nsCOMPtr<nsIRunnable> getPreviewStreamTask = new GetPreviewStreamTask(this, size, onSuccess, onError);
   mCameraThread->Dispatch(getPreviewStreamTask, NS_DISPATCH_NORMAL);
 
   return NS_OK;
@@ -439,17 +425,10 @@ nsCameraControl::AutoFocus(nsICameraAutoFocusCallback *onSuccess, nsICameraError
 /* void takePicture (in nsICameraTakePictureCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
 NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
-  PRUint32 width = 0;
-  PRUint32 height = 0;
   PRInt32 rotation = 0;
-  double latitude = 0;
-  double longitude = 0;
-  double altitude = 0;
-  double timestamp = 0;
-  bool latitudeSet = false;
-  bool longitudeSet = false;
-  bool altitudeSet = false;
-  bool timestampSet = false;
+
+  CameraSize size;
+  CameraPosition pos;
 
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
   NS_ENSURE_TRUE(aOptions, NS_ERROR_INVALID_ARG);
@@ -457,12 +436,9 @@ NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, ns
   jsval pictureSize;
   nsresult rv = aOptions->GetPictureSize(&pictureSize);
   NS_ENSURE_SUCCESS(rv, rv);
-  if (pictureSize.isObject()) {
-    JSObject* options = JSVAL_TO_OBJECT(pictureSize);
 
-    width = getPropertyHelper(cx, options, "width", width);
-    height = getPropertyHelper(cx, options, "height", height);
-  }
+  rv = size.Init(cx, &pictureSize);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsString fileFormat;
   rv = aOptions->GetFileFormat(fileFormat);
@@ -474,45 +450,19 @@ NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, ns
   jsval position;
   rv = aOptions->GetPosition(&position);
   NS_ENSURE_SUCCESS(rv, rv);
-  if (position.isObject()) {
-    JSObject* options = JSVAL_TO_OBJECT(position);
-    jsval v;
 
-    if (!JS_GetProperty(cx, options, "latitude", &v)) {
-      return NS_ERROR_FAILURE;
-    }
-    if (JSVAL_IS_NUMBER(v)) {
-      if (JS_ValueToNumber(cx, v, &latitude)) {
-        latitudeSet = true;
-      }
-    }
-    if (!JS_GetProperty(cx, options, "longitude", &v)) {
-      return NS_ERROR_FAILURE;
-    }
-    if (JSVAL_IS_NUMBER(v)) {
-      if (JS_ValueToNumber(cx, v, &longitude)) {
-        longitudeSet = true;
-      }
-    }
-    if (!JS_GetProperty(cx, options, "altitude", &v)) {
-      return NS_ERROR_FAILURE;
-    }
-    if (JSVAL_IS_NUMBER(v)) {
-      if (JS_ValueToNumber(cx, v, &altitude)) {
-        altitudeSet = true;
-      }
-    }
-    if (!JS_GetProperty(cx, options, "timestamp", &v)) {
-      return NS_ERROR_FAILURE;
-    }
-    if (JSVAL_IS_NUMBER(v)) {
-      if (JS_ValueToNumber(cx, v, &timestamp)) {
-        timestampSet = true;
-      }
-    }
-  }
+  /**
+   * Default values, until the dictionary parser can handle them.
+   * NaN indicates no value provided.
+   */
+  pos.latitude = NAN;
+  pos.longitude = NAN;
+  pos.altitude = NAN;
+  pos.timestamp = NAN;
+  rv = pos.Init(cx, &position);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIRunnable> takePictureTask = new TakePictureTask(this, width, height, rotation, fileFormat, latitude, latitudeSet, longitude, longitudeSet, altitude, altitudeSet, timestamp, timestampSet, onSuccess, onError);
+  nsCOMPtr<nsIRunnable> takePictureTask = new TakePictureTask(this, size, rotation, fileFormat, pos, onSuccess, onError);
   mCameraThread->Dispatch(takePictureTask, NS_DISPATCH_NORMAL);
 
   return NS_OK;

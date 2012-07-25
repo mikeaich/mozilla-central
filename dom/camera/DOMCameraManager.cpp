@@ -5,6 +5,7 @@
 #include "CameraControl.h"
 #include "DOMCameraManager.h"
 #include "nsDOMClassInfo.h"
+#include "DictionaryHelpers.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
@@ -62,25 +63,17 @@ nsDOMCameraManager::Create(PRUint64 aWindowId, nsDOMCameraManager * *aMozCameras
 NS_IMETHODIMP
 nsDOMCameraManager::GetCamera(const JS::Value & aOptions, nsICameraGetCameraCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
-  nsresult rv;
-  PRUint32 cameraId = 0;  // back (or forward-facing) camera by default
-
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
 
-  if (aOptions.isObject()) {
-    JSObject *options = JSVAL_TO_OBJECT(aOptions);
-    jsval v;
+  nsresult rv;
+  PRUint32 cameraId = 0;  // back (or forward-facing) camera by default
+  CameraSelector selector;
 
-    if (JS_GetProperty(cx, options, "camera", &v)) {
-      if (JSVAL_IS_STRING(v)) {
-        const char* camera = JS_EncodeString(cx, JSVAL_TO_STRING(v));
-        if (camera) {
-          if (strcmp(camera, "front") == 0) {
-            cameraId = 1;
-          }
-        }
-      }
-    }
+  rv = selector.Init(cx, &aOptions);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (selector.camera.EqualsASCII("front")) {
+    cameraId = 1;
   }
 
   // reuse the same camera thread to conserve resources
