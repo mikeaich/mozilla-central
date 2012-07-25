@@ -283,7 +283,7 @@ interface nsICameraControl : nsISupports
     /* capture an image and return it as a blob to the 'onSuccess' callback;
        if the camera supports it, this may be invoked while the camera is
        already recording video.
-       
+
        invoking this function will stop the preview stream, which must be
        manually restarted (e.g. by calling .play() on it). */
     [implicit_jscontext]

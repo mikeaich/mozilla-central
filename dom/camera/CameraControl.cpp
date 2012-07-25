@@ -68,12 +68,10 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, double *aValue)
 static nsresult
 setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValue, JSContext *cx, PRUint32 aLimit)
 {
-#if 0
   if (aLimit == 0) {
     DOM_CAMERA_LOGI("%s:%d : aLimit = 0, nothing to do\n", __func__, __LINE__);
     return NS_OK;
   }
-#endif
 
   PRUint32 length = 0;
 
@@ -84,11 +82,9 @@ setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValu
     }
 
     DOM_CAMERA_LOGI("%s:%d : got %d regions (limited to %d)\n", __func__, __LINE__, length, aLimit);
-#if 0
     if (length > aLimit) {
       length = aLimit;
     }
-#endif
       
     nsTArray<CameraRegion> regionArray;
     regionArray.SetCapacity(length);
@@ -140,7 +136,7 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, JSContext *cx, JS::Val
   if (!array) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  
+
   PRUint32 length = regionArray.Length();
   DOM_CAMERA_LOGI("%s:%d : got %d regions\n", __func__, __LINE__, length);
 

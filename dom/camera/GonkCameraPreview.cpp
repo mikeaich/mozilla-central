@@ -28,7 +28,7 @@ using namespace mozilla;
  * v data (from a yuv420sp frame) in 's0' and 's1', and deinterlaces
  * them into pairs of contiguous 32-bit blocks, the u plane data in
  * 'u', and the v plane data in 'v' (i.e. for a yuv420p frame).
- * 
+ *
  * yuv420sp:
  *  [ y-data ][ uv-data ]
  *    [ uv-data ]: [u0][v0][u1][v1][u2][v2]...
@@ -138,11 +138,11 @@ GonkCameraPreview::ReceiveFrame(PRUint8 *aData, PRUint32 aLength)
   data.mYStride = mWidth * lumaBpp;
   NS_ASSERTION(data.mYStride & 0x7 == 0, "Invalid image dimensions!");
   data.mYStride /= 8;
-  
+
   data.mCbCrStride = mWidth * chromaBpp;
   NS_ASSERTION(data.mCbCrStride & 0x7 == 0, "Invalid image dimensions!");
   data.mCbCrStride /= 8;
-  
+
   data.mCbChannel = aData + mHeight * data.mYStride;
   data.mCrChannel = data.mCbChannel + mHeight * data.mCbCrStride / 2;
   data.mCbCrSize = gfxIntSize(mWidth / 2, mHeight / 2);
