@@ -78,7 +78,7 @@ public:
     , mCameraThread(aCameraThread)
     , mCapabilities(nsnull)
     , mPreview(nsnull)
-    , mFileFormat(nsnull)
+    , mFileFormat()
     , mMaxMeteringAreas(0)
     , mMaxFocusAreas(0)
     , mAutoFocusOnSuccessCb(nsnull)
@@ -90,17 +90,19 @@ public:
     , mOnShutterCb(nsnull)
   { }
 
-  virtual ~nsCameraControl()
-  {
-    if (mFileFormat) {
-      nsMemory::Free(const_cast<char*>(mFileFormat));
-    }
-  }
+  virtual ~nsCameraControl() { }
 
   void TakePictureComplete(PRUint8 *aData, PRUint32 aLength);
   void AutoFocusComplete(bool aSuccess);
 
 protected:
+  nsresult SetHelper(PRUint32 aKey, const nsAString& aValue);
+  nsresult GetHelper(PRUint32 aKey, nsAString& aValue);
+  nsresult SetHelper(PRUint32 aKey, double aValue);
+  nsresult GetHelper(PRUint32 aKey, double *aValue);
+  nsresult SetHelper(JSContext *aCx, PRUint32 aKey, const JS::Value & aValue, PRUint32 aLimit);
+  nsresult GetHelper(JSContext *aCx, PRUint32 aKey, JS::Value *aValue);
+
   virtual nsresult GetPreviewStreamImpl(GetPreviewStreamTask *aGetPreviewStream) = 0;
   virtual nsresult AutoFocusImpl(AutoFocusTask *aAutoFocus) = 0;
   virtual nsresult TakePictureImpl(TakePictureTask *aTakePicture) = 0;
@@ -121,7 +123,7 @@ protected:
   PRUint32                        mPreviewWidth;
   PRUint32                        mPreviewHeight;
   nsCOMPtr<CameraPreview>         mPreview;
-  const char*                     mFileFormat;
+  nsString                        mFileFormat;
   PRUint32                        mMaxMeteringAreas;
   PRUint32                        mMaxFocusAreas;
 
@@ -173,11 +175,11 @@ public:
   {
     nsresult rv = mCameraControl->GetPreviewStreamImpl(this);
 
-    if (NS_FAILED(rv)) {
+    if (NS_FAILED(rv) && mOnErrorCb) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
       NS_ENSURE_SUCCESS(rv, rv);
     }
-    return NS_OK;
+    return rv;
   }
 
   CameraSize mSize;
@@ -226,11 +228,11 @@ public:
     nsresult rv = mCameraControl->AutoFocusImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
-    if (NS_FAILED(rv)) {
+    if (NS_FAILED(rv) && mOnErrorCb) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
       NS_ENSURE_SUCCESS(rv, rv);
     }
-    return NS_OK;
+    return rv;
   }
 
   nsCOMPtr<nsCameraControl> mCameraControl;
@@ -266,7 +268,7 @@ protected:
 class TakePictureTask : public nsRunnable
 {
 public:
-  TakePictureTask(nsCameraControl *aCameraControl, CameraSize aSize, PRInt32 aRotation, nsString aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError)
+  TakePictureTask(nsCameraControl *aCameraControl, CameraSize aSize, PRInt32 aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError)
     : mCameraControl(aCameraControl)
     , mSize(aSize)
     , mRotation(aRotation)
@@ -282,11 +284,11 @@ public:
     nsresult rv = mCameraControl->TakePictureImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
-    if (NS_FAILED(rv)) {
+    if (NS_FAILED(rv) && mOnErrorCb) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
       NS_ENSURE_SUCCESS(rv, rv);
     }
-    return NS_OK;
+    return rv;
   }
 
   nsCOMPtr<nsCameraControl> mCameraControl;
@@ -339,11 +341,11 @@ public:
     nsresult rv = mCameraControl->StartRecordingImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
-    if (NS_FAILED(rv)) {
+    if (NS_FAILED(rv) && mOnErrorCb) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
       NS_ENSURE_SUCCESS(rv, rv);
     }
-    return NS_OK;
+    return rv;
   }
 
   CameraSize mSize;

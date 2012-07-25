@@ -10,11 +10,11 @@
 #include "nsThreadUtils.h"
 #include "nsIDOMCameraManager.h"
 
-#define DOM_CAMERA_LOG( l, ... )       \
-  do {                                  \
+#define DOM_CAMERA_LOG( l, ... )          \
+  do {                                    \
     if ( DOM_CAMERA_LOG_LEVEL >= (l) ) {  \
-      printf_stderr (__VA_ARGS__); \
-    }                                   \
+      printf_stderr (__VA_ARGS__);        \
+    }                                     \
   } while (0)
 
 #define DOM_CAMERA_LOGA( ... )        DOM_CAMERA_LOG( 0, __VA_ARGS__ )

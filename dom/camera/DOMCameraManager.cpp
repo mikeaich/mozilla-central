@@ -65,11 +65,10 @@ nsDOMCameraManager::GetCamera(const JS::Value & aOptions, nsICameraGetCameraCall
 {
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
 
-  nsresult rv;
   PRUint32 cameraId = 0;  // back (or forward-facing) camera by default
   CameraSelector selector;
 
-  rv = selector.Init(cx, &aOptions);
+  nsresult rv = selector.Init(cx, &aOptions);
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (selector.camera.EqualsASCII("front")) {

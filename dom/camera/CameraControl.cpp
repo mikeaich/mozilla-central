@@ -29,17 +29,17 @@ NS_IMPL_ADDREF(nsCameraControl)
 NS_IMPL_RELEASE(nsCameraControl)
 
 // Helpers for string properties.
-static inline nsresult
-setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const nsAString& aValue)
+nsresult
+nsCameraControl::SetHelper(PRUint32 aKey, const nsAString& aValue)
 {
-  aCameraContol->SetParameter(aKey, NS_ConvertUTF16toUTF8(aValue).get());
+  SetParameter(aKey, NS_ConvertUTF16toUTF8(aValue).get());
   return NS_OK;
 }
 
-static nsresult
-getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, nsAString& aValue)
+nsresult
+nsCameraControl::GetHelper(PRUint32 aKey, nsAString& aValue)
 {
-  const char *value = aCameraControl->GetParameterConstChar(aKey);
+  const char *value = GetParameterConstChar(aKey);
   if (!value) {
     return NS_ERROR_FAILURE;
   }
@@ -49,90 +49,91 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, nsAString& aValue)
 }
 
 // Helpers for doubles.
-static inline nsresult
-setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, double aValue)
+nsresult
+nsCameraControl::SetHelper(PRUint32 aKey, double aValue)
 {
-  aCameraContol->SetParameter(aKey, aValue);
+  SetParameter(aKey, aValue);
   return NS_OK;
 }
 
-static inline nsresult
-getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, double *aValue)
+nsresult
+nsCameraControl::GetHelper(PRUint32 aKey, double *aValue)
 {
   MOZ_ASSERT(aValue);
-  *aValue = aCameraControl->GetParameterDouble(aKey);
+  *aValue = GetParameterDouble(aKey);
   return NS_OK;
 }
 
 // Helper for weighted regions.
-static nsresult
-setHelper(nsCameraControl *aCameraContol, PRUint32 aKey, const JS::Value & aValue, JSContext *cx, PRUint32 aLimit)
+nsresult
+nsCameraControl::SetHelper(JSContext *aCx, PRUint32 aKey, const JS::Value & aValue, PRUint32 aLimit)
 {
   if (aLimit == 0) {
     DOM_CAMERA_LOGI("%s:%d : aLimit = 0, nothing to do\n", __func__, __LINE__);
     return NS_OK;
   }
 
+  if (!aValue.isObject()) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
   PRUint32 length = 0;
 
-  if (aValue.isObject()) {
-    JSObject *regions = JSVAL_TO_OBJECT(aValue);
-    if (!JS_GetArrayLength(cx, regions, &length)) {
+  JSObject *regions = &aValue.toObject();
+  if (!JS_GetArrayLength(aCx, regions, &length)) {
+    return NS_ERROR_FAILURE;
+  }
+
+  DOM_CAMERA_LOGI("%s:%d : got %d regions (limited to %d)\n", __func__, __LINE__, length, aLimit);
+  if (length > aLimit) {
+    length = aLimit;
+  }
+    
+  nsTArray<CameraRegion> regionArray;
+  regionArray.SetCapacity(length);
+
+  for (PRUint32 i = 0; i < length; ++i) {
+    JS::Value v;
+
+    if (!JS_GetElement(aCx, regions, i, &v)) {
       return NS_ERROR_FAILURE;
     }
 
-    DOM_CAMERA_LOGI("%s:%d : got %d regions (limited to %d)\n", __func__, __LINE__, length, aLimit);
-    if (length > aLimit) {
-      length = aLimit;
-    }
-      
-    nsTArray<CameraRegion> regionArray;
-    regionArray.SetCapacity(length);
+    CameraRegion *r = regionArray.AppendElement();
+    /**
+     * These are the default values.  We can remove these when the xpidl
+     * dictionary parser gains the ability to grok default values.
+     */
+    r->top = -1000;
+    r->left = -1000;
+    r->bottom = 1000;
+    r->right = 1000;
+    r->weight = 1000;
 
-    for (PRUint32 i = 0; i < length; ++i) {
-      jsval v;
+    nsresult rv = r->Init(aCx, &v);
+    NS_ENSURE_SUCCESS(rv, rv);
 
-      if (!JS_GetElement(cx, regions, i, &v)) {
-        return NS_ERROR_FAILURE;
-      }
-
-      CameraRegion *r = regionArray.AppendElement();
-      /**
-       * These are the default values.  We can remove these when the xpidl
-       * dictionary parser gains the ability to grok default values.
-       */
-      r->top = -1000;
-      r->left = -1000;
-      r->bottom = 1000;
-      r->right = 1000;
-      r->weight = 1000;
-
-      nsresult rv = r->Init(cx, &v);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      DOM_CAMERA_LOGI("region %d: top=%d, left=%d, bottom=%d, right=%d, weight=%d\n",
-        i,
-        r->top,
-        r->left,
-        r->bottom,
-        r->right,
-        r->weight
-      );
-    }
-    aCameraContol->SetParameter(aKey, regionArray);
+    DOM_CAMERA_LOGI("region %d: top=%d, left=%d, bottom=%d, right=%d, weight=%d\n",
+      i,
+      r->top,
+      r->left,
+      r->bottom,
+      r->right,
+      r->weight
+    );
   }
-
+  SetParameter(aKey, regionArray);
   return NS_OK;
 }
 
-static nsresult
-getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, JSContext *cx, JS::Value *aValue)
+nsresult
+nsCameraControl::GetHelper(JSContext *aCx, PRUint32 aKey, JS::Value *aValue)
 {
   nsTArray<CameraRegion> regionArray;
 
-  aCameraControl->GetParameter(aKey, regionArray);
+  GetParameter(aKey, regionArray);
 
-  JSObject *array = JS_NewArrayObject(cx, 0, nsnull);
+  JSObject *array = JS_NewArrayObject(aCx, 0, nsnull);
   if (!array) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -144,39 +145,39 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, JSContext *cx, JS::Val
     CameraRegion *r = &regionArray[i];
     JS::Value v;
 
-    JSObject *o = JS_NewObject(cx, nsnull, nsnull, nsnull);
+    JSObject *o = JS_NewObject(aCx, nsnull, nsnull, nsnull);
     if (!o) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
 
     DOM_CAMERA_LOGI("top=%d\n", r->top);
     v = INT_TO_JSVAL(r->top);
-    if (!JS_SetProperty(cx, o, "top", &v)) {
+    if (!JS_SetProperty(aCx, o, "top", &v)) {
       return NS_ERROR_FAILURE;
     }
     DOM_CAMERA_LOGI("left=%d\n", r->left);
     v = INT_TO_JSVAL(r->left);
-    if (!JS_SetProperty(cx, o, "left", &v)) {
+    if (!JS_SetProperty(aCx, o, "left", &v)) {
       return NS_ERROR_FAILURE;
     }
     DOM_CAMERA_LOGI("bottom=%d\n", r->bottom);
     v = INT_TO_JSVAL(r->bottom);
-    if (!JS_SetProperty(cx, o, "bottom", &v)) {
+    if (!JS_SetProperty(aCx, o, "bottom", &v)) {
       return NS_ERROR_FAILURE;
     }
     DOM_CAMERA_LOGI("right=%d\n", r->right);
     v = INT_TO_JSVAL(r->right);
-    if (!JS_SetProperty(cx, o, "right", &v)) {
+    if (!JS_SetProperty(aCx, o, "right", &v)) {
       return NS_ERROR_FAILURE;
     }
     DOM_CAMERA_LOGI("weight=%d\n", r->weight);
     v = INT_TO_JSVAL(r->weight);
-    if (!JS_SetProperty(cx, o, "weight", &v)) {
+    if (!JS_SetProperty(aCx, o, "weight", &v)) {
       return NS_ERROR_FAILURE;
     }
 
     v = OBJECT_TO_JSVAL(o);
-    if (!JS_SetElement(cx, array, i, &v)) {
+    if (!JS_SetElement(aCx, array, i, &v)) {
       return NS_ERROR_FAILURE;
     }
   }
@@ -189,13 +190,11 @@ getHelper(nsCameraControl *aCameraControl, PRUint32 aKey, JSContext *cx, JS::Val
 NS_IMETHODIMP
 nsCameraControl::GetCapabilities(nsICameraCapabilities * *aCapabilities)
 {
-  nsCOMPtr<nsICameraCapabilities> capabilities = mCapabilities;
-
-  if (!capabilities) {
-    capabilities = new nsCameraCapabilities(this);
-    mCapabilities = capabilities;
+  if (!mCapabilities) {
+    mCapabilities = new nsCameraCapabilities(this);
   }
 
+  nsCOMPtr<nsICameraCapabilities> capabilities = mCapabilities;
   capabilities.forget(aCapabilities);
   return NS_OK;
 }
@@ -204,124 +203,124 @@ nsCameraControl::GetCapabilities(nsICameraCapabilities * *aCapabilities)
 NS_IMETHODIMP
 nsCameraControl::GetEffect(nsAString & aEffect)
 {
-  return getHelper(this, CAMERA_PARAM_EFFECT, aEffect);
+  return GetHelper(CAMERA_PARAM_EFFECT, aEffect);
 }
 NS_IMETHODIMP
 nsCameraControl::SetEffect(const nsAString & aEffect)
 {
-  return setHelper(this, CAMERA_PARAM_EFFECT, aEffect);
+  return SetHelper(CAMERA_PARAM_EFFECT, aEffect);
 }
 
 /* attribute DOMString whiteBalanceMode; */
 NS_IMETHODIMP
 nsCameraControl::GetWhiteBalanceMode(nsAString & aWhiteBalanceMode)
 {
-  return getHelper(this, CAMERA_PARAM_WHITEBALANCE, aWhiteBalanceMode);
+  return GetHelper(CAMERA_PARAM_WHITEBALANCE, aWhiteBalanceMode);
 }
 NS_IMETHODIMP
 nsCameraControl::SetWhiteBalanceMode(const nsAString & aWhiteBalanceMode)
 {
-  return setHelper(this, CAMERA_PARAM_WHITEBALANCE, aWhiteBalanceMode);
+  return SetHelper(CAMERA_PARAM_WHITEBALANCE, aWhiteBalanceMode);
 }
 
 /* attribute DOMString sceneMode; */
 NS_IMETHODIMP
 nsCameraControl::GetSceneMode(nsAString & aSceneMode)
 {
-  return getHelper(this, CAMERA_PARAM_SCENEMODE, aSceneMode);
+  return GetHelper(CAMERA_PARAM_SCENEMODE, aSceneMode);
 }
 NS_IMETHODIMP
 nsCameraControl::SetSceneMode(const nsAString & aSceneMode)
 {
-  return setHelper(this, CAMERA_PARAM_SCENEMODE, aSceneMode);
+  return SetHelper(CAMERA_PARAM_SCENEMODE, aSceneMode);
 }
 
 /* attribute DOMString flashMode; */
 NS_IMETHODIMP
 nsCameraControl::GetFlashMode(nsAString & aFlashMode)
 {
-  return getHelper(this, CAMERA_PARAM_FLASHMODE, aFlashMode);
+  return GetHelper(CAMERA_PARAM_FLASHMODE, aFlashMode);
 }
 NS_IMETHODIMP
 nsCameraControl::SetFlashMode(const nsAString & aFlashMode)
 {
-  return setHelper(this, CAMERA_PARAM_FLASHMODE, aFlashMode);
+  return SetHelper(CAMERA_PARAM_FLASHMODE, aFlashMode);
 }
 
 /* attribute DOMString focusMode; */
 NS_IMETHODIMP
 nsCameraControl::GetFocusMode(nsAString & aFocusMode)
 {
-  return getHelper(this, CAMERA_PARAM_FOCUSMODE, aFocusMode);
+  return GetHelper(CAMERA_PARAM_FOCUSMODE, aFocusMode);
 }
 NS_IMETHODIMP
 nsCameraControl::SetFocusMode(const nsAString & aFocusMode)
 {
-  return setHelper(this, CAMERA_PARAM_FOCUSMODE, aFocusMode);
+  return SetHelper(CAMERA_PARAM_FOCUSMODE, aFocusMode);
 }
 
 /* attribute double zoom; */
 NS_IMETHODIMP
 nsCameraControl::GetZoom(double *aZoom)
 {
-  return getHelper(this, CAMERA_PARAM_ZOOM, aZoom);
+  return GetHelper(CAMERA_PARAM_ZOOM, aZoom);
 }
 NS_IMETHODIMP
 nsCameraControl::SetZoom(double aZoom)
 {
-  return setHelper(this, CAMERA_PARAM_ZOOM, aZoom);
+  return SetHelper(CAMERA_PARAM_ZOOM, aZoom);
 }
 
 /* attribute jsval meteringAreas; */
 NS_IMETHODIMP
 nsCameraControl::GetMeteringAreas(JSContext *cx, JS::Value *aMeteringAreas)
 {
-  return getHelper(this, CAMERA_PARAM_METERINGAREAS, cx, aMeteringAreas);
+  return GetHelper(cx, CAMERA_PARAM_METERINGAREAS, aMeteringAreas);
 }
 NS_IMETHODIMP
 nsCameraControl::SetMeteringAreas(JSContext *cx, const JS::Value & aMeteringAreas)
 {
-  return setHelper(this, CAMERA_PARAM_METERINGAREAS, aMeteringAreas, cx, mMaxMeteringAreas);
+  return SetHelper(cx, CAMERA_PARAM_METERINGAREAS, aMeteringAreas, mMaxMeteringAreas);
 }
 
 /* attribute jsval focusAreas; */
 NS_IMETHODIMP
 nsCameraControl::GetFocusAreas(JSContext *cx, JS::Value *aFocusAreas)
 {
-  return getHelper(this, CAMERA_PARAM_FOCUSAREAS, cx, aFocusAreas);
+  return GetHelper(cx, CAMERA_PARAM_FOCUSAREAS, aFocusAreas);
 }
 NS_IMETHODIMP
 nsCameraControl::SetFocusAreas(JSContext *cx, const JS::Value & aFocusAreas)
 {
-  return setHelper(this, CAMERA_PARAM_FOCUSAREAS, aFocusAreas, cx, mMaxFocusAreas);
+  return SetHelper(cx, CAMERA_PARAM_FOCUSAREAS, aFocusAreas, mMaxFocusAreas);
 }
 
 /* readonly attribute double focalLength; */
 NS_IMETHODIMP
 nsCameraControl::GetFocalLength(double *aFocalLength)
 {
-  return getHelper(this, CAMERA_PARAM_FOCALLENGTH, aFocalLength);
+  return GetHelper(CAMERA_PARAM_FOCALLENGTH, aFocalLength);
 }
 
 /* readonly attribute double focusDistanceNear; */
 NS_IMETHODIMP
 nsCameraControl::GetFocusDistanceNear(double *aFocusDistanceNear)
 {
-  return getHelper(this, CAMERA_PARAM_FOCUSDISTANCENEAR, aFocusDistanceNear);
+  return GetHelper(CAMERA_PARAM_FOCUSDISTANCENEAR, aFocusDistanceNear);
 }
 
 /* readonly attribute double focusDistanceOptimum; */
 NS_IMETHODIMP
 nsCameraControl::GetFocusDistanceOptimum(double *aFocusDistanceOptimum)
 {
-  return getHelper(this, CAMERA_PARAM_FOCUSDISTANCEOPTIMUM, aFocusDistanceOptimum);
+  return GetHelper(CAMERA_PARAM_FOCUSDISTANCEOPTIMUM, aFocusDistanceOptimum);
 }
 
 /* readonly attribute double focusDistanceFar; */
 NS_IMETHODIMP
 nsCameraControl::GetFocusDistanceFar(double *aFocusDistanceFar)
 {
-  return getHelper(this, CAMERA_PARAM_FOCUSDISTANCEFAR, aFocusDistanceFar);
+  return GetHelper(CAMERA_PARAM_FOCUSDISTANCEFAR, aFocusDistanceFar);
 }
 
 /* void setExposureCompensation (const JS::Value & aCompensation); */
@@ -330,15 +329,15 @@ nsCameraControl::SetExposureCompensation(const JS::Value & aCompensation)
 {
   if (JSVAL_IS_DOUBLE(aCompensation)) {
     double compensation = JSVAL_TO_DOUBLE(aCompensation);
-    return setHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, compensation);
+    return SetHelper(CAMERA_PARAM_EXPOSURECOMPENSATION, compensation);
   }
   if (JSVAL_IS_INT(aCompensation)) {
     PRUint32 compensation = JSVAL_TO_INT(aCompensation);
-    return setHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, compensation);
+    return SetHelper(CAMERA_PARAM_EXPOSURECOMPENSATION, compensation);
   }
   if (JSVAL_IS_NULL(aCompensation) || JSVAL_IS_VOID(aCompensation)) {
     /* use NaN to switch the camera back into auto mode */
-    return setHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, NAN);
+    return SetHelper(CAMERA_PARAM_EXPOSURECOMPENSATION, NAN);
   }
   return NS_ERROR_INVALID_ARG;
 }
@@ -347,7 +346,7 @@ nsCameraControl::SetExposureCompensation(const JS::Value & aCompensation)
 NS_IMETHODIMP
 nsCameraControl::GetExposureCompensation(double *aExposureCompensation)
 {
-  return getHelper(this, CAMERA_PARAM_EXPOSURECOMPENSATION, aExposureCompensation);
+  return GetHelper(CAMERA_PARAM_EXPOSURECOMPENSATION, aExposureCompensation);
 }
 
 /* attribute nsICameraShutterCallback onShutter; */
@@ -418,7 +417,7 @@ nsCameraControl::AutoFocus(nsICameraAutoFocusCallback *onSuccess, nsICameraError
   return NS_OK;
 }
 
-/* void takePicture (in nsICameraTakePictureCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
+/* void takePicture (in nsICameraPictureOptions aOptions, in nsICameraTakePictureCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
 NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
   PRInt32 rotation = 0;
@@ -493,7 +492,7 @@ nsCameraControl::TakePictureComplete(PRUint8* aData, PRUint32 aLength)
    * TODO: pick up the actual specified picture format for the MIME type;
    * for now, assume we'll be using JPEGs.
    */
-  nsIDOMBlob *blob = new nsDOMMemoryFile((void*)data, (PRUint64)aLength, NS_LITERAL_STRING("image/jpeg"));
+  nsIDOMBlob *blob = new nsDOMMemoryFile(static_cast<void*>(data), static_cast<PRUint64>(aLength), NS_LITERAL_STRING("image/jpeg"));
   nsCOMPtr<nsIRunnable> takePictureResult = new TakePictureResult(blob, mTakePictureOnSuccessCb);
 
   nsresult rv = NS_DispatchToMainThread(takePictureResult);

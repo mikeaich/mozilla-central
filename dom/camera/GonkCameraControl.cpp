@@ -374,8 +374,10 @@ nsGonkCameraControl::GetPreviewStreamImpl(GetPreviewStreamTask *aGetPreviewStrea
   if (!preview) {
     preview = new GonkCameraPreview(mHwHandle, aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height);
     if (!preview) {
-      rv = NS_DispatchToMainThread(new CameraErrorResult(aGetPreviewStream->mOnErrorCb, NS_LITERAL_STRING("OUT_OF_MEMORY")));
-      NS_ENSURE_SUCCESS(rv, rv);
+      if (aGetPreviewStream->mOnErrorCb) {
+        rv = NS_DispatchToMainThread(new CameraErrorResult(aGetPreviewStream->mOnErrorCb, NS_LITERAL_STRING("OUT_OF_MEMORY")));
+        NS_ENSURE_SUCCESS(rv, rv);
+      }
       return NS_ERROR_OUT_OF_MEMORY;
     }
   }
@@ -452,12 +454,8 @@ nsGonkCameraControl::TakePictureImpl(TakePictureTask *aTakePicture)
   }
 
   // Picture format -- need to keep it for the callback.
-  if (mFileFormat) {
-    nsMemory::Free(const_cast<char*>(mFileFormat));
-  }
-  mFileFormat = ToNewCString(aTakePicture->mFileFormat);
-  NS_ENSURE_TRUE(!!mFileFormat, NS_ERROR_OUT_OF_MEMORY);
-  SetParameter(CameraParameters::KEY_PICTURE_FORMAT, mFileFormat);
+  mFileFormat = aTakePicture->mFileFormat;
+  SetParameter(CameraParameters::KEY_PICTURE_FORMAT, NS_ConvertUTF16toUTF8(mFileFormat).get());
 
   // Convert 'rotation' to a positive value from 0..270 degrees, in steps of 90.
   PRUint32 r = static_cast<PRUint32>(aTakePicture->mRotation);

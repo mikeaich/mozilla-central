@@ -10,6 +10,8 @@
 
 namespace mozilla {
 
+typedef nsresult (*ParseItemAndAddFunc)(JSContext *aCx, JSObject *aArray, PRUint32 aIndex, const char *aStart,  char **aEnd);
+
 class nsCameraCapabilities : public nsICameraCapabilities
 {
 public:
@@ -18,20 +20,14 @@ public:
 
   nsCameraCapabilities(nsCameraControl *aCamera);
 
-  nsresult parameterListToNewArray(
+  nsresult ParameterListToNewArray(
     JSContext *cx,
-    JSObject **array,
-    const char *key,
-    nsresult (*parseItemAndAdd)(
-      JSContext *cx,
-      JSObject *array,
-      PRUint32 index,
-      const char *start,
-      char **end
-    )
+    JSObject **aArray,
+    const char *aKey,
+    ParseItemAndAddFunc aParseItemAndAdd
   );
-  nsresult stringListToNewObject(JSContext* cx, JS::Value *aArray, const char *key);
-  nsresult dimensionListToNewObject(JSContext* cx, JS::Value *aArray, const char *key);
+  nsresult StringListToNewObject(JSContext *aCx, JS::Value *aArray, const char *aKey);
+  nsresult DimensionListToNewObject(JSContext *aCx, JS::Value *aArray, const char *aKey);
 
 private:
   nsCameraCapabilities(const nsCameraCapabilities&);
