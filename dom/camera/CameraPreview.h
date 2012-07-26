@@ -24,7 +24,6 @@ public:
   NS_DECL_ISUPPORTS
 
   CameraPreview(PRUint32 aWidth, PRUint32 aHeight);
-  virtual ~CameraPreview();
 
   void SetFrameRate(PRUint32 aFramesPerSecond);
 
@@ -37,6 +36,8 @@ public:
   virtual void Stop() = 0;
 
 protected:
+  virtual ~CameraPreview();
+
   PRUint32 mWidth;
   PRUint32 mHeight;
   PRUint32 mFramesPerSecond;
@@ -48,8 +49,8 @@ protected:
   enum { TRACK_VIDEO = 1 };
 
 private:
-  CameraPreview(const CameraPreview&);
-  CameraPreview& operator=(const CameraPreview&);
+  CameraPreview(const CameraPreview&) MOZ_DELETE;
+  CameraPreview& operator=(const CameraPreview&) MOZ_DELETE;
 };
 
 } // namespace mozilla

@@ -49,14 +49,13 @@ nsDOMCameraManager::OnNavigation(PRUint64 aWindowId)
 }
 
 // static creator
-NS_IMETHODIMP
-nsDOMCameraManager::Create(PRUint64 aWindowId, nsDOMCameraManager * *aMozCameras)
+already_AddRefed<nsDOMCameraManager>
+nsDOMCameraManager::Create(PRUint64 aWindowId)
 {
   // TODO: check for permissions here to access cameras
 
   nsRefPtr<nsDOMCameraManager> cameraManager = new nsDOMCameraManager(aWindowId);
-  cameraManager.forget(aMozCameras);
-  return NS_OK;
+  return cameraManager.forget();
 }
 
 /* [implicit_jscontext] void getCamera ([optional] in jsval aOptions, in nsICameraGetCameraCallback onSuccess, [optional] in nsICameraErrorCallback onError); */

@@ -30,7 +30,6 @@ class nsGonkCameraControl : public nsCameraControl
 {
 public:
   nsGonkCameraControl(PRUint32 aCameraId, nsIThread *aCameraThread);
-  ~nsGonkCameraControl();
 
   const char* GetParameter(const char *aKey);
   const char* GetParameterConstChar(PRUint32 aKey);
@@ -45,6 +44,8 @@ public:
   void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
 
 protected:
+  ~nsGonkCameraControl();
+
   nsresult GetPreviewStreamImpl(GetPreviewStreamTask *aGetPreviewStream);
   nsresult AutoFocusImpl(AutoFocusTask *aAutoFocus);
   nsresult TakePictureImpl(TakePictureTask *aTakePicture);
@@ -59,6 +60,10 @@ protected:
   bool                      mDeferConfigUpdate;
   PRRWLock*                 mRwLock;
   android::CameraParameters mParams;
+
+private:
+  nsGonkCameraControl(const nsGonkCameraControl&) MOZ_DELETE;
+  nsGonkCameraControl& operator=(const nsGonkCameraControl&) MOZ_DELETE;
 };
 
 // camera driver callbacks

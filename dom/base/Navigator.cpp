@@ -1339,24 +1339,20 @@ Navigator::MozSetMessageHandler(const nsAString& aType,
 NS_IMETHODIMP
 Navigator::GetMozCameras(nsIDOMCameraManager** aCameraManager)
 {
-  nsRefPtr<nsDOMCameraManager> cameraManager = mCameraManager;
-
-  if (!cameraManager) {
+  if (!mCameraManager) {
     nsCOMPtr<nsPIDOMWindow> win = do_QueryReferent(mWindow);
     NS_ENSURE_TRUE(win, NS_ERROR_FAILURE);
 
-    if (!win || !win->GetOuterWindow() ||
-        win->GetOuterWindow()->GetCurrentInnerWindow() != win) {
+    if (!win->GetOuterWindow() || win->GetOuterWindow()->GetCurrentInnerWindow() != win) {
       return NS_ERROR_NOT_AVAILABLE;
     }
 
-    nsresult rv = nsDOMCameraManager::Create(win->WindowID(), getter_AddRefs(mCameraManager));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    cameraManager = mCameraManager;
+    mCameraManager = nsDOMCameraManager::Create(win->WindowID());
   }
 
+  nsRefPtr<nsDOMCameraManager> cameraManager = mCameraManager;
   cameraManager.forget(aCameraManager);
+
   return NS_OK;
 }
 #endif //MOZ_B2G_CAMERA
@@ -1385,9 +1381,13 @@ Navigator::SetWindow(nsPIDOMWindow *aInnerWindow)
 void
 Navigator::OnNavigation()
 {
-  // Inform MediaManager in case there are live streams or pending callbacks.
   nsCOMPtr<nsPIDOMWindow> win = do_QueryReferent(mWindow);
+  if (!win) {
+    return;
+  }
+
 #ifdef MOZ_MEDIA_NAVIGATOR
+  // Inform MediaManager in case there are live streams or pending callbacks.
   MediaManager *manager = MediaManager::Get();
   manager->OnNavigation(win->WindowID());
 #endif

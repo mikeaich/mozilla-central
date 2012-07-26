@@ -33,10 +33,6 @@ public:
     , mDiscardedFrameCount(0)
     , mFormat(GonkCameraHardware::PREVIEW_FORMAT_UNKNOWN)
   { }
-  ~GonkCameraPreview()
-  {
-    Stop();
-  }
 
   void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
 
@@ -44,13 +40,18 @@ public:
   void Stop();
 
 protected:
+  ~GonkCameraPreview()
+  {
+    Stop();
+  }
+
   PRUint32 mHwHandle;
   PRUint32 mDiscardedFrameCount;
   PRUint32 mFormat;
 
 private:
-  GonkCameraPreview(const GonkCameraPreview&);
-  GonkCameraPreview& operator=(const GonkCameraPreview&);
+  GonkCameraPreview(const GonkCameraPreview&) MOZ_DELETE;
+  GonkCameraPreview& operator=(const GonkCameraPreview&) MOZ_DELETE;
 };
 
 } // namespace mozilla

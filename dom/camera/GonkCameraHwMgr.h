@@ -116,8 +116,8 @@ protected:
   }
 
 private:
-  GonkCameraHardware(const GonkCameraHardware&);
-  GonkCameraHardware& operator=(const GonkCameraHardware&);
+  GonkCameraHardware(const GonkCameraHardware&) MOZ_DELETE;
+  GonkCameraHardware& operator=(const GonkCameraHardware&) MOZ_DELETE;
 };
 
 } // namespace mozilla

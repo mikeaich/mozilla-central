@@ -19,15 +19,15 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIDOMCAMERAMANAGER
 
-  static NS_IMETHODIMP Create(PRUint64 aWindowId, nsDOMCameraManager * *aMozCameras);
+  static already_AddRefed<nsDOMCameraManager> Create(PRUint64 aWindowId);
 
   void OnNavigation(PRUint64 aWindowId);
 
 private:
   nsDOMCameraManager();
   nsDOMCameraManager(PRUint64 aWindowId);
-  nsDOMCameraManager(const nsDOMCameraManager&);
-  nsDOMCameraManager& operator=(const nsDOMCameraManager&);
+  nsDOMCameraManager(const nsDOMCameraManager&) MOZ_DELETE;
+  nsDOMCameraManager& operator=(const nsDOMCameraManager&) MOZ_DELETE;
   ~nsDOMCameraManager();
 
 protected:

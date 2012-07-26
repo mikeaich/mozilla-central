@@ -30,12 +30,12 @@ public:
   nsresult DimensionListToNewObject(JSContext *aCx, JS::Value *aArray, const char *aKey);
 
 private:
-  nsCameraCapabilities(const nsCameraCapabilities&);
-  nsCameraCapabilities& operator=(const nsCameraCapabilities&);
-  ~nsCameraCapabilities();
+  nsCameraCapabilities(const nsCameraCapabilities&) MOZ_DELETE;
+  nsCameraCapabilities& operator=(const nsCameraCapabilities&) MOZ_DELETE;
 
 protected:
   /* additional members */
+  ~nsCameraCapabilities();
   nsCOMPtr<nsCameraControl> mCamera;
 };
 

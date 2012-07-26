@@ -90,12 +90,12 @@ public:
     , mOnShutterCb(nsnull)
   { }
 
-  virtual ~nsCameraControl() { }
-
   void TakePictureComplete(PRUint8 *aData, PRUint32 aLength);
   void AutoFocusComplete(bool aSuccess);
 
 protected:
+  virtual ~nsCameraControl() { }
+
   nsresult SetHelper(PRUint32 aKey, const nsAString& aValue);
   nsresult GetHelper(PRUint32 aKey, nsAString& aValue);
   nsresult SetHelper(PRUint32 aKey, double aValue);
@@ -112,8 +112,8 @@ protected:
   virtual nsresult PullParametersImpl(PullParametersTask *aPullParameters) = 0;
 
 private:
-  nsCameraControl(const nsCameraControl&);
-  nsCameraControl& operator=(const nsCameraControl&);
+  nsCameraControl(const nsCameraControl&) MOZ_DELETE;
+  nsCameraControl& operator=(const nsCameraControl&) MOZ_DELETE;
 
 protected:
   /* additional members */
