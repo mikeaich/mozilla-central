@@ -417,33 +417,19 @@ nsCameraControl::AutoFocus(nsICameraAutoFocusCallback *onSuccess, nsICameraError
   return NS_OK;
 }
 
-/* void takePicture (in nsICameraPictureOptions aOptions, in nsICameraTakePictureCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
-NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
+/* void takePicture (in jsval aOptions, in nsICameraTakePictureCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
+NS_IMETHODIMP nsCameraControl::TakePicture(const JS::Value & aOptions, nsICameraTakePictureCallback *onSuccess, nsICameraErrorCallback *onError, JSContext* cx)
 {
-  PRInt32 rotation = 0;
-
-  CameraSize size;
-  CameraPosition pos;
-
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
-  NS_ENSURE_TRUE(aOptions, NS_ERROR_INVALID_ARG);
 
-  jsval pictureSize;
-  nsresult rv = aOptions->GetPictureSize(&pictureSize);
+  CameraPictureOptions  options;
+  CameraSize            size;
+  CameraPosition        pos;
+
+  nsresult rv = options.Init(cx, &aOptions);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = size.Init(cx, &pictureSize);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsString fileFormat;
-  rv = aOptions->GetFileFormat(fileFormat);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = aOptions->GetRotation(&rotation);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  jsval position;
-  rv = aOptions->GetPosition(&position);
+  rv = size.Init(cx, &options.pictureSize);
   NS_ENSURE_SUCCESS(rv, rv);
 
   /**
@@ -454,10 +440,10 @@ NS_IMETHODIMP nsCameraControl::TakePicture(nsICameraPictureOptions *aOptions, ns
   pos.longitude = NAN;
   pos.altitude = NAN;
   pos.timestamp = NAN;
-  rv = pos.Init(cx, &position);
+  rv = pos.Init(cx, &options.position);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIRunnable> takePictureTask = new TakePictureTask(this, size, rotation, fileFormat, pos, onSuccess, onError);
+  nsCOMPtr<nsIRunnable> takePictureTask = new TakePictureTask(this, size, options.rotation, options.fileFormat, pos, onSuccess, onError);
   mCameraThread->Dispatch(takePictureTask, NS_DISPATCH_NORMAL);
 
   return NS_OK;
