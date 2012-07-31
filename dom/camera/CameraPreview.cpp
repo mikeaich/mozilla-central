@@ -62,12 +62,46 @@ protected:
   nsCOMPtr<CameraPreview> mPreview;
 };
 
-CameraPreview::CameraPreview(PRUint32 aWidth, PRUint32 aHeight)
+// Control the preview stream source.
+class CameraPreviewControlTask : public nsRunnable
+{
+public:
+  enum {
+    START,
+    STOP
+  };
+
+  CameraPreviewControlTask(CameraPreview* aPreview, PRUint32 aControl)
+    : mPreview(aPreview)
+    , mControl(aControl)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    switch (mControl) {
+      case START:
+        return mPreview->StartImpl();
+
+      case STOP:
+        return mPreview->StopImpl();
+
+      default:
+        DOM_CAMERA_LOGE("%s:%d : unhandled preview control %d\n", __func__, __LINE__, mControl);
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+  }
+
+  nsCOMPtr<CameraPreview> mPreview;
+  PRUint32 mControl;
+};
+
+CameraPreview::CameraPreview(nsIThread* aCameraThread, PRUint32 aWidth, PRUint32 aHeight)
   : nsDOMMediaStream()
   , mWidth(aWidth)
   , mHeight(aHeight)
   , mFramesPerSecond(0)
   , mFrameCount(0)
+  , mCameraThread(aCameraThread)
 {
   DOM_CAMERA_LOGI("%s:%d : mWidth=%d, mHeight=%d : this=%p\n", __func__, __LINE__, mWidth, mHeight, this);
 
@@ -86,13 +120,27 @@ CameraPreview::SetFrameRate(PRUint32 aFramesPerSecond)
   mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
 }
 
+void
+CameraPreview::Start()
+{
+  nsCOMPtr<CameraPreviewControlTask> cameraPreviewControlTask = new CameraPreviewControlTask(this, CameraPreviewControlTask::START);
+  nsresult rv = mCameraThread->Dispatch(cameraPreviewControlTask, NS_DISPATCH_NORMAL);
+  if (NS_FAILED(rv)) {
+    DOM_CAMERA_LOGE("failed to start camera preview (%d)\n", rv);
+  }
+}
+
+void
+CameraPreview::Stop()
+{
+  nsCOMPtr<CameraPreviewControlTask> cameraPreviewControlTask = new CameraPreviewControlTask(this, CameraPreviewControlTask::STOP);
+  nsresult rv = mCameraThread->Dispatch(cameraPreviewControlTask, NS_DISPATCH_NORMAL);
+  if (NS_FAILED(rv)) {
+    DOM_CAMERA_LOGE("failed to stop camera preview (%d)\n", rv);
+  }
+}
+
 CameraPreview::~CameraPreview()
 {
-  DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
-
-  /**
-   * We _must_ remember to call RemoveListener on this before destroying this,
-   * else the media framework will trigger a double-free.
-   */
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
 }
