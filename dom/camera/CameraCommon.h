@@ -89,6 +89,7 @@ static inline void nsLogReleaseCamera(const char *file, PRUint32 line, void* p, 
   if (count == 0) {
     DOM_CAMERA_LOGI("----------------------------------------");
     if (abortOnDelete) {
+      DOM_CAMERA_LOGI("---------- ABORTING ON DELETE ----------");
       *((PRUint32 *)0xdeadbeef) = 0x266230;
     }
   }

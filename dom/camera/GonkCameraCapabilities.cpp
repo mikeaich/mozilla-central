@@ -11,7 +11,7 @@
 #include "CameraCapabilities.h"
 
 #define DOM_CAMERA_DEBUG_REFS 1
-#define DOM_CAMERA_DEBUG_REFS_ABORT_ON_DELETE true
+#define DOM_CAMERA_DEBUG_REFS_ABORT_ON_DELETE false
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
