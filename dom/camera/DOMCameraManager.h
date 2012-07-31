@@ -61,16 +61,25 @@ public:
   GetCameraResult(nsICameraControl* aCameraControl, nsICameraGetCameraCallback* onSuccess)
     : mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
-  { }
+  {
+    printf_stderr("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~GetCameraResult()
+  {
+    printf_stderr("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
     MOZ_ASSERT(NS_IsMainThread());
 
     // TODO: window management stuff
+    printf_stderr("%s:%d : this=%p -- BEFORE CALLBACK\n", __func__, __LINE__, this);
     if (mOnSuccessCb) {
       mOnSuccessCb->HandleEvent(mCameraControl);
     }
+    printf_stderr("%s:%d : this=%p -- AFTER CALLBACK\n", __func__, __LINE__, this);
     return NS_OK;
   }
 

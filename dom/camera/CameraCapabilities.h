@@ -5,6 +5,7 @@
 #ifndef DOM_CAMERA_NSCAMERACAPABILITIES_H
 #define DOM_CAMERA_NSCAMERACAPABILITIES_H
 
+#include "nsCycleCollectionParticipant.h"
 #include "CameraControl.h"
 #include "nsAutoPtr.h"
 
@@ -15,7 +16,8 @@ typedef nsresult (*ParseItemAndAddFunc)(JSContext* aCx, JSObject* aArray, PRUint
 class nsCameraCapabilities : public nsICameraCapabilities
 {
 public:
-  NS_DECL_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTION_CLASS(nsCameraCapabilities)
   NS_DECL_NSICAMERACAPABILITIES
 
   nsCameraCapabilities(nsCameraControl* aCamera);

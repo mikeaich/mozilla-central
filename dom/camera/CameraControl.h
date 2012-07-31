@@ -11,6 +11,7 @@
 #include "nsDOMFile.h"
 #include "DictionaryHelpers.h"
 #include "CameraPreview.h"
+#include "nsCycleCollectionParticipant.h"
 #include "nsIDOMCameraManager.h"
 
 #define DOM_CAMERA_LOG_LEVEL 3
@@ -44,7 +45,8 @@ class nsCameraControl : public nsICameraControl
   friend class PullParametersTask;
 
 public:
-  NS_DECL_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTION_CLASS(nsCameraControl)
   NS_DECL_NSICAMERACONTROL
 
   enum {
@@ -104,7 +106,9 @@ public:
     , mStartRecordingOnSuccessCb(nullptr)
     , mStartRecordingOnErrorCb(nullptr)
     , mOnShutterCb(nullptr)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   void TakePictureComplete(PRUint8 *aData, PRUint32 aLength);
   void AutoFocusComplete(bool aSuccess);
@@ -159,7 +163,14 @@ public:
   GetPreviewStreamResult(nsIDOMMediaStream* aStream, nsICameraPreviewStreamCallback* onSuccess)
     : mStream(aStream)
     , mOnSuccessCb(onSuccess)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~GetPreviewStreamResult()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
@@ -185,7 +196,14 @@ public:
     , mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~GetPreviewStreamTask()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
@@ -263,15 +281,24 @@ public:
   TakePictureResult(nsIDOMBlob* aImage, nsICameraTakePictureCallback* onSuccess)
     : mImage(aImage)
     , mOnSuccessCb(onSuccess)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~TakePictureResult()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
     MOZ_ASSERT(NS_IsMainThread());
 
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
     if (mOnSuccessCb) {
       mOnSuccessCb->HandleEvent(mImage);
     }
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
     return NS_OK;
   }
 

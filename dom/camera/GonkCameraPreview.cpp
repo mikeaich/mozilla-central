@@ -18,6 +18,7 @@
 #include "GonkCameraHwMgr.h"
 #include "GonkCameraPreview.h"
 
+#define DOM_CAMERA_DEBUG_REFS 1
 #define DOM_CAMERA_LOG_LEVEL  2
 #include "CameraCommon.h"
 

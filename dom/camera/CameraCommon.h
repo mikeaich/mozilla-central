@@ -66,3 +66,38 @@ protected:
 };
 
 #endif // DOM_CAMERA_CAMERACOMMON_H
+
+#if DOM_CAMERA_DEBUG_REFS
+#ifdef NS_LOG_ADDREF
+#undef NS_LOG_ADDREF
+#endif
+#ifdef NS_LOG_RELEASE
+#undef NS_LOG_RELEASE
+#endif
+
+static inline void nsLogAddRefCamera(const char *file, PRUint32 line, void* p, PRUint32 count, const char *clazz, PRUint32 size)
+{
+  if (count == 1) {
+    DOM_CAMERA_LOGI("++++++++++++++++++++++++++++++++++++++++");
+  }
+  DOM_CAMERA_LOGI("%s:%d : CAMREF-ADD(%s): this=%p, mRefCnt=%d\n", file, line, clazz, p, count);
+}
+
+static inline void nsLogReleaseCamera(const char *file, PRUint32 line, void* p, PRUint32 count, const char *clazz, bool abortOnDelete)
+{
+  DOM_CAMERA_LOGI("%s:%d : CAMREF-REL(%s): this=%p, mRefCnt=%d\n", file, line, clazz, p, count);
+  if (count == 0) {
+    DOM_CAMERA_LOGI("----------------------------------------");
+    if (abortOnDelete) {
+      *((PRUint32 *)0xdeadbeef) = 0x266230;
+    }
+  }
+}
+
+#define NS_LOG_ADDREF( p, n, c, s ) nsLogAddRefCamera(__FILE__, __LINE__, (p), (n), (c), (s))
+#ifdef DOM_CAMERA_DEBUG_REFS_ABORT_ON_DELETE
+#define NS_LOG_RELEASE( p, n, c )   nsLogReleaseCamera(__FILE__, __LINE__, (p), (n), (c), DOM_CAMERA_DEBUG_REFS_ABORT_ON_DELETE)
+#else
+#define NS_LOG_RELEASE( p, n, c )   nsLogReleaseCamera(__FILE__, __LINE__, (p), (n), (c), false)
+#endif
+#endif

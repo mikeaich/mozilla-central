@@ -10,6 +10,8 @@
 #include "CameraControl.h"
 #include "CameraCapabilities.h"
 
+#define DOM_CAMERA_DEBUG_REFS 1
+#define DOM_CAMERA_DEBUG_REFS_ABORT_ON_DELETE true
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
@@ -18,15 +20,24 @@ using namespace mozilla;
 
 DOMCI_DATA(CameraCapabilities, nsICameraCapabilities)
 
-NS_INTERFACE_MAP_BEGIN(nsCameraCapabilities)
+NS_IMPL_CYCLE_COLLECTION_CLASS(nsCameraCapabilities)
+
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(nsCameraCapabilities)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mCamera)
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
+
+NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(nsCameraCapabilities)
+  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mCamera)
+NS_IMPL_CYCLE_COLLECTION_UNLINK_END
+
+NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsCameraCapabilities)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
   NS_INTERFACE_MAP_ENTRY(nsICameraCapabilities)
   NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(CameraCapabilities)
 NS_INTERFACE_MAP_END
 
-NS_IMPL_ADDREF(nsCameraCapabilities)
-NS_IMPL_RELEASE(nsCameraCapabilities)
-
+NS_IMPL_CYCLE_COLLECTING_ADDREF(nsCameraCapabilities)
+NS_IMPL_CYCLE_COLLECTING_RELEASE(nsCameraCapabilities)
 
 nsCameraCapabilities::nsCameraCapabilities(nsCameraControl* aCamera)
   : mCamera(aCamera)
