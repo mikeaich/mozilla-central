@@ -62,39 +62,6 @@ protected:
   nsCOMPtr<CameraPreview> mPreview;
 };
 
-// Control the preview stream source.
-class CameraPreviewControlTask : public nsRunnable
-{
-public:
-  enum {
-    START,
-    STOP
-  };
-
-  CameraPreviewControlTask(CameraPreview* aPreview, PRUint32 aControl)
-    : mPreview(aPreview)
-    , mControl(aControl)
-  { }
-
-  NS_IMETHOD Run()
-  {
-    switch (mControl) {
-      case START:
-        return mPreview->StartImpl();
-
-      case STOP:
-        return mPreview->StopImpl();
-
-      default:
-        DOM_CAMERA_LOGE("%s:%d : unhandled preview control %d\n", __func__, __LINE__, mControl);
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
-  }
-
-  nsCOMPtr<CameraPreview> mPreview;
-  PRUint32 mControl;
-};
-
 CameraPreview::CameraPreview(nsIThread* aCameraThread, PRUint32 aWidth, PRUint32 aHeight)
   : nsDOMMediaStream()
   , mWidth(aWidth)
@@ -123,8 +90,8 @@ CameraPreview::SetFrameRate(PRUint32 aFramesPerSecond)
 void
 CameraPreview::Start()
 {
-  nsCOMPtr<CameraPreviewControlTask> cameraPreviewControlTask = new CameraPreviewControlTask(this, CameraPreviewControlTask::START);
-  nsresult rv = mCameraThread->Dispatch(cameraPreviewControlTask, NS_DISPATCH_NORMAL);
+  nsCOMPtr<nsIRunnable> cameraPreviewControl = NS_NewRunnableMethod(this, &CameraPreview::StartImpl);
+  nsresult rv = mCameraThread->Dispatch(cameraPreviewControl, NS_DISPATCH_NORMAL);
   if (NS_FAILED(rv)) {
     DOM_CAMERA_LOGE("failed to start camera preview (%d)\n", rv);
   }
@@ -133,8 +100,8 @@ CameraPreview::Start()
 void
 CameraPreview::Stop()
 {
-  nsCOMPtr<CameraPreviewControlTask> cameraPreviewControlTask = new CameraPreviewControlTask(this, CameraPreviewControlTask::STOP);
-  nsresult rv = mCameraThread->Dispatch(cameraPreviewControlTask, NS_DISPATCH_NORMAL);
+  nsCOMPtr<nsIRunnable> cameraPreviewControl = NS_NewRunnableMethod(this, &CameraPreview::StopImpl);
+  nsresult rv = mCameraThread->Dispatch(cameraPreviewControl, NS_DISPATCH_NORMAL);
   if (NS_FAILED(rv)) {
     DOM_CAMERA_LOGE("failed to stop camera preview (%d)\n", rv);
   }
