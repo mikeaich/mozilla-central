@@ -26,26 +26,12 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(nsCameraControl)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mCameraThread)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mCapabilities)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mPreview)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mAutoFocusOnSuccessCb)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mAutoFocusOnErrorCb)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mTakePictureOnSuccessCb)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mTakePictureOnErrorCb)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mStartRecordingOnSuccessCb)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mStartRecordingOnErrorCb)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mOnShutterCb)
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
 NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(nsCameraControl)
   NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mCameraThread)
   NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mCapabilities)
   NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mPreview)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mAutoFocusOnSuccessCb)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mAutoFocusOnErrorCb)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mTakePictureOnSuccessCb)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mTakePictureOnErrorCb)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mStartRecordingOnSuccessCb)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mStartRecordingOnErrorCb)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mOnShutterCb)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsCameraControl)
@@ -54,26 +40,21 @@ NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsCameraControl)
   NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(CameraControl)
 NS_INTERFACE_MAP_END
 
-#if 1
 NS_IMPL_CYCLE_COLLECTING_ADDREF(nsCameraControl)
 NS_IMPL_CYCLE_COLLECTING_RELEASE(nsCameraControl)
-#else
-NS_IMPL_THREADSAFE_ADDREF(nsCameraControl)
-NS_IMPL_THREADSAFE_RELEASE(nsCameraControl)
-#endif
 
 // Helpers for string properties.
 nsresult
 nsCameraControl::SetHelper(PRUint32 aKey, const nsAString& aValue)
 {
-  SetParameter(aKey, NS_ConvertUTF16toUTF8(aValue).get());
+  mCameraCore->SetParameter(aKey, NS_ConvertUTF16toUTF8(aValue).get());
   return NS_OK;
 }
 
 nsresult
 nsCameraControl::GetHelper(PRUint32 aKey, nsAString& aValue)
 {
-  const char* value = GetParameterConstChar(aKey);
+  const char* value = mCameraCore->GetParameterConstChar(aKey);
   if (!value) {
     return NS_ERROR_FAILURE;
   }
@@ -86,7 +67,7 @@ nsCameraControl::GetHelper(PRUint32 aKey, nsAString& aValue)
 nsresult
 nsCameraControl::SetHelper(PRUint32 aKey, double aValue)
 {
-  SetParameter(aKey, aValue);
+  mCameraCore->SetParameter(aKey, aValue);
   return NS_OK;
 }
 
@@ -94,7 +75,7 @@ nsresult
 nsCameraControl::GetHelper(PRUint32 aKey, double* aValue)
 {
   MOZ_ASSERT(aValue);
-  *aValue = GetParameterDouble(aKey);
+  *aValue = mCameraCore->GetParameterDouble(aKey);
   return NS_OK;
 }
 
@@ -156,7 +137,7 @@ nsCameraControl::SetHelper(JSContext* aCx, PRUint32 aKey, const JS::Value& aValu
       r->weight
     );
   }
-  SetParameter(aKey, regionArray);
+  mCameraCore->SetParameter(aKey, regionArray);
   return NS_OK;
 }
 
@@ -165,7 +146,7 @@ nsCameraControl::GetHelper(JSContext* aCx, PRUint32 aKey, JS::Value* aValue)
 {
   nsTArray<CameraRegion> regionArray;
 
-  GetParameter(aKey, regionArray);
+  mCameraCore->GetParameter(aKey, regionArray);
 
   JSObject* array = JS_NewArrayObject(aCx, 0, nullptr);
   if (!array) {
@@ -405,20 +386,14 @@ nsCameraControl::StartRecording(const JS::Value& aOptions, nsICameraStartRecordi
   nsresult rv = size.Init(cx, &aOptions);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIRunnable> startRecordingTask = new StartRecordingTask(this, size, onSuccess, onError);
-  mCameraThread->Dispatch(startRecordingTask, NS_DISPATCH_NORMAL);
-
-  return NS_OK;
+  return mCameraCore->StartRecording(size, onSuccess, onError);
 }
 
 /* void stopRecording (); */
 NS_IMETHODIMP
 nsCameraControl::StopRecording()
 {
-  nsCOMPtr<nsIRunnable> stopRecordingTask = new StopRecordingTask(this);
-  mCameraThread->Dispatch(stopRecordingTask, NS_DISPATCH_NORMAL);
-
-  return NS_OK;
+  return mCameraCore->StopRecording();
 }
 
 /* [implicit_jscontext] void getPreviewStream (in jsval aOptions, in nsICameraPreviewStreamCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
@@ -431,8 +406,7 @@ nsCameraControl::GetPreviewStream(const JS::Value& aOptions, nsICameraPreviewStr
   nsresult rv = size.Init(cx, &aOptions);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIRunnable> getPreviewStreamTask = new GetPreviewStreamTask(this, size, onSuccess, onError);
-  return NS_DispatchToMainThread(getPreviewStreamTask);
+  return mCameraCore->GetPreviewStream(size, onSuccess, onError);
 }
 
 /* void autoFocus (in nsICameraAutoFocusCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
@@ -440,11 +414,7 @@ NS_IMETHODIMP
 nsCameraControl::AutoFocus(nsICameraAutoFocusCallback* onSuccess, nsICameraErrorCallback* onError)
 {
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
-
-  nsCOMPtr<nsIRunnable> autoFocusTask = new AutoFocusTask(this, onSuccess, onError);
-  mCameraThread->Dispatch(autoFocusTask, NS_DISPATCH_NORMAL);
-
-  return NS_OK;
+  return mCameraCore->AutoFocus(onSuccess, onError);
 }
 
 /* void takePicture (in jsval aOptions, in nsICameraTakePictureCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
@@ -473,46 +443,5 @@ NS_IMETHODIMP nsCameraControl::TakePicture(const JS::Value& aOptions, nsICameraT
   rv = pos.Init(cx, &options.position);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIRunnable> takePictureTask = new TakePictureTask(this, size, options.rotation, options.fileFormat, pos, onSuccess, onError);
-  mCameraThread->Dispatch(takePictureTask, NS_DISPATCH_NORMAL);
-
-  return NS_OK;
-}
-
-void
-nsCameraControl::AutoFocusComplete(bool aSuccess)
-{
-  /**
-   * Auto focusing can change some of the camera's parameters, so
-   * we need to pull a new set before sending the result to the
-   * main thread.
-   */
-  PullParametersImpl(nullptr);
-
-  nsCOMPtr<nsIRunnable> autoFocusResult = new AutoFocusResult(aSuccess, mAutoFocusOnSuccessCb);
-
-  nsresult rv = NS_DispatchToMainThread(autoFocusResult);
-  if (NS_FAILED(rv)) {
-    NS_WARNING("Failed to dispatch autoFocus() onSuccess callback to main thread!");
-  }
-}
-
-void
-nsCameraControl::TakePictureComplete(PRUint8* aData, PRUint32 aLength)
-{
-  PRUint8* data = new PRUint8[aLength];
-
-  memcpy(data, aData, aLength);
-
-  /**
-   * TODO: pick up the actual specified picture format for the MIME type;
-   * for now, assume we'll be using JPEGs.
-   */
-  nsIDOMBlob* blob = new nsDOMMemoryFile(static_cast<void*>(data), static_cast<PRUint64>(aLength), NS_LITERAL_STRING("image/jpeg"));
-  nsCOMPtr<nsIRunnable> takePictureResult = new TakePictureResult(blob, mTakePictureOnSuccessCb);
-
-  nsresult rv = NS_DispatchToMainThread(takePictureResult);
-  if (NS_FAILED(rv)) {
-    NS_WARNING("Failed to dispatch takePicture() onSuccess callback to main thread!");
-  }
+  return mCameraCore->TakePicture(size, options.rotation, options.fileFormat, pos, onSuccess, onError);
 }
