@@ -4,7 +4,7 @@
 
 #include "nsDOMClassInfoID.h"
 #include "DOMCameraManager.h"
-#include "CameraControl.h"
+#include "DOMCameraControl.h"
 
 using namespace mozilla;
 

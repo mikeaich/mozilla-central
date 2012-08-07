@@ -7,8 +7,8 @@
 #include "nsDOMClassInfo.h"
 #include "jsapi.h"
 #include "camera/CameraParameters.h"
-#include "CameraControl.h"
-#include "CameraCapabilities.h"
+#include "DOMCameraControl.h"
+#include "DOMCameraCapabilities.h"
 
 #define DOM_CAMERA_DEBUG_REFS 1
 #define DOM_CAMERA_DEBUG_REFS_ABORT_ON_DELETE false

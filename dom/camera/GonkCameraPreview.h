@@ -17,7 +17,7 @@
 #ifndef DOM_CAMERA_GONKCAMERAPREVIEW_H
 #define DOM_CAMERA_GONKCAMERAPREVIEW_H
 
-#include "CameraPreview.h"
+#include "DOMCameraPreview.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"

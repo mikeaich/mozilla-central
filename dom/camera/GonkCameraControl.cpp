@@ -25,7 +25,7 @@
 #include "nsPrintfCString.h"
 #include "DOMCameraManager.h"
 #include "GonkCameraHwMgr.h"
-#include "CameraCapabilities.h"
+#include "DOMCameraCapabilities.h"
 #include "GonkCameraControl.h"
 #include "GonkCameraPreview.h"
 

@@ -19,9 +19,9 @@ include $(topsrcdir)/dom/dom-config.mk
 
 CPPSRCS = \
   DOMCameraManager.cpp \
-  CameraControl.cpp \
-  CameraPreview.cpp \
-  CameraCore.cpp \
+  DOMCameraControl.cpp \
+  DOMCameraPreview.cpp \
+  DOMCameraCore.cpp \
   $(NULL)
 
 ifeq ($(MOZ_B2G_CAMERA),1)

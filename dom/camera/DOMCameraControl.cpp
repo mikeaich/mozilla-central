@@ -7,9 +7,9 @@
 #include "jsapi.h"
 #include "nsThread.h"
 #include "DOMCameraManager.h"
-#include "CameraControl.h"
-#include "CameraCapabilities.h"
-#include "CameraControl.h"
+#include "DOMCameraControl.h"
+#include "DOMCameraCapabilities.h"
+#include "DOMCameraControl.h"
 
 #define DOM_CAMERA_DEBUG_REFS 1
 #define DOM_CAMERA_LOG_LEVEL  3

@@ -9,8 +9,8 @@
 #include "nsCOMPtr.h"
 #include "nsDOMFile.h"
 #include "DictionaryHelpers.h"
-#include "CameraCore.h"
-#include "CameraPreview.h"
+#include "CameraControl.h"
+#include "DOMCameraPreview.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsIDOMCameraManager.h"
 
