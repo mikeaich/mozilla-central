@@ -54,8 +54,13 @@ NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsCameraControl)
   NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(CameraControl)
 NS_INTERFACE_MAP_END
 
+#if 1
 NS_IMPL_CYCLE_COLLECTING_ADDREF(nsCameraControl)
 NS_IMPL_CYCLE_COLLECTING_RELEASE(nsCameraControl)
+#else
+NS_IMPL_THREADSAFE_ADDREF(nsCameraControl)
+NS_IMPL_THREADSAFE_RELEASE(nsCameraControl)
+#endif
 
 // Helpers for string properties.
 nsresult
@@ -427,9 +432,7 @@ nsCameraControl::GetPreviewStream(const JS::Value& aOptions, nsICameraPreviewStr
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIRunnable> getPreviewStreamTask = new GetPreviewStreamTask(this, size, onSuccess, onError);
-  mCameraThread->Dispatch(getPreviewStreamTask, NS_DISPATCH_NORMAL);
-
-  return NS_OK;
+  return NS_DispatchToMainThread(getPreviewStreamTask);
 }
 
 /* void autoFocus (in nsICameraAutoFocusCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
