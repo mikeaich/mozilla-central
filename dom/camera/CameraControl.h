@@ -6,12 +6,21 @@
 #define DOM_CAMERA_CAMERACONTROLIMPL_H
 
 #include "nsCOMPtr.h"
+#include "nsDOMFile.h"
 #include "DictionaryHelpers.h"
 #include "nsIDOMCameraManager.h"
+#include "DOMCameraPreview.h"
+
+#define DOM_CAMERA_LOG_LEVEL  3
+#include "CameraCommon.h"
 
 namespace mozilla {
+  
+using namespace dom;
 
 class GetPreviewStreamTask;
+class StartPreviewTask;
+class StopPreviewTask;
 class AutoFocusTask;
 class TakePictureTask;
 class StartRecordingTask;
@@ -21,9 +30,11 @@ class GetParameterTask;
 class PushParametersTask;
 class PullParametersTask;
 
-class CameraCore
+class CameraControl
 {
   friend class GetPreviewStreamTask;
+  friend class StartPreviewTask;
+  friend class StopPreviewTask;
   friend class AutoFocusTask;
   friend class TakePictureTask;
   friend class StartRecordingTask;
@@ -34,9 +45,9 @@ class CameraCore
   friend class PullParametersTask;
 
 public:
-  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(CameraCore)
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(CameraControl)
 
-  CameraCore(PRUint32 aCameraId, nsIThread* aCameraThread)
+  CameraControl(PRUint32 aCameraId, nsIThread* aCameraThread)
     : mCameraId(aCameraId)
     , mCameraThread(aCameraThread)
     , mFileFormat()
@@ -54,6 +65,8 @@ public:
   }
 
   nsresult GetPreviewStream(CameraSize aSize, nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError);
+  nsresult StartPreview(DOMCameraPreview* aPreview);
+  void StopPreview();
   nsresult AutoFocus(nsICameraAutoFocusCallback* onSuccess, nsICameraErrorCallback* onError);
   nsresult TakePicture(CameraSize aSize, PRInt32 aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback* onSuccess, nsICameraErrorCallback* onError);
   nsresult StartRecording(CameraSize aSize, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError);
@@ -62,38 +75,23 @@ public:
   nsresult PullParameters();
   void Shutdown();
 
-  enum {
-    CAMERA_PARAM_EFFECT,
-    CAMERA_PARAM_WHITEBALANCE,
-    CAMERA_PARAM_SCENEMODE,
-    CAMERA_PARAM_FLASHMODE,
-    CAMERA_PARAM_FOCUSMODE,
-    CAMERA_PARAM_ZOOM,
-    CAMERA_PARAM_METERINGAREAS,
-    CAMERA_PARAM_FOCUSAREAS,
-    CAMERA_PARAM_FOCALLENGTH,
-    CAMERA_PARAM_FOCUSDISTANCENEAR,
-    CAMERA_PARAM_FOCUSDISTANCEOPTIMUM,
-    CAMERA_PARAM_FOCUSDISTANCEFAR,
-    CAMERA_PARAM_EXPOSURECOMPENSATION,
+  nsresult Set(PRUint32 aKey, const nsAString& aValue);
+  nsresult Get(PRUint32 aKey, nsAString& aValue);
+  nsresult Set(PRUint32 aKey, double aValue);
+  nsresult Get(PRUint32 aKey, double* aValue);
+  nsresult Set(JSContext* aCx, PRUint32 aKey, const JS::Value& aValue, PRUint32 aLimit);
+  nsresult Get(JSContext* aCx, PRUint32 aKey, JS::Value* aValue);
 
-    CAMERA_PARAM_SUPPORTED_PREVIEWSIZES,
-    CAMERA_PARAM_SUPPORTED_VIDEOSIZES,
-    CAMERA_PARAM_SUPPORTED_PICTURESIZES,
-    CAMERA_PARAM_SUPPORTED_PICTUREFORMATS,
-    CAMERA_PARAM_SUPPORTED_WHITEBALANCES,
-    CAMERA_PARAM_SUPPORTED_SCENEMODES,
-    CAMERA_PARAM_SUPPORTED_EFFECTS,
-    CAMERA_PARAM_SUPPORTED_FLASHMODES,
-    CAMERA_PARAM_SUPPORTED_FOCUSMODES,
-    CAMERA_PARAM_SUPPORTED_MAXFOCUSAREAS,
-    CAMERA_PARAM_SUPPORTED_MAXMETERINGAREAS,
-    CAMERA_PARAM_SUPPORTED_MINEXPOSURECOMPENSATION,
-    CAMERA_PARAM_SUPPORTED_MAXEXPOSURECOMPENSATION,
-    CAMERA_PARAM_SUPPORTED_EXPOSURECOMPENSATIONSTEP,
-    CAMERA_PARAM_SUPPORTED_ZOOM,
-    CAMERA_PARAM_SUPPORTED_ZOOMRATIOS
-  };
+  nsresult SetFocusAreas(JSContext* aCx, const JS::Value& aValue)
+  {
+    return Set(aCx, CAMERA_PARAM_FOCUSAREAS, aValue, mMaxFocusAreas);
+  }
+
+  nsresult SetMeteringAreas(JSContext* aCx, const JS::Value& aValue)
+  {
+    return Set(aCx, CAMERA_PARAM_METERINGAREAS, aValue, mMaxMeteringAreas);
+  }
+
   virtual const char* GetParameter(const char* aKey) = 0;
   virtual const char* GetParameterConstChar(PRUint32 aKey) = 0;
   virtual double GetParameterDouble(PRUint32 aKey) = 0;
@@ -102,12 +100,15 @@ public:
   virtual void SetParameter(PRUint32 aKey, const char* aValue) = 0;
   virtual void SetParameter(PRUint32 aKey, double aValue) = 0;
   virtual void SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& aRegions) = 0;
-  virtual void PushParameters() = 0;
 
 protected:
-  virtual ~CameraCore() { }
+  virtual ~CameraControl() { }
+
+  void ReceiveFrame(PRUint8* aData);
 
   virtual nsresult GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStream) = 0;
+  virtual nsresult StartPreviewImpl(StartPreviewTask* aStartPreview) = 0;
+  virtual nsresult StopPreviewImpl(StopPreviewTask* aStopPreview) = 0;
   virtual nsresult AutoFocusImpl(AutoFocusTask* aAutoFocus) = 0;
   virtual nsresult TakePictureImpl(TakePictureTask* aTakePicture) = 0;
   virtual nsresult StartRecordingImpl(StartRecordingTask* aStartRecording) = 0;
@@ -121,6 +122,16 @@ protected:
   PRUint32            mMaxMeteringAreas;
   PRUint32            mMaxFocusAreas;
 
+  /**
+   * 'mPreview' is a raw pointer to the object that will receive incoming
+   * preview frames.  This is guaranteed to be valid, or null.
+   *
+   * It is set by a call to StartPreview(), and set to null on StopPreview().
+   * It is up to the caller to ensure that the object will not disappear
+   * out from under this pointer--usually by calling NS_ADDREF().
+   */
+  DOMCameraPreview*   mPreview;
+
   nsCOMPtr<nsICameraAutoFocusCallback>      mAutoFocusOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback>          mAutoFocusOnErrorCb;
   nsCOMPtr<nsICameraTakePictureCallback>    mTakePictureOnSuccessCb;
@@ -130,16 +141,19 @@ protected:
   nsCOMPtr<nsICameraShutterCallback>        mOnShutterCb;
 
 private:
-  CameraCore(const CameraCore&) MOZ_DELETE;
-  CameraCore& operator=(const CameraCore&) MOZ_DELETE;
+  CameraControl(const CameraControl&) MOZ_DELETE;
+  CameraControl& operator=(const CameraControl&) MOZ_DELETE;
 };
 
 // Return the resulting preview stream to JS.  Runs on the main thread.
 class GetPreviewStreamResult : public nsRunnable
 {
 public:
-  GetPreviewStreamResult(nsIDOMMediaStream* aStream, nsICameraPreviewStreamCallback* onSuccess)
-    : mStream(aStream)
+  GetPreviewStreamResult(CameraControl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFramesPerSecond, nsICameraPreviewStreamCallback* onSuccess)
+    : mCameraControl(aCameraControl)
+    , mWidth(aWidth)
+    , mHeight(aHeight)
+    , mFramesPerSecond(aFramesPerSecond)
     , mOnSuccessCb(onSuccess)
   {
     DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
@@ -155,13 +169,17 @@ public:
     MOZ_ASSERT(NS_IsMainThread());
 
     if (mOnSuccessCb) {
-      mOnSuccessCb->HandleEvent(mStream);
+      nsCOMPtr<nsIDOMMediaStream> stream = new DOMCameraPreview(mCameraControl, mWidth, mHeight, mFramesPerSecond);
+      mOnSuccessCb->HandleEvent(stream);
     }
     return NS_OK;
   }
 
 protected:
-  nsCOMPtr<nsIDOMMediaStream> mStream;
+  nsRefPtr<CameraControl> mCameraControl;
+  PRUint32 mWidth;
+  PRUint32 mHeight;
+  PRUint32 mFramesPerSecond;
   nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
 };
 
@@ -169,9 +187,9 @@ protected:
 class GetPreviewStreamTask : public nsRunnable
 {
 public:
-  GetPreviewStreamTask(CameraCore* aCameraCore, CameraSize aSize, nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError)
+  GetPreviewStreamTask(CameraControl* aCameraControl, CameraSize aSize, nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError)
     : mSize(aSize)
-    , mCameraCore(aCameraCore)
+    , mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
   {
@@ -185,7 +203,7 @@ public:
 
   NS_IMETHOD Run()
   {
-    nsresult rv = mCameraCore->GetPreviewStreamImpl(this);
+    nsresult rv = mCameraControl->GetPreviewStreamImpl(this);
 
     if (NS_FAILED(rv) && mOnErrorCb) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
@@ -195,7 +213,7 @@ public:
   }
 
   CameraSize mSize;
-  nsCOMPtr<CameraCore> mCameraCore;
+  nsRefPtr<CameraControl> mCameraControl;
   nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
@@ -228,8 +246,8 @@ protected:
 class AutoFocusTask : public nsRunnable
 {
 public:
-  AutoFocusTask(CameraCore* aCameraCore, nsICameraAutoFocusCallback* onSuccess, nsICameraErrorCallback* onError)
-    : mCameraCore(aCameraCore)
+  AutoFocusTask(CameraControl* aCameraControl, nsICameraAutoFocusCallback* onSuccess, nsICameraErrorCallback* onError)
+    : mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
   { }
@@ -237,7 +255,7 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraCore->AutoFocusImpl(this);
+    nsresult rv = mCameraControl->AutoFocusImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv) && mOnErrorCb) {
@@ -247,7 +265,7 @@ public:
     return rv;
   }
 
-  nsCOMPtr<CameraCore> mCameraCore;
+  nsRefPtr<CameraControl> mCameraControl;
   nsCOMPtr<nsICameraAutoFocusCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
@@ -289,8 +307,8 @@ protected:
 class TakePictureTask : public nsRunnable
 {
 public:
-  TakePictureTask(CameraCore* aCameraCore, CameraSize aSize, PRInt32 aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback* onSuccess, nsICameraErrorCallback* onError)
-    : mCameraCore(aCameraCore)
+  TakePictureTask(CameraControl* aCameraControl, CameraSize aSize, PRInt32 aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback* onSuccess, nsICameraErrorCallback* onError)
+    : mCameraControl(aCameraControl)
     , mSize(aSize)
     , mRotation(aRotation)
     , mFileFormat(aFileFormat)
@@ -302,7 +320,7 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraCore->TakePictureImpl(this);
+    nsresult rv = mCameraControl->TakePictureImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv) && mOnErrorCb) {
@@ -312,7 +330,7 @@ public:
     return rv;
   }
 
-  nsCOMPtr<CameraCore> mCameraCore;
+  nsRefPtr<CameraControl> mCameraControl;
   CameraSize mSize;
   PRInt32 mRotation;
   nsString mFileFormat;
@@ -349,9 +367,9 @@ protected:
 class StartRecordingTask : public nsRunnable
 {
 public:
-  StartRecordingTask(CameraCore* aCameraCore, CameraSize aSize, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError)
+  StartRecordingTask(CameraControl* aCameraControl, CameraSize aSize, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError)
     : mSize(aSize)
-    , mCameraCore(aCameraCore)
+    , mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
   { }
@@ -359,7 +377,7 @@ public:
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraCore->StartRecordingImpl(this);
+    nsresult rv = mCameraControl->StartRecordingImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     if (NS_FAILED(rv) && mOnErrorCb) {
@@ -370,7 +388,7 @@ public:
   }
 
   CameraSize mSize;
-  nsCOMPtr<CameraCore> mCameraCore;
+  nsRefPtr<CameraControl> mCameraControl;
   nsCOMPtr<nsICameraStartRecordingCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
@@ -379,63 +397,106 @@ public:
 class StopRecordingTask : public nsRunnable
 {
 public:
-  StopRecordingTask(CameraCore* aCameraCore)
-    : mCameraCore(aCameraCore)
+  StopRecordingTask(CameraControl* aCameraControl)
+    : mCameraControl(aCameraControl)
   { }
 
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraCore->StopRecordingImpl(this);
+    nsresult rv = mCameraControl->StopRecordingImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     NS_ENSURE_SUCCESS(rv, rv);
     return NS_OK;
   }
 
-  nsCOMPtr<CameraCore> mCameraCore;
+  nsRefPtr<CameraControl> mCameraControl;
 };
 
 // Pushes all camera parameters to the camera.
 class PushParametersTask : public nsRunnable
 {
 public:
-  PushParametersTask(CameraCore* aCameraCore)
-    : mCameraCore(aCameraCore)
+  PushParametersTask(CameraControl* aCameraControl)
+    : mCameraControl(aCameraControl)
   { }
 
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraCore->PushParametersImpl(this);
+    nsresult rv = mCameraControl->PushParametersImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     NS_ENSURE_SUCCESS(rv, rv);
     return NS_OK;
   }
 
-  nsCOMPtr<CameraCore> mCameraCore;
+  nsRefPtr<CameraControl> mCameraControl;
 };
 
 // Get all camera parameters from the camera.
 class PullParametersTask : public nsRunnable
 {
 public:
-  PullParametersTask(CameraCore* aCameraCore)
-    : mCameraCore(aCameraCore)
+  PullParametersTask(CameraControl* aCameraControl)
+    : mCameraControl(aCameraControl)
   { }
 
   NS_IMETHOD Run()
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraCore->PullParametersImpl(this);
+    nsresult rv = mCameraControl->PullParametersImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     NS_ENSURE_SUCCESS(rv, rv);
     return NS_OK;
   }
 
-  nsCOMPtr<CameraCore> mCameraCore;
+  nsRefPtr<CameraControl> mCameraControl;
+};
+
+// Start the preview.
+class StartPreviewTask : public nsRunnable
+{
+public:
+  StartPreviewTask(CameraControl* aCameraControl, DOMCameraPreview* aPreview)
+    : mCameraControl(aCameraControl)
+    , mPreview(aPreview)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+    nsresult rv = mCameraControl->StartPreviewImpl(this);
+    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+
+    NS_ENSURE_SUCCESS(rv, rv);
+    return NS_OK;
+  }
+
+  nsRefPtr<CameraControl> mCameraControl;
+  DOMCameraPreview* mPreview; // DOMCameraPreview NS_ADDREFs itself for us
+};
+
+// Stop the preview.
+class StopPreviewTask : public nsRunnable
+{
+public:
+  StopPreviewTask(CameraControl* aCameraControl)
+    : mCameraControl(aCameraControl)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+    mCameraControl->StopPreviewImpl(this);
+    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+
+    return NS_OK;
+  }
+
+  nsRefPtr<CameraControl> mCameraControl;
 };
 
 } // namespace mozilla

@@ -19,14 +19,14 @@
 
 #include "prtypes.h"
 #include "prrwlock.h"
-#include "DOMCameraControl.h"
+#include "CameraControl.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
 namespace mozilla {
 
-class nsGonkCameraControl : public nsCameraControl
+class nsGonkCameraControl : public CameraControl
 {
 public:
   nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread);
@@ -42,11 +42,17 @@ public:
   void PushParameters();
 
   void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
+  void AutoFocusComplete(bool aSuccess);
+  void TakePictureComplete(PRUint8* aData, PRUint32 aLength);
 
 protected:
   ~nsGonkCameraControl();
 
+  nsresult Init();
+
   nsresult GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStream);
+  nsresult StartPreviewImpl(StartPreviewTask* aStartPreview);
+  nsresult StopPreviewImpl(StopPreviewTask* aStopPreview);
   nsresult AutoFocusImpl(AutoFocusTask* aAutoFocus);
   nsresult TakePictureImpl(TakePictureTask* aTakePicture);
   nsresult StartRecordingImpl(StartRecordingTask* aStartRecording);
@@ -60,6 +66,10 @@ protected:
   bool                      mDeferConfigUpdate;
   PRRWLock*                 mRwLock;
   android::CameraParameters mParams;
+  PRUint32                  mWidth;
+  PRUint32                  mHeight;
+  PRUint32                  mFormat;
+  PRUint32                  mDiscardedFrameCount;
 
 private:
   nsGonkCameraControl(const nsGonkCameraControl&) MOZ_DELETE;

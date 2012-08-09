@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "VideoUtils.h"
 #include "DOMCameraPreview.h"
 
 #define DOM_CAMERA_DEBUG_REFS 1
@@ -10,18 +11,16 @@
 
 using namespace mozilla;
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(CameraPreview, CameraPreview)
-
-class CameraPreviewListener : public MediaStreamListener
+class DOMCameraPreviewListener : public MediaStreamListener
 {
 public:
-  CameraPreviewListener(CameraPreview* aPreview) :
+  DOMCameraPreviewListener(DOMCameraPreview* aPreview) :
     mPreview(aPreview)
   {
     DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
   }
 
-  ~CameraPreviewListener()
+  ~DOMCameraPreviewListener()
   {
     DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
   }
@@ -60,55 +59,176 @@ public:
   }
 
 protected:
-  nsCOMPtr<CameraPreview> mPreview;
+  nsCOMPtr<DOMCameraPreview> mPreview;
 };
 
-CameraPreview::CameraPreview(nsIThread* aCameraThread, PRUint32 aWidth, PRUint32 aHeight)
+DOMCameraPreview::DOMCameraPreview(CameraControl* aCameraControl, PRUint32 aDesiredWidth, PRUint32 aDesiredHeight, PRUint32 aDesiredFrameRate)
   : nsDOMMediaStream()
-  , mWidth(aWidth)
-  , mHeight(aHeight)
-  , mFramesPerSecond(0)
+  , mState(UNINITED)
+  , mWidth(aDesiredWidth)
+  , mHeight(aDesiredHeight)
+  , mFramesPerSecond(aDesiredFrameRate)
   , mFrameCount(0)
-  , mCameraThread(aCameraThread)
+  , mCameraControl(aCameraControl)
 {
-  DOM_CAMERA_LOGI("%s:%d : mWidth=%d, mHeight=%d : this=%p\n", __func__, __LINE__, mWidth, mHeight, this);
+  DOM_CAMERA_LOGI("%s:%d : mWidth=%d, mHeight=%d, mFramesPerSecond=%d : this=%p\n", __func__, __LINE__, mWidth, mHeight, mFramesPerSecond, this);
 
   mImageContainer = LayerManager::CreateImageContainer();
   MediaStreamGraph* gm = MediaStreamGraph::GetInstance();
   mStream = gm->CreateInputStream(this);
   mInput = GetStream()->AsSourceStream();
-  mInput->AddListener(new CameraPreviewListener(this));
+  mInput->AddListener(new DOMCameraPreviewListener(this));
 }
 
-void
-CameraPreview::SetFrameRate(PRUint32 aFramesPerSecond)
-{
-  mFramesPerSecond = aFramesPerSecond;
-  mInput->AddTrack(TRACK_VIDEO, mFramesPerSecond, 0, new VideoSegment());
-  mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
-}
-
-void
-CameraPreview::Start()
-{
-  nsCOMPtr<nsIRunnable> cameraPreviewControl = NS_NewRunnableMethod(this, &CameraPreview::StartImpl);
-  nsresult rv = mCameraThread->Dispatch(cameraPreviewControl, NS_DISPATCH_NORMAL);
-  if (NS_FAILED(rv)) {
-    DOM_CAMERA_LOGE("failed to start camera preview (%d)\n", rv);
-  }
-}
-
-void
-CameraPreview::Stop()
-{
-  nsCOMPtr<nsIRunnable> cameraPreviewControl = NS_NewRunnableMethod(this, &CameraPreview::StopImpl);
-  nsresult rv = mCameraThread->Dispatch(cameraPreviewControl, NS_DISPATCH_NORMAL);
-  if (NS_FAILED(rv)) {
-    DOM_CAMERA_LOGE("failed to stop camera preview (%d)\n", rv);
-  }
-}
-
-CameraPreview::~CameraPreview()
+DOMCameraPreview::~DOMCameraPreview()
 {
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+}
+
+bool
+DOMCameraPreview::HaveEnoughBuffered()
+{
+  return mInput->HaveEnoughBuffered(TRACK_VIDEO);
+}
+
+void
+DOMCameraPreview::ReceiveFrame(PlanarYCbCrImage* aFrame)
+{
+  if (mState != STARTED) {
+    return;
+  }
+
+  Image::Format format = Image::PLANAR_YCBCR;
+  nsRefPtr<Image> image = mImageContainer->CreateImage(&format, 1);
+  image->AddRef();
+  PlanarYCbCrImage* videoImage = static_cast<PlanarYCbCrImage*>(image.get());
+
+  /**
+   * If you change either lumaBpp or chromaBpp, make sure the
+   * assertions below still hold.
+   */
+  const PRUint8 lumaBpp = 8;
+  const PRUint8 chromaBpp = 4;
+  PlanarYCbCrImage::Data data;
+  data.mYChannel = aFrame;
+  data.mYSize = gfxIntSize(mWidth, mHeight);
+
+  data.mYStride = mWidth * lumaBpp;
+  NS_ASSERTION((data.mYStride & 0x7) == 0, "Invalid image dimensions!");
+  data.mYStride /= 8;
+
+  data.mCbCrStride = mWidth * chromaBpp;
+  NS_ASSERTION((data.mCbCrStride & 0x7) == 0, "Invalid image dimensions!");
+  data.mCbCrStride /= 8;
+
+  data.mCbChannel = aData + mHeight * data.mYStride;
+  data.mCrChannel = data.mCbChannel + mHeight * data.mCbCrStride / 2;
+  data.mCbCrSize = gfxIntSize(mWidth / 2, mHeight / 2);
+  data.mPicX = 0;
+  data.mPicY = 0;
+  data.mPicSize = gfxIntSize(mWidth, mHeight);
+  data.mStereoMode = mozilla::layers::STEREO_MODE_MONO;
+  videoImage->SetData(data); // copies buffer
+
+  mVideoSegment.AppendFrame(aFrame, 1, gfxIntSize(mWidth, mHeight));
+  mInput->AppendToTrack(TRACK_VIDEO, &mVideoSegment);
+}
+
+void
+DOMCameraPreview::Start()
+{
+  NS_ASSERTION(NS_IsMainThread(), "Start() not called from main thread");
+  if (mState != STOPPED) {
+    return;
+  }
+
+  DOM_CAMERA_LOGI("Starting preview stream\n");
+  NS_ADDREF_THIS();
+  mState = STARTING;
+  mCameraControl->StartPreview(this);
+}
+
+void
+DOMCameraPreview::SetStateStarted()
+{
+  mState = STARTED;
+  DOM_CAMERA_LOGI("Preview stream started\n");
+}
+
+void
+DOMCameraPreview::Started(PRUint32 aActualWidth, PRUint32 aActualHeight, PRUint32 aActualFramesPerSecond)
+{
+  if (mState != STARTING) {
+    return;
+  }
+
+  mWidth = aActualWidth;
+  mHeight = aActualHeight;
+  mFramesPerSecond = aActualFramesPerSecond;
+  mInput->AddTrack(TRACK_VIDEO, mFramesPerSecond, 0, new VideoSegment());
+  mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
+
+  DOM_CAMERA_LOGI("Dispatching preview stream started\n");
+  nsCOMPtr<nsIRunnable> started = NS_NewRunnableMethod(this, &DOMCameraPreview::SetStateStarted);
+  nsresult rv = NS_DispatchToMainThread(started);
+  if (NS_FAILED(rv)) {
+    DOM_CAMERA_LOGE("failed to set statrted state (%d), POTENTIAL MEMORY LEAK!\n", rv);
+  }
+}
+
+void
+DOMCameraPreview::Stop()
+{
+  NS_ASSERTION(NS_IsMainThread(), "Stop() not called from main thread");
+  if (mState != STARTED) {
+    return;
+  }
+
+  DOM_CAMERA_LOGI("Stopping preview stream\n");
+  mState = STOPPING;
+  mCameraControl->StopPreview();
+  mInput->EndTrack(TRACK_VIDEO);
+  mInput->Finish();
+}
+
+void
+DOMCameraPreview::SetStateStopped()
+{
+  mState = STOPPED;
+  DOM_CAMERA_LOGI("Preview stream stopped\n");
+  NS_RELEASE_THIS();
+}
+
+void
+DOMCameraPreview::Stopped()
+{
+  if (mState != STOPPING) {
+    return;
+  }
+
+  DOM_CAMERA_LOGI("Dispatching preview stream stopped\n");
+  nsCOMPtr<nsIRunnable> stopped = NS_NewRunnableMethod(this, &DOMCameraPreview::SetStateStopped);
+  nsresult rv = NS_DispatchToMainThread(stopped);
+  if (NS_FAILED(rv)) {
+    DOM_CAMERA_LOGE("failed to decrement reference count (%d), MEMORY LEAK!\n", rv);
+  }
+}
+
+void
+DOMCameraPreview::SetStateError()
+{
+  mState = UNINITED;
+  DOM_CAMERA_LOGI("Preview stream encountered an error\n");
+  NS_RELEASE_THIS();
+}
+
+void
+DOMCameraPreview::Error()
+{
+  DOM_CAMERA_LOGE("Error occurred changing preview state!\n");
+  nsCOMPtr<nsIRunnable> stopped = NS_NewRunnableMethod(this, &DOMCameraPreview::SetStateError);
+  nsresult rv = NS_DispatchToMainThread(stopped);
+  if (NS_FAILED(rv)) {
+    DOM_CAMERA_LOGE("failed to decrement reference count (%d), MEMORY LEAK!\n", rv);
+  }
 }

@@ -94,15 +94,3 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value* _retval)
   *_retval = OBJECT_TO_JSVAL(a);
   return NS_OK;
 }
-
-using namespace mozilla;
-
-NS_IMETHODIMP
-GetCameraTask::Run()
-{
-  nsCOMPtr<nsICameraControl> cameraControl = new nsGonkCameraControl(mCameraId, mCameraThread);
-
-  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-
-  return NS_DispatchToMainThread(new GetCameraResult(cameraControl, mOnSuccessCb));
-}

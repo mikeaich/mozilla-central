@@ -2,25 +2,29 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef DOM_CAMERA_NSCAMERACAPABILITIES_H
-#define DOM_CAMERA_NSCAMERACAPABILITIES_H
+#ifndef DOM_CAMERA_DOMCameraCapabilities_H
+#define DOM_CAMERA_DOMCameraCapabilities_H
 
 #include "nsCycleCollectionParticipant.h"
-#include "CameraControl.h"
+#include "DOMCameraControl.h"
 #include "nsAutoPtr.h"
 
 namespace mozilla {
 
 typedef nsresult (*ParseItemAndAddFunc)(JSContext* aCx, JSObject* aArray, PRUint32 aIndex, const char* aStart, char** aEnd);
 
-class nsCameraCapabilities : public nsICameraCapabilities
+class DOMCameraCapabilities : public nsICameraCapabilities
 {
 public:
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS
-  NS_DECL_CYCLE_COLLECTION_CLASS(nsCameraCapabilities)
+  NS_DECL_CYCLE_COLLECTION_CLASS(DOMCameraCapabilities)
   NS_DECL_NSICAMERACAPABILITIES
 
-  nsCameraCapabilities(nsCameraControl* aCamera);
+  DOMCameraCapabilities(CameraControl* aCamera)
+    : mCamera(aCamera)
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   nsresult ParameterListToNewArray(
     JSContext* cx,
@@ -32,15 +36,20 @@ public:
   nsresult DimensionListToNewObject(JSContext* aCx, JS::Value* aArray, PRUint32 aKey);
 
 private:
-  nsCameraCapabilities(const nsCameraCapabilities&) MOZ_DELETE;
-  nsCameraCapabilities& operator=(const nsCameraCapabilities&) MOZ_DELETE;
+  DOMCameraCapabilities(const DOMCameraCapabilities&) MOZ_DELETE;
+  DOMCameraCapabilities& operator=(const DOMCameraCapabilities&) MOZ_DELETE;
 
 protected:
   /* additional members */
-  ~nsCameraCapabilities();
-  nsCOMPtr<nsCameraControl> mCamera;
+  ~DOMCameraCapabilities()
+  {
+    // destructor code
+    DOM_CAMERA_LOGI("%s:%d : this=%p, mCamera=%p\n", __func__, __LINE__, this, mCamera.get());
+  }
+
+  nsRefPtr<CameraControl> mCamera;
 };
 
 } // namespace mozilla
 
-#endif // DOM_CAMERA_NSCAMERACAPABILITIES_H
+#endif // DOM_CAMERA_DOMCameraCapabilities_H

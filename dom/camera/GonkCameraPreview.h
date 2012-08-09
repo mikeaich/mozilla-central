@@ -42,7 +42,7 @@ public:
 protected:
   ~GonkCameraPreview()
   {
-    Stop();
+    // TODO: implement Stop();
   }
 
   PRUint32 mHwHandle;

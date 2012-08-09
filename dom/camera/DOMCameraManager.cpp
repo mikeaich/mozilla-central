@@ -83,8 +83,6 @@ nsDOMCameraManager::GetCamera(const JS::Value& aOptions, nsICameraGetCameraCallb
 
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
-  nsCOMPtr<nsIRunnable> getCameraTask = new GetCameraTask(cameraId, onSuccess, onError, mCameraThread);
-  mCameraThread->Dispatch(getCameraTask, NS_DISPATCH_NORMAL);
-
+  nsCOMPtr<nsICameraControl> cameraControl = new nsDOMCameraControl(cameraId, mCameraThread);
   return NS_OK;
 }

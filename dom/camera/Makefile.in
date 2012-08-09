@@ -21,7 +21,7 @@ CPPSRCS = \
   DOMCameraManager.cpp \
   DOMCameraControl.cpp \
   DOMCameraPreview.cpp \
-  DOMCameraCore.cpp \
+  CameraControl.cpp \
   $(NULL)
 
 ifeq ($(MOZ_B2G_CAMERA),1)
@@ -29,7 +29,6 @@ CPPSRCS += \
   GonkCameraManager.cpp \
   GonkCameraControl.cpp \
   GonkCameraHwMgr.cpp \
-  GonkCameraPreview.cpp \
   GonkNativeWindow.cpp \
   GonkCameraCapabilities.cpp \
   $(NULL)

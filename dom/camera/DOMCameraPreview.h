@@ -2,11 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef DOM_CAMERA_CAMERAPREVIEW_H
-#define DOM_CAMERA_CAMERAPREVIEW_H
+#ifndef DOM_CAMERA_DOMCAMERAPREVIEW_H
+#define DOM_CAMERA_DOMCAMERAPREVIEW_H
 
+#include "nsCycleCollectionParticipant.h"
 #include "MediaStreamGraph.h"
 #include "StreamBuffer.h"
+#include "CameraControl.h"
 #include "nsDOMMediaStream.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
@@ -16,47 +18,59 @@ using namespace mozilla;
 using namespace mozilla::layers;
 
 namespace mozilla {
+  
+class CameraControl;
 
-class CameraPreview : public nsDOMMediaStream
-                    , public MediaStreamListener
+class DOMCameraPreview : public nsDOMMediaStream
 {
+protected:
+  enum { TRACK_VIDEO = 1 };
+
 public:
-  NS_DECL_ISUPPORTS
-
-  CameraPreview(nsIThread* aCameraThread, PRUint32 aWidth, PRUint32 aHeight);
-
-  void SetFrameRate(PRUint32 aFramesPerSecond);
+  DOMCameraPreview(CameraControl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFramesPerSecond = 30);
+  void ReceiveFrame(PlanarYCbCrImage* aFrame);
+  bool HaveEnoughBuffered();
 
   NS_IMETHODIMP
   GetCurrentTime(double* aCurrentTime) {
     return nsDOMMediaStream::GetCurrentTime(aCurrentTime);
   }
 
-  void Start();
-  void Stop();
-
-  virtual nsresult StartImpl() = 0;
-  virtual nsresult StopImpl() = 0;
+  void Start();   // called by the MediaStreamListener to start preview
+  void Started(); // called by the CameraControl when preview is started
+  void Stop();    // called by the MediaStreamListener to stop preview
+  void Stopped(); // called by the CameraControl when preview is stopped
+  void Error();   // something went wrong
 
 protected:
-  virtual ~CameraPreview();
+  virtual ~DOMCameraPreview();
+
+  enum {
+    UNINITED,
+    STOPPED,
+    STARTING,
+    STARTED,
+    STOPPING
+  };
+  PRUint32 mState;
+  void SetStateStarted();
+  void SetStateStopped();
+  void SetStateError();
 
   PRUint32 mWidth;
   PRUint32 mHeight;
   PRUint32 mFramesPerSecond;
   SourceMediaStream* mInput;
-  nsRefPtr<mozilla::layers::ImageContainer> mImageContainer;
+  nsRefPtr<ImageContainer> mImageContainer;
   VideoSegment mVideoSegment;
   PRUint32 mFrameCount;
-  nsCOMPtr<nsIThread> mCameraThread;
-
-  enum { TRACK_VIDEO = 1 };
+  nsRefPtr<CameraControl> mCameraControl;
 
 private:
-  CameraPreview(const CameraPreview&) MOZ_DELETE;
-  CameraPreview& operator=(const CameraPreview&) MOZ_DELETE;
+  DOMCameraPreview(const DOMCameraPreview&) MOZ_DELETE;
+  DOMCameraPreview& operator=(const DOMCameraPreview&) MOZ_DELETE;
 };
 
 } // namespace mozilla
 
-#endif // DOM_CAMERA_CAMERAPREVIEW_H
+#endif // DOM_CAMERA_DOMCAMERAPREVIEW_H
