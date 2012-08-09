@@ -20,6 +20,7 @@
 #include "prtypes.h"
 #include "prrwlock.h"
 #include "nsIDOMCameraManager.h"
+#include "DOMCameraControl.h"
 #include "CameraControl.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
@@ -30,7 +31,7 @@ namespace mozilla {
 class nsGonkCameraControl : public CameraControl
 {
 public:
-  nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError);
+  nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError);
   nsresult Init();
 
   const char* GetParameter(const char* aKey);
@@ -41,7 +42,6 @@ public:
   void SetParameter(PRUint32 aKey, const char* aValue);
   void SetParameter(PRUint32 aKey, double aValue);
   void SetParameter(PRUint32 aKey, const nsTArray<dom::CameraRegion>& aRegions);
-  void PushParameters();
 
   void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
   void AutoFocusComplete(bool aSuccess);

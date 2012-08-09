@@ -6,8 +6,8 @@
 #include "nsDOMClassInfo.h"
 #include "jsapi.h"
 #include "nsThread.h"
+#include "CameraControl.h"
 #include "DOMCameraManager.h"
-#include "DOMCameraControl.h"
 #include "DOMCameraCapabilities.h"
 #include "DOMCameraControl.h"
 
@@ -23,15 +23,11 @@ DOMCI_DATA(CameraControl, nsICameraControl)
 NS_IMPL_CYCLE_COLLECTION_CLASS(nsDOMCameraControl)
 
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(nsDOMCameraControl)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mCameraThread)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mDOMCapabilities)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mDOMPreview)
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
 NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(nsDOMCameraControl)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mCameraThread)
   NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mDOMCapabilities)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mDOMPreview)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsDOMCameraControl)
@@ -287,4 +283,53 @@ nsDOMCameraControl::TakePicture(const JS::Value& aOptions, nsICameraTakePictureC
   NS_ENSURE_SUCCESS(rv, rv);
 
   return mCameraControl->TakePicture(size, options.rotation, options.fileFormat, pos, onSuccess, onError);
+}
+
+class GetCameraResult : public nsRunnable
+{
+public:
+  GetCameraResult(nsDOMCameraControl* aDOMCameraControl, nsresult aResult, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+    : mDOMCameraControl(aDOMCameraControl)
+    , mResult(aResult)
+    , mOnSuccessCb(onSuccess)
+    , mOnErrorCb(onError)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    DOM_CAMERA_LOGI("%s : this=%p -- BEFORE CALLBACK\n", __func__, this);
+    if (NS_FAILED(mResult)) {
+      if (mOnErrorCb) {
+        mOnErrorCb->HandleEvent(NS_LITERAL_STRING("FAILURE"));
+      }
+    } else {
+      if (mOnSuccessCb) {
+        mOnSuccessCb->HandleEvent(mDOMCameraControl);
+      }
+    }
+    DOM_CAMERA_LOGI("%s : this=%p -- AFTER CALLBACK\n", __func__, this);
+
+    /**
+     * Finally, release the extra reference to the DOM-facing camera control.
+     * See the nsDOMCameraControl constructor for the corresponding call to
+     * NS_ADDREF_THIS().
+     */
+    NS_RELEASE(mDOMCameraControl);
+  }
+
+protected:
+  // 'mDOMCameraControl' is a raw pointer; see TODO
+  nsDOMCameraControl* mDOMCameraControl;
+  nsresult mResult;
+  nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
+  nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
+};
+
+nsresult
+nsDOMCameraControl::Result(nsresult aResult, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+{
+  nsCOMPtr<GetCameraResult> getCameraResult = new GetCameraResult(this, aResult, onSuccess, onError);
+  return NS_DispatchToMainThread(getCameraResult);
 }

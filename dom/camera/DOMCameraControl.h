@@ -2,16 +2,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef DOM_CAMERA_nsDOMCameraControl_H
-#define DOM_CAMERA_nsDOMCameraControl_H
+#ifndef DOM_CAMERA_DOMCAMERACONTROL_H
+#define DOM_CAMERA_DOMCAMERACONTROL_H
 
 #include "prtypes.h"
 #include "nsCOMPtr.h"
 #include "nsAutoPtr.h"
-#include "DictionaryHelpers.h"
-#include "CameraControl.h"
-#include "DOMCameraPreview.h"
 #include "nsCycleCollectionParticipant.h"
+#include "DictionaryHelpers.h"
+#include "ICameraControl.h"
+#include "DOMCameraPreview.h"
 #include "nsIDOMCameraManager.h"
 
 #define DOM_CAMERA_LOG_LEVEL 3
@@ -30,6 +30,7 @@ public:
   NS_DECL_NSICAMERACONTROL
 
   nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError);
+  nsresult Result(nsresult aResult, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError);
 
 protected:
   virtual ~nsDOMCameraControl() { }
@@ -40,15 +41,10 @@ private:
 
 protected:
   /* additional members */
-  nsRefPtr<CameraControl>         mCameraControl; // non-DOM implementation
-  PRUint32                        mCameraId;
-  nsCOMPtr<nsIThread>             mCameraThread;
+  nsRefPtr<ICameraControl>        mCameraControl; // non-DOM camera control
   nsCOMPtr<nsICameraCapabilities> mDOMCapabilities;
-  PRUint32                        mPreviewWidth;
-  PRUint32                        mPreviewHeight;
-  nsCOMPtr<DOMCameraPreview>      mDOMPreview;
 };
 
 } // namespace mozilla
 
-#endif // DOM_CAMERA_nsDOMCameraControl_H
+#endif // DOM_CAMERA_DOMCAMERACONTROL_H

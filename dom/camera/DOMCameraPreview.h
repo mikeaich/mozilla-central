@@ -8,7 +8,7 @@
 #include "nsCycleCollectionParticipant.h"
 #include "MediaStreamGraph.h"
 #include "StreamBuffer.h"
-#include "CameraControl.h"
+#include "ICameraControl.h"
 #include "nsDOMMediaStream.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
@@ -19,15 +19,13 @@ using namespace mozilla::layers;
 
 namespace mozilla {
   
-class CameraControl;
-
 class DOMCameraPreview : public nsDOMMediaStream
 {
 protected:
   enum { TRACK_VIDEO = 1 };
 
 public:
-  DOMCameraPreview(CameraControl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFramesPerSecond = 30);
+  DOMCameraPreview(ICameraControl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFramesPerSecond = 30);
   void ReceiveFrame(PRUint8* aFrame);
   bool HaveEnoughBuffered();
 
@@ -64,7 +62,7 @@ protected:
   nsRefPtr<ImageContainer> mImageContainer;
   VideoSegment mVideoSegment;
   PRUint32 mFrameCount;
-  nsRefPtr<CameraControl> mCameraControl;
+  nsRefPtr<ICameraControl> mCameraControl;
 
 private:
   DOMCameraPreview(const DOMCameraPreview&) MOZ_DELETE;

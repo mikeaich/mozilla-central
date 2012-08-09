@@ -26,6 +26,7 @@
 #include "DOMCameraManager.h"
 #include "GonkCameraHwMgr.h"
 #include "DOMCameraCapabilities.h"
+#include "DOMCameraControl.h"
 #include "GonkCameraControl.h"
 
 #define DOM_CAMERA_DEBUG_REFS 1
@@ -102,13 +103,10 @@ static const char* getKeyText(PRUint32 aKey)
 
 // nsDOMCameraControl implementation-specific constructor
 nsDOMCameraControl::nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
-  : mCameraId(aCameraId)
-  , mCameraThread(aCameraThread)
-  , mDOMCapabilities(nullptr)
-  , mDOMPreview(nullptr)
+  : mDOMCapabilities(nullptr)
 {
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
-  mCameraControl = new nsGonkCameraControl(mCameraId, mCameraThread, this, onSuccess, onError);
+  mCameraControl = new nsGonkCameraControl(aCameraId, aCameraThread, this, onSuccess, onError);
 
   /**
    * nsDOMCameraControl is a cycle-collection participant, which means it is
@@ -130,7 +128,7 @@ nsDOMCameraControl::nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThr
 class InitGonkCameraControl : public nsRunnable
 {
 public:
-  InitGonkCameraControl(nsGonkCameraControl* aCameraControl, nsICameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+  InitGonkCameraControl(nsGonkCameraControl* aCameraControl, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
     : mCameraControl(aCameraControl)
     , mDOMCameraControl(aDOMCameraControl)
     , mOnSuccessCb(onSuccess)
@@ -140,22 +138,18 @@ public:
   NS_IMETHOD Run()
   {
     nsresult rv = mCameraControl->Init();
-    rv = NS_DispatchToMainThread(new GetCameraResult(mDOMCameraControl, mCameraControl, rv, mOnSuccessCb, mOnErrorCb));
-    if (NS_FAILED(rv)) {
-      DOM_CAMERA_LOGE("%s: failed to dispatch camera result to main thread (%d), POSSIBLE MEMORY LEAK!\n", rv);
-    }
-    return rv;
+    return mDOMCameraControl->Result(rv, mOnSuccessCb, mOnErrorCb);
   }
 
   nsRefPtr<nsGonkCameraControl> mCameraControl;
   // Raw pointer to DOM-facing camera control--it must NS_ADDREF itself for us
-  nsICameraControl* mDOMCameraControl;
+  nsDOMCameraControl* mDOMCameraControl;
   nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
 
 // Construct nsGonkCameraControl on the main thread.
-nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
   : CameraControl(aCameraId, aCameraThread)
   , mHwHandle(0)
   , mExposureCompensationMin(0.0)
@@ -367,6 +361,8 @@ GetParameter_error:
   aRegions.Clear();
 }
 
+#if 0
+// TODO: nsGonkCameraControl::PushParameters()
 void
 nsGonkCameraControl::PushParameters()
 {
@@ -386,6 +382,7 @@ nsGonkCameraControl::PushParameters()
     }
   }
 }
+#endif
 
 void
 nsGonkCameraControl::SetParameter(const char* aKey, const char* aValue)

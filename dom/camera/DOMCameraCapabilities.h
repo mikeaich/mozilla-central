@@ -6,7 +6,7 @@
 #define DOM_CAMERA_DOMCameraCapabilities_H
 
 #include "nsCycleCollectionParticipant.h"
-#include "DOMCameraControl.h"
+#include "ICameraControl.h"
 #include "nsAutoPtr.h"
 
 namespace mozilla {
@@ -20,7 +20,7 @@ public:
   NS_DECL_CYCLE_COLLECTION_CLASS(DOMCameraCapabilities)
   NS_DECL_NSICAMERACAPABILITIES
 
-  DOMCameraCapabilities(CameraControl* aCamera)
+  DOMCameraCapabilities(ICameraControl* aCamera)
     : mCamera(aCamera)
   {
     DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
@@ -47,7 +47,7 @@ protected:
     DOM_CAMERA_LOGI("%s:%d : this=%p, mCamera=%p\n", __func__, __LINE__, this, mCamera.get());
   }
 
-  nsRefPtr<CameraControl> mCamera;
+  nsRefPtr<ICameraControl> mCamera;
 };
 
 } // namespace mozilla

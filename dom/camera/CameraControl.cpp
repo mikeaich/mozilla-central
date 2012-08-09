@@ -169,12 +169,6 @@ CameraControl::Get(JSContext* aCx, PRUint32 aKey, JS::Value* aValue)
   return NS_OK;
 }
 
-void
-CameraControl::Shutdown()
-{
-  // TODO: fill this in if required, remove if not.
-}
-
 nsresult
 CameraControl::GetPreviewStream(CameraSize aSize, nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError)
 {

@@ -9,6 +9,8 @@
 #include "nsDOMFile.h"
 #include "DictionaryHelpers.h"
 #include "nsIDOMCameraManager.h"
+#include "DOMCameraControl.h"
+#include "ICameraControl.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
@@ -31,7 +33,7 @@ class PullParametersTask;
   
 class DOMCameraPreview;
 
-class CameraControl
+class CameraControl : public ICameraControl
 {
   friend class GetPreviewStreamTask;
   friend class StartPreviewTask;
@@ -75,7 +77,6 @@ public:
   nsresult StopRecording();
   nsresult PushParameters();
   nsresult PullParameters();
-  void Shutdown();
 
   nsresult Set(PRUint32 aKey, const nsAString& aValue);
   nsresult Get(PRUint32 aKey, nsAString& aValue);
@@ -145,55 +146,6 @@ protected:
 private:
   CameraControl(const CameraControl&) MOZ_DELETE;
   CameraControl& operator=(const CameraControl&) MOZ_DELETE;
-};
-
-// Return the resulting camera to JS.  Runs on the main thread.
-class GetCameraResult : public nsRunnable
-{
-public:
-  GetCameraResult(nsICameraControl* aDOMCameraControl, CameraControl* aCameraControl, nsresult aResult, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
-    : mDOMCameraControl(aDOMCameraControl)
-    , mCameraControl(aCameraControl)
-    , mResult(aResult)
-    , mOnSuccessCb(onSuccess)
-    , mOnErrorCb(onError)
-  {
-    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
-  }
-
-  ~GetCameraResult()
-  {
-    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
-  }
-
-  NS_IMETHOD Run()
-  {
-    MOZ_ASSERT(NS_IsMainThread());
-
-    // TODO: window management stuff
-    DOM_CAMERA_LOGI("%s:%d : this=%p -- BEFORE CALLBACK\n", __func__, __LINE__, this);
-    if (NS_FAILED(mResult)) {
-      if (mOnErrorCb) {
-        mOnErrorCb->HandleEvent(NS_LITERAL_STRING("FAILURE"));
-      }
-    } else {
-      if (mOnSuccessCb) {
-        mOnSuccessCb->HandleEvent(mDOMCameraControl);
-      }
-    }
-    DOM_CAMERA_LOGI("%s:%d : this=%p -- AFTER CALLBACK\n", __func__, __LINE__, this);
-    return NS_OK;
-  }
-
-protected:
-  // Raw pointer to the DOM-facing camera control object; it is responsible
-  // for making sure the object is kept alive with an additional reference.
-  // See nsDOMCameraControl ctor.
-  nsICameraControl* mDOMCameraControl;
-  nsRefPtr<CameraControl> mCameraControl;
-  nsresult mResult;
-  nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
-  nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
 
 // Return the resulting preview stream to JS.  Runs on the main thread.
