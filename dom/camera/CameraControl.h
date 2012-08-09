@@ -54,6 +54,7 @@ public:
     , mFileFormat()
     , mMaxMeteringAreas(0)
     , mMaxFocusAreas(0)
+    , mDOMPreview(nullptr)
     , mAutoFocusOnSuccessCb(nullptr)
     , mAutoFocusOnErrorCb(nullptr)
     , mTakePictureOnSuccessCb(nullptr)
@@ -66,7 +67,7 @@ public:
   }
 
   nsresult GetPreviewStream(CameraSize aSize, nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError);
-  nsresult StartPreview(DOMCameraPreview* aPreview);
+  nsresult StartPreview(DOMCameraPreview* aDOMPreview);
   void StopPreview();
   nsresult AutoFocus(nsICameraAutoFocusCallback* onSuccess, nsICameraErrorCallback* onError);
   nsresult TakePicture(CameraSize aSize, PRInt32 aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback* onSuccess, nsICameraErrorCallback* onError);
@@ -124,14 +125,14 @@ protected:
   PRUint32            mMaxFocusAreas;
 
   /**
-   * 'mPreview' is a raw pointer to the object that will receive incoming
+   * 'mDOMPreview' is a raw pointer to the object that will receive incoming
    * preview frames.  This is guaranteed to be valid, or null.
    *
    * It is set by a call to StartPreview(), and set to null on StopPreview().
    * It is up to the caller to ensure that the object will not disappear
    * out from under this pointer--usually by calling NS_ADDREF().
    */
-  DOMCameraPreview*   mPreview;
+  DOMCameraPreview*   mDOMPreview;
 
   nsCOMPtr<nsICameraAutoFocusCallback>      mAutoFocusOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback>          mAutoFocusOnErrorCb;
@@ -185,7 +186,10 @@ public:
   }
 
 protected:
-  nsCOMPtr<nsICameraControl> mDOMCameraControl;
+  // Raw pointer to the DOM-facing camera control object; it is responsible
+  // for making sure the object is kept alive with an additional reference.
+  // See nsDOMCameraControl ctor.
+  nsICameraControl* mDOMCameraControl;
   nsRefPtr<CameraControl> mCameraControl;
   nsresult mResult;
   nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
@@ -498,9 +502,9 @@ public:
 class StartPreviewTask : public nsRunnable
 {
 public:
-  StartPreviewTask(CameraControl* aCameraControl, DOMCameraPreview* aPreview)
+  StartPreviewTask(CameraControl* aCameraControl, DOMCameraPreview* aDOMPreview)
     : mCameraControl(aCameraControl)
-    , mPreview(aPreview)
+    , mDOMPreview(aDOMPreview)
   { }
 
   NS_IMETHOD Run()
@@ -514,7 +518,7 @@ public:
   }
 
   nsRefPtr<CameraControl> mCameraControl;
-  DOMCameraPreview* mPreview; // DOMCameraPreview NS_ADDREFs itself for us
+  DOMCameraPreview* mDOMPreview; // DOMCameraPreview NS_ADDREFs itself for us
 };
 
 // Stop the preview.

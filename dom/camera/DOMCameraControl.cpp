@@ -24,14 +24,14 @@ NS_IMPL_CYCLE_COLLECTION_CLASS(nsDOMCameraControl)
 
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(nsDOMCameraControl)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mCameraThread)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mCapabilities)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mPreview)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mDOMCapabilities)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mDOMPreview)
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
 NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(nsDOMCameraControl)
   NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mCameraThread)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mCapabilities)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mPreview)
+  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mDOMCapabilities)
+  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mDOMPreview)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsDOMCameraControl)
@@ -47,11 +47,11 @@ NS_IMPL_CYCLE_COLLECTING_RELEASE(nsDOMCameraControl)
 NS_IMETHODIMP
 nsDOMCameraControl::GetCapabilities(nsICameraCapabilities** aCapabilities)
 {
-  if (!mCapabilities) {
-    mCapabilities = new DOMCameraCapabilities(mCameraControl);
+  if (!mDOMCapabilities) {
+    mDOMCapabilities = new DOMCameraCapabilities(mCameraControl);
   }
 
-  nsCOMPtr<nsICameraCapabilities> capabilities = mCapabilities;
+  nsCOMPtr<nsICameraCapabilities> capabilities = mDOMCapabilities;
   capabilities.forget(aCapabilities);
   return NS_OK;
 }

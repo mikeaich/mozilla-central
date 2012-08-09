@@ -11,11 +11,75 @@
 
 using namespace mozilla;
 
+/**
+ * 'PreviewControl' is a helper class that dispatches preview control
+ * events from the main thread.
+ *
+ * NS_NewRunnableMethod() can't be used because it AddRef()s the method's
+ * object, which can't be done off the main thread for cycle collection
+ * participants.
+ *
+ * Before using this class, 'aDOMPreview' must be appropriately AddRef()ed.
+ */
+class PreviewControl : public nsRunnable
+{
+public:
+  enum {
+    START,
+    STOP,
+    STARTED,
+    STOPPED
+  };
+  PreviewControl(DOMCameraPreview* aDOMPreview, PRUint32 aControl)
+    : mDOMPreview(aDOMPreview)
+    , mControl(aControl)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    NS_ASSERTION(NS_IsMainThread(), "PreviewControl not run on main thread");
+
+    switch (mControl) {
+      case START:
+        mDOMPreview->Start();
+        break;
+
+      case STOP:
+        mDOMPreview->Stop();
+        break;
+
+      case STARTED:
+        mDOMPreview->SetStateStarted();
+        break;
+
+      case STOPPED:
+        mDOMPreview->SetStateStopped();
+        break;
+
+      default:
+        DOM_CAMERA_LOGE("PreviewControl: invalid control %d\n", mControl);
+        break;
+    }
+
+    return NS_OK;
+  }
+
+protected:
+  /**
+   * This must be a raw pointer because this class is not created on the
+   * main thread, and DOMCameraPreview is not threadsafe.  Prior to
+   * issuing a preview control event, the caller must ensure that
+   * mDOMPreview will not disappear.
+   */
+  DOMCameraPreview* mDOMPreview;
+  PRUint32 mControl;
+};
+
 class DOMCameraPreviewListener : public MediaStreamListener
 {
 public:
-  DOMCameraPreviewListener(DOMCameraPreview* aPreview) :
-    mPreview(aPreview)
+  DOMCameraPreviewListener(DOMCameraPreview* aDOMPreview) :
+    mDOMPreview(aDOMPreview)
   {
     DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
   }
@@ -46,25 +110,34 @@ public:
     }
 
     DOM_CAMERA_LOGA("camera viewfinder is %s\n", state);
+    nsCOMPtr<nsIRunnable> previewControl;
 
     switch (aConsuming) {
       case NOT_CONSUMED:
-        mPreview->Stop();
+        previewControl = new PreviewControl(mDOMPreview, PreviewControl::STOP);
         break;
 
       case CONSUMED:
-        mPreview->Start();
+        previewControl = new PreviewControl(mDOMPreview, PreviewControl::START);
         break;
+
+      default:
+        return;
+    }
+
+    nsresult rv = NS_DispatchToMainThread(previewControl);
+    if (NS_FAILED(rv)) {
+      DOM_CAMERA_LOGE("Failed to dispatch preview control (%d)!\n", rv);
     }
   }
 
 protected:
-  nsCOMPtr<DOMCameraPreview> mPreview;
+  nsCOMPtr<DOMCameraPreview> mDOMPreview;
 };
 
 DOMCameraPreview::DOMCameraPreview(CameraControl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFrameRate)
   : nsDOMMediaStream()
-  , mState(UNINITED)
+  , mState(STOPPED)
   , mWidth(aWidth)
   , mHeight(aHeight)
   , mFramesPerSecond(aFrameRate)
@@ -146,6 +219,14 @@ DOMCameraPreview::Start()
   }
 
   DOM_CAMERA_LOGI("Starting preview stream\n");
+  
+  /**
+   * Add a reference to ourselves to make sure we stay alive while
+   * the preview is running, as the CameraControl object holds a
+   * weak reference to us.
+   *
+   * This reference is removed in SetStateStopped().
+   */
   NS_ADDREF_THIS();
   mState = STARTING;
   mCameraControl->StartPreview(this);
@@ -166,7 +247,7 @@ DOMCameraPreview::Started()
   }
 
   DOM_CAMERA_LOGI("Dispatching preview stream started\n");
-  nsCOMPtr<nsIRunnable> started = NS_NewRunnableMethod(this, &DOMCameraPreview::SetStateStarted);
+  nsCOMPtr<nsIRunnable> started = new PreviewControl(this, PreviewControl::STARTED);
   nsresult rv = NS_DispatchToMainThread(started);
   if (NS_FAILED(rv)) {
     DOM_CAMERA_LOGE("failed to set statrted state (%d), POTENTIAL MEMORY LEAK!\n", rv);
@@ -193,6 +274,11 @@ DOMCameraPreview::SetStateStopped()
 {
   mState = STOPPED;
   DOM_CAMERA_LOGI("Preview stream stopped\n");
+  
+  /**
+   * Only remove the reference added in Start() once the preview
+   * has stopped completely.
+   */
   NS_RELEASE_THIS();
 }
 
@@ -204,28 +290,16 @@ DOMCameraPreview::Stopped(bool aForced)
   }
 
   DOM_CAMERA_LOGI("Dispatching preview stream stopped\n");
-  nsCOMPtr<nsIRunnable> stopped = NS_NewRunnableMethod(this, &DOMCameraPreview::SetStateStopped);
+  nsCOMPtr<nsIRunnable> stopped = new PreviewControl(this, PreviewControl::STOPPED);
   nsresult rv = NS_DispatchToMainThread(stopped);
   if (NS_FAILED(rv)) {
     DOM_CAMERA_LOGE("failed to decrement reference count (%d), MEMORY LEAK!\n", rv);
   }
-}
-
-void
-DOMCameraPreview::SetStateError()
-{
-  mState = UNINITED;
-  DOM_CAMERA_LOGI("Preview stream encountered an error\n");
-  NS_RELEASE_THIS();
 }
 
 void
 DOMCameraPreview::Error()
 {
   DOM_CAMERA_LOGE("Error occurred changing preview state!\n");
-  nsCOMPtr<nsIRunnable> stopped = NS_NewRunnableMethod(this, &DOMCameraPreview::SetStateError);
-  nsresult rv = NS_DispatchToMainThread(stopped);
-  if (NS_FAILED(rv)) {
-    DOM_CAMERA_LOGE("failed to decrement reference count (%d), MEMORY LEAK!\n", rv);
-  }
+  Stopped(true);
 }

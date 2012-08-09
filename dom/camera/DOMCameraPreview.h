@@ -43,20 +43,19 @@ public:
                   // called by the CameraControl when preview is stopped
   void Error();   // something went wrong, NS_RELEASE needed
 
+  void SetStateStarted();
+  void SetStateStopped();
+
 protected:
   virtual ~DOMCameraPreview();
 
   enum {
-    UNINITED,
     STOPPED,
     STARTING,
     STARTED,
     STOPPING
   };
   PRUint32 mState;
-  void SetStateStarted();
-  void SetStateStopped();
-  void SetStateError();
 
   PRUint32 mWidth;
   PRUint32 mHeight;

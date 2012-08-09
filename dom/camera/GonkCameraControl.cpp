@@ -104,8 +104,8 @@ static const char* getKeyText(PRUint32 aKey)
 nsDOMCameraControl::nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
   : mCameraId(aCameraId)
   , mCameraThread(aCameraThread)
-  , mCapabilities(nullptr)
-  , mPreview(nullptr)
+  , mDOMCapabilities(nullptr)
+  , mDOMPreview(nullptr)
 {
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
   mCameraControl = new nsGonkCameraControl(mCameraId, mCameraThread, this, onSuccess, onError);
@@ -190,10 +190,10 @@ nsGonkCameraControl::Init()
   mMaxMeteringAreas = mParams.getInt(CameraParameters::KEY_MAX_NUM_METERING_AREAS);
   mMaxFocusAreas = mParams.getInt(CameraParameters::KEY_MAX_NUM_FOCUS_AREAS);
 
-  DOM_CAMERA_LOGI(" - minimum exposure compensation = %f\n", mExposureCompensationMin);
-  DOM_CAMERA_LOGI(" - exposure compensation step = %f\n", mExposureCompensationStep);
-  DOM_CAMERA_LOGI(" - maximum metering areas = %d\n", mMaxMeteringAreas);
-  DOM_CAMERA_LOGI(" - maximum focus areas = %d\n", mMaxFocusAreas);
+  DOM_CAMERA_LOGI(" - minimum exposure compensation: %f\n", mExposureCompensationMin);
+  DOM_CAMERA_LOGI(" - exposure compensation step:    %f\n", mExposureCompensationStep);
+  DOM_CAMERA_LOGI(" - maximum metering areas:        %d\n", mMaxMeteringAreas);
+  DOM_CAMERA_LOGI(" - maximum focus areas:           %d\n", mMaxFocusAreas);
 
   return mHwHandle != 0 ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -640,17 +640,18 @@ nsGonkCameraControl::GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStrea
 nsresult
 nsGonkCameraControl::StartPreviewImpl(StartPreviewTask* aStartPreview)
 {
-  if (mPreview) {
-    mPreview->Stopped(true);
+  if (mDOMPreview) {
+    mDOMPreview->Stopped(true);
   }
-  mPreview = aStartPreview->mPreview;
+  mDOMPreview = aStartPreview->mDOMPreview;
 
-  DOM_CAMERA_LOGI("%s: starting preview (mPreview=%p)\n", __func__, mPreview);
+  DOM_CAMERA_LOGI("%s: starting preview (mDOMPreview=%p)\n", __func__, mDOMPreview);
   if (GonkCameraHardware::StartPreview(mHwHandle) != OK) {
     DOM_CAMERA_LOGE("%s: failed to start preview\n", __func__);
     return NS_ERROR_FAILURE;
   }
 
+  mDOMPreview->Started();
   return NS_OK;
 }
 
@@ -658,7 +659,13 @@ nsresult
 nsGonkCameraControl::StopPreviewImpl(StopPreviewTask* aStopPreview)
 {
   DOM_CAMERA_LOGI("%s: stopping preview\n", __func__);
+
+  // StopPreview() is a synchronous call--it doesn't return
+  // until the camera preview thread exits.
   GonkCameraHardware::StopPreview(mHwHandle);
+  mDOMPreview->Stopped();
+  mDOMPreview = nullptr;
+
   return NS_OK;
 }
 
@@ -693,7 +700,7 @@ nsGonkCameraControl::ReceiveFrame(PRUint8* aData, PRUint32 aLength)
 {
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
 
-  if (mPreview->HaveEnoughBuffered()) {
+  if (mDOMPreview->HaveEnoughBuffered()) {
     if (mDiscardedFrameCount == 0) {
       DOM_CAMERA_LOGI("mInput has enough data buffered, starting to discard\n");
     }

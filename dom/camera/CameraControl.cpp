@@ -5,6 +5,7 @@
 #include "DOMCameraPreview.h"
 #include "CameraControl.h"
 
+#define DOM_CAMERA_DEBUG_REFS 1
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
@@ -222,11 +223,11 @@ CameraControl::PullParameters()
 }
 
 nsresult
-CameraControl::StartPreview(DOMCameraPreview* aPreview)
+CameraControl::StartPreview(DOMCameraPreview* aDOMPreview)
 {
-  NS_ENSURE_TRUE(aPreview, NS_ERROR_INVALID_ARG);
+  NS_ENSURE_TRUE(aDOMPreview, NS_ERROR_INVALID_ARG);
 
-  nsCOMPtr<nsIRunnable> startPreviewTask = new StartPreviewTask(this, mPreview);
+  nsCOMPtr<nsIRunnable> startPreviewTask = new StartPreviewTask(this, aDOMPreview);
   return mCameraThread->Dispatch(startPreviewTask, NS_DISPATCH_NORMAL);
 }
 
@@ -240,8 +241,8 @@ CameraControl::StopPreview()
 void
 CameraControl::ReceiveFrame(PRUint8* aData)
 {
-  if (mPreview) {
-    mPreview->ReceiveFrame(aData);
+  if (mDOMPreview) {
+    mDOMPreview->ReceiveFrame(aData);
   }
 }
 

@@ -43,10 +43,10 @@ protected:
   nsRefPtr<CameraControl>         mCameraControl; // non-DOM implementation
   PRUint32                        mCameraId;
   nsCOMPtr<nsIThread>             mCameraThread;
-  nsCOMPtr<nsICameraCapabilities> mCapabilities;
+  nsCOMPtr<nsICameraCapabilities> mDOMCapabilities;
   PRUint32                        mPreviewWidth;
   PRUint32                        mPreviewHeight;
-  nsCOMPtr<DOMCameraPreview>      mPreview;
+  nsCOMPtr<DOMCameraPreview>      mDOMPreview;
 };
 
 } // namespace mozilla
