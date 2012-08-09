@@ -42,7 +42,7 @@ class GonkCameraHardware
 protected:
   GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera);
   ~GonkCameraHardware();
-  void init();
+  void Init();
 
   static void                   DataCallback(int32_t aMsgType, const sp<IMemory> &aDataPtr, camera_frame_metadata_t* aMetadata, void* aUser);
   static void                   NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2, void* aUser);

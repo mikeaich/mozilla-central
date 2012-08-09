@@ -29,7 +29,7 @@ public:
   NS_DECL_CYCLE_COLLECTION_CLASS(nsDOMCameraControl)
   NS_DECL_NSICAMERACONTROL
 
-  nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread);
+  nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError);
 
 protected:
   virtual ~nsDOMCameraControl() { }

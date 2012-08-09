@@ -62,12 +62,12 @@ protected:
   nsCOMPtr<DOMCameraPreview> mPreview;
 };
 
-DOMCameraPreview::DOMCameraPreview(CameraControl* aCameraControl, PRUint32 aDesiredWidth, PRUint32 aDesiredHeight, PRUint32 aDesiredFrameRate)
+DOMCameraPreview::DOMCameraPreview(CameraControl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFrameRate)
   : nsDOMMediaStream()
   , mState(UNINITED)
-  , mWidth(aDesiredWidth)
-  , mHeight(aDesiredHeight)
-  , mFramesPerSecond(aDesiredFrameRate)
+  , mWidth(aWidth)
+  , mHeight(aHeight)
+  , mFramesPerSecond(aFrameRate)
   , mFrameCount(0)
   , mCameraControl(aCameraControl)
 {
@@ -78,6 +78,9 @@ DOMCameraPreview::DOMCameraPreview(CameraControl* aCameraControl, PRUint32 aDesi
   mStream = gm->CreateInputStream(this);
   mInput = GetStream()->AsSourceStream();
   mInput->AddListener(new DOMCameraPreviewListener(this));
+
+  mInput->AddTrack(TRACK_VIDEO, mFramesPerSecond, 0, new VideoSegment());
+  mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
 }
 
 DOMCameraPreview::~DOMCameraPreview()
@@ -92,7 +95,7 @@ DOMCameraPreview::HaveEnoughBuffered()
 }
 
 void
-DOMCameraPreview::ReceiveFrame(PlanarYCbCrImage* aFrame)
+DOMCameraPreview::ReceiveFrame(PRUint8* aFrame)
 {
   if (mState != STARTED) {
     return;
@@ -121,7 +124,7 @@ DOMCameraPreview::ReceiveFrame(PlanarYCbCrImage* aFrame)
   NS_ASSERTION((data.mCbCrStride & 0x7) == 0, "Invalid image dimensions!");
   data.mCbCrStride /= 8;
 
-  data.mCbChannel = aData + mHeight * data.mYStride;
+  data.mCbChannel = aFrame + mHeight * data.mYStride;
   data.mCrChannel = data.mCbChannel + mHeight * data.mCbCrStride / 2;
   data.mCbCrSize = gfxIntSize(mWidth / 2, mHeight / 2);
   data.mPicX = 0;
@@ -130,7 +133,7 @@ DOMCameraPreview::ReceiveFrame(PlanarYCbCrImage* aFrame)
   data.mStereoMode = mozilla::layers::STEREO_MODE_MONO;
   videoImage->SetData(data); // copies buffer
 
-  mVideoSegment.AppendFrame(aFrame, 1, gfxIntSize(mWidth, mHeight));
+  mVideoSegment.AppendFrame(videoImage, 1, gfxIntSize(mWidth, mHeight));
   mInput->AppendToTrack(TRACK_VIDEO, &mVideoSegment);
 }
 
@@ -156,17 +159,11 @@ DOMCameraPreview::SetStateStarted()
 }
 
 void
-DOMCameraPreview::Started(PRUint32 aActualWidth, PRUint32 aActualHeight, PRUint32 aActualFramesPerSecond)
+DOMCameraPreview::Started()
 {
   if (mState != STARTING) {
     return;
   }
-
-  mWidth = aActualWidth;
-  mHeight = aActualHeight;
-  mFramesPerSecond = aActualFramesPerSecond;
-  mInput->AddTrack(TRACK_VIDEO, mFramesPerSecond, 0, new VideoSegment());
-  mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
 
   DOM_CAMERA_LOGI("Dispatching preview stream started\n");
   nsCOMPtr<nsIRunnable> started = NS_NewRunnableMethod(this, &DOMCameraPreview::SetStateStarted);
@@ -200,9 +197,9 @@ DOMCameraPreview::SetStateStopped()
 }
 
 void
-DOMCameraPreview::Stopped()
+DOMCameraPreview::Stopped(bool aForced)
 {
-  if (mState != STOPPING) {
+  if (mState != STOPPING && !aForced) {
     return;
   }
 

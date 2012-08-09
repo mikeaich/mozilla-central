@@ -83,6 +83,8 @@ nsDOMCameraManager::GetCamera(const JS::Value& aOptions, nsICameraGetCameraCallb
 
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
-  nsCOMPtr<nsICameraControl> cameraControl = new nsDOMCameraControl(cameraId, mCameraThread);
+  // Creating this object will trigger the onSuccess handler
+  nsCOMPtr<nsICameraControl> cameraControl = new nsDOMCameraControl(cameraId, mCameraThread, onSuccess, onError);
+  
   return NS_OK;
 }

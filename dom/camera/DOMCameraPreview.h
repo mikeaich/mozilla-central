@@ -28,7 +28,7 @@ protected:
 
 public:
   DOMCameraPreview(CameraControl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFramesPerSecond = 30);
-  void ReceiveFrame(PlanarYCbCrImage* aFrame);
+  void ReceiveFrame(PRUint8* aFrame);
   bool HaveEnoughBuffered();
 
   NS_IMETHODIMP
@@ -39,8 +39,9 @@ public:
   void Start();   // called by the MediaStreamListener to start preview
   void Started(); // called by the CameraControl when preview is started
   void Stop();    // called by the MediaStreamListener to stop preview
-  void Stopped(); // called by the CameraControl when preview is stopped
-  void Error();   // something went wrong
+  void Stopped(bool aForced = false);
+                  // called by the CameraControl when preview is stopped
+  void Error();   // something went wrong, NS_RELEASE needed
 
 protected:
   virtual ~DOMCameraPreview();

@@ -100,9 +100,62 @@ static const char* getKeyText(PRUint32 aKey)
   }
 }
 
+// nsDOMCameraControl implementation-specific constructor
+nsDOMCameraControl::nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+  : mCameraId(aCameraId)
+  , mCameraThread(aCameraThread)
+  , mCapabilities(nullptr)
+  , mPreview(nullptr)
+{
+  DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  mCameraControl = new nsGonkCameraControl(mCameraId, mCameraThread, this, onSuccess, onError);
+
+  /**
+   * nsDOMCameraControl is a cycle-collection participant, which means it is
+   * not threadsafe--so we need to bump up its reference count here to make
+   * sure that it exists long enough to be initialized.
+   *
+   * Once it is initialized, the main thread result runnable will decrement
+   * it again to make sure it can be cleaned up.
+   *
+   * nsGonkCameraControl MUST NOT hold a strong reference to this
+   * nsDOMCameraControl or memory will leak!
+   */
+  NS_ADDREF_THIS();
+}
+
 // Gonk-specific CameraControl implementation.
 
-nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraControl* aCameraControl)
+// Initialize nsGonkCameraControl instance--runs on camera thread.
+class InitGonkCameraControl : public nsRunnable
+{
+public:
+  InitGonkCameraControl(nsGonkCameraControl* aCameraControl, nsICameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+    : mCameraControl(aCameraControl)
+    , mDOMCameraControl(aDOMCameraControl)
+    , mOnSuccessCb(onSuccess)
+    , mOnErrorCb(onError)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    nsresult rv = mCameraControl->Init();
+    rv = NS_DispatchToMainThread(new GetCameraResult(mDOMCameraControl, mCameraControl, rv, mOnSuccessCb, mOnErrorCb));
+    if (NS_FAILED(rv)) {
+      DOM_CAMERA_LOGE("%s: failed to dispatch camera result to main thread (%d), POSSIBLE MEMORY LEAK!\n", rv);
+    }
+    return rv;
+  }
+
+  nsRefPtr<nsGonkCameraControl> mCameraControl;
+  // Raw pointer to DOM-facing camera control--it must NS_ADDREF itself for us
+  nsICameraControl* mDOMCameraControl;
+  nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
+  nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
+};
+
+// Construct nsGonkCameraControl on the main thread.
+nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
   : CameraControl(aCameraId, aCameraThread)
   , mHwHandle(0)
   , mExposureCompensationMin(0.0)
@@ -113,14 +166,12 @@ nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraT
   , mFormat(GonkCameraHardware::PREVIEW_FORMAT_UNKNOWN)
   , mDiscardedFrameCount(0)
 {
-  // Constructor runs on the camera thread--see DOMCameraManager.cpp::GetCameraImpl().
+  // Constructor runs on the main thread...
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
   mRwLock = PR_NewRWLock(PR_RWLOCK_RANK_NONE, "GonkCameraControl.Parameters.Lock");
 
-  // FIXME: NS_NewRunnableMethod() won't work here--need to pass in 'aCameraControl'
-  // to a runnable class that calls init, and if init succeeds, passes it back
-  // to a main-thread runnable.
-  nsCOMPtr<nsIRunnable> init = NS_NewRunnableMethod(this, &nsGonkCameraControl::Init);
+  // ...but initialization is carried out on the camera thread.
+  nsCOMPtr<nsIRunnable> init = new InitGonkCameraControl(this, aDOMCameraControl, onSuccess, onError);
   mCameraThread->Dispatch(init, NS_DISPATCH_NORMAL);
 }
 
@@ -128,7 +179,7 @@ nsresult
 nsGonkCameraControl::Init()
 {
   mHwHandle = GonkCameraHardware::GetHandle(this, mCameraId);
-  DOM_CAMERA_LOGI("%s:%d : this = %p, mHwHandle = %d\n", __func__, __LINE__, this, mHwHandle);
+  DOM_CAMERA_LOGI("Initializing camera %d (this = %p, mHwHandle = %d)\n", mCameraId, this, mHwHandle);
 
   // Initialize our camera configuration database.
   PullParametersImpl(nullptr);
@@ -139,10 +190,10 @@ nsGonkCameraControl::Init()
   mMaxMeteringAreas = mParams.getInt(CameraParameters::KEY_MAX_NUM_METERING_AREAS);
   mMaxFocusAreas = mParams.getInt(CameraParameters::KEY_MAX_NUM_FOCUS_AREAS);
 
-  DOM_CAMERA_LOGI("minimum exposure compensation = %f\n", mExposureCompensationMin);
-  DOM_CAMERA_LOGI("exposure compensation step = %f\n", mExposureCompensationStep);
-  DOM_CAMERA_LOGI("maximum metering areas = %d\n", mMaxMeteringAreas);
-  DOM_CAMERA_LOGI("maximum focus areas = %d\n", mMaxFocusAreas);
+  DOM_CAMERA_LOGI(" - minimum exposure compensation = %f\n", mExposureCompensationMin);
+  DOM_CAMERA_LOGI(" - exposure compensation step = %f\n", mExposureCompensationStep);
+  DOM_CAMERA_LOGI(" - maximum metering areas = %d\n", mMaxMeteringAreas);
+  DOM_CAMERA_LOGI(" - maximum focus areas = %d\n", mMaxFocusAreas);
 
   return mHwHandle != 0 ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -578,6 +629,9 @@ nsGonkCameraControl::GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStrea
   GonkCameraHardware::GetPreviewSize(mHwHandle, &mWidth, &mHeight);
 
   PRUint32 fps = GonkCameraHardware::GetFps(mHwHandle);
+  mFormat = GonkCameraHardware::GetPreviewFormat(mHwHandle);
+
+  DOM_CAMERA_LOGI("wanted preview %d x %d, got %d x %d (%d fps, format %d)\n", aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height, mWidth, mHeight, fps, mFormat);
 
   nsCOMPtr<GetPreviewStreamResult> getPreviewStreamResult = new GetPreviewStreamResult(this, mWidth, mHeight, fps, aGetPreviewStream->mOnSuccessCb);
   return NS_DispatchToMainThread(getPreviewStreamResult);
@@ -586,9 +640,12 @@ nsGonkCameraControl::GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStrea
 nsresult
 nsGonkCameraControl::StartPreviewImpl(StartPreviewTask* aStartPreview)
 {
+  if (mPreview) {
+    mPreview->Stopped(true);
+  }
   mPreview = aStartPreview->mPreview;
 
-  DOM_CAMERA_LOGI("%s: starting preview\n", __func__);
+  DOM_CAMERA_LOGI("%s: starting preview (mPreview=%p)\n", __func__, mPreview);
   if (GonkCameraHardware::StartPreview(mHwHandle) != OK) {
     DOM_CAMERA_LOGE("%s: failed to start preview\n", __func__);
     return NS_ERROR_FAILURE;
@@ -741,17 +798,6 @@ nsGonkCameraControl::TakePictureComplete(PRUint8* aData, PRUint32 aLength)
   if (NS_FAILED(rv)) {
     NS_WARNING("Failed to dispatch takePicture() onSuccess callback to main thread!");
   }
-}
-
-// nsDOMCameraControl implementation-specific constructor
-nsDOMCameraControl::nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread)
-  : mCameraId(aCameraId)
-  , mCameraThread(aCameraThread)
-  , mCapabilities(nullptr)
-  , mPreview(nullptr)
-{
-  DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
-  mCameraControl = new nsGonkCameraControl(mCameraId, mCameraThread, this);
 }
 
 // Gonk callback handlers.

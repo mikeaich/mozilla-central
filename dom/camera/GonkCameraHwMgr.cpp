@@ -57,7 +57,7 @@ GonkCameraHardware::GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera)
   , mInitialized(false)
 {
   DOM_CAMERA_LOGI( "%s: this = %p (aTarget = %p)\n", __func__, (void* )this, (void* )aTarget );
-  init();
+  Init();
 }
 
 // Android data callback
@@ -135,7 +135,7 @@ GonkCameraHardware::NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2,
 }
 
 void
-GonkCameraHardware::init()
+GonkCameraHardware::Init()
 {
   DOM_CAMERA_LOGI("%s: this = %p\n", __func__, (void* )this);
 
@@ -161,6 +161,35 @@ GonkCameraHardware::init()
   mParams = mHardware->getParameters();
 
   mHardware->setPreviewWindow(mWindow);
+
+  DOM_CAMERA_LOGI("Preview formats: %s\n", mParams.get(mParams.KEY_SUPPORTED_PREVIEW_FORMATS));
+
+  // try to set preferred image format and frame rate
+  const char* const PREVIEW_FORMAT = "yuv420p";
+  const char* const BAD_PREVIEW_FORMAT = "yuv420sp";
+  mParams.setPreviewFormat(PREVIEW_FORMAT);
+  mParams.setPreviewFrameRate(mFps);
+  mHardware->setParameters(mParams);
+
+  // check that our settings stuck
+  mParams = mHardware->getParameters();
+  const char* format = mParams.getPreviewFormat();
+  if (strcmp(format, PREVIEW_FORMAT) == 0) {
+    mPreviewFormat = PREVIEW_FORMAT_YUV420P;  /* \o/ */
+  } else if (strcmp(format, BAD_PREVIEW_FORMAT) == 0) {
+    mPreviewFormat = PREVIEW_FORMAT_YUV420SP;
+    DOM_CAMERA_LOGA("Camera ignored our request for '%s' preview, will have to convert (from %d)\n", PREVIEW_FORMAT, mPreviewFormat);
+  } else {
+    mPreviewFormat = PREVIEW_FORMAT_UNKNOWN;
+    DOM_CAMERA_LOGE("Camera ignored our request for '%s' preview, returned UNSUPPORTED format '%s'\n", PREVIEW_FORMAT, format);
+  }
+
+  // Check the frame rate and log if the camera ignored our setting
+  PRUint32 fps = mParams.getPreviewFrameRate();
+  if (fps != mFps) {
+    DOM_CAMERA_LOGA("We asked for %d fps but camera returned %d fps, using that", mFps, fps);
+    mFps = fps;
+  }
 
   mInitialized = true;
 }
@@ -367,39 +396,7 @@ GonkCameraHardware::PullParameters(PRUint32 aHwHandle, CameraParameters& aParams
 int
 GonkCameraHardware::StartPreview()
 {
-  const char* format;
-
   mHardware->enableMsgType(CAMERA_MSG_PREVIEW_FRAME);
-
-  DOM_CAMERA_LOGI("Preview formats: %s\n", mParams.get(mParams.KEY_SUPPORTED_PREVIEW_FORMATS));
-
-  // try to set preferred image format and frame rate
-  const char* const PREVIEW_FORMAT = "yuv420p";
-  const char* const BAD_PREVIEW_FORMAT = "yuv420sp";
-  mParams.setPreviewFormat(PREVIEW_FORMAT);
-  mParams.setPreviewFrameRate(mFps);
-  mHardware->setParameters(mParams);
-
-  // check that our settings stuck
-  mParams = mHardware->getParameters();
-  format = mParams.getPreviewFormat();
-  if (strcmp(format, PREVIEW_FORMAT) == 0) {
-    mPreviewFormat = PREVIEW_FORMAT_YUV420P;  /* \o/ */
-  } else if (strcmp(format, BAD_PREVIEW_FORMAT) == 0) {
-    mPreviewFormat = PREVIEW_FORMAT_YUV420SP;
-    DOM_CAMERA_LOGA("Camera ignored our request for '%s' preview, will have to convert (from %d)\n", PREVIEW_FORMAT, mPreviewFormat);
-  } else {
-    mPreviewFormat = PREVIEW_FORMAT_UNKNOWN;
-    DOM_CAMERA_LOGE("Camera ignored our request for '%s' preview, returned UNSUPPORTED format '%s'\n", PREVIEW_FORMAT, format);
-  }
-
-  // Check the frame rate and log if the camera ignored our setting
-  PRUint32 fps = mParams.getPreviewFrameRate();
-  if (fps != mFps) {
-    DOM_CAMERA_LOGA("We asked for %d fps but camera returned %d fps, using it", mFps, fps);
-    mFps = fps;
-  }
-
   return mHardware->startPreview();
 }
 

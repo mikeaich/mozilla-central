@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "DOMCameraPreview.h"
 #include "CameraControl.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
@@ -223,10 +224,9 @@ CameraControl::PullParameters()
 nsresult
 CameraControl::StartPreview(DOMCameraPreview* aPreview)
 {
-  NS_ENSURE_TRUE(preview, NS_ERROR_INVALID_ARG);
-  mPreview = aPreview;
+  NS_ENSURE_TRUE(aPreview, NS_ERROR_INVALID_ARG);
 
-  nsCOMPtr<nsIRunnable> startPreviewTask = new StartPreviewTask(this, aWidth, aHeight);
+  nsCOMPtr<nsIRunnable> startPreviewTask = new StartPreviewTask(this, mPreview);
   return mCameraThread->Dispatch(startPreviewTask, NS_DISPATCH_NORMAL);
 }
 
@@ -234,7 +234,7 @@ void
 CameraControl::StopPreview()
 {
   nsCOMPtr<nsIRunnable> stopPreviewTask = new StopPreviewTask(this);
-  return mCameraThread->Dispatch(stopPreviewTask, NS_DISPATCH_NORMAL);
+  mCameraThread->Dispatch(stopPreviewTask, NS_DISPATCH_NORMAL);
 }
 
 void
@@ -243,4 +243,16 @@ CameraControl::ReceiveFrame(PRUint8* aData)
   if (mPreview) {
     mPreview->ReceiveFrame(aData);
   }
+}
+
+NS_IMETHODIMP
+GetPreviewStreamResult::Run()
+{
+  MOZ_ASSERT(NS_IsMainThread());
+
+  if (mOnSuccessCb) {
+    nsCOMPtr<nsIDOMMediaStream> stream = new DOMCameraPreview(mCameraControl, mWidth, mHeight, mFramesPerSecond);
+    mOnSuccessCb->HandleEvent(stream);
+  }
+  return NS_OK;
 }

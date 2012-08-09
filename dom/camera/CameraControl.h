@@ -9,7 +9,6 @@
 #include "nsDOMFile.h"
 #include "DictionaryHelpers.h"
 #include "nsIDOMCameraManager.h"
-#include "DOMCameraPreview.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
@@ -29,6 +28,8 @@ class SetParameterTask;
 class GetParameterTask;
 class PushParametersTask;
 class PullParametersTask;
+  
+class DOMCameraPreview;
 
 class CameraControl
 {
@@ -145,6 +146,52 @@ private:
   CameraControl& operator=(const CameraControl&) MOZ_DELETE;
 };
 
+// Return the resulting camera to JS.  Runs on the main thread.
+class GetCameraResult : public nsRunnable
+{
+public:
+  GetCameraResult(nsICameraControl* aDOMCameraControl, CameraControl* aCameraControl, nsresult aResult, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+    : mDOMCameraControl(aDOMCameraControl)
+    , mCameraControl(aCameraControl)
+    , mResult(aResult)
+    , mOnSuccessCb(onSuccess)
+    , mOnErrorCb(onError)
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~GetCameraResult()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    // TODO: window management stuff
+    DOM_CAMERA_LOGI("%s:%d : this=%p -- BEFORE CALLBACK\n", __func__, __LINE__, this);
+    if (NS_FAILED(mResult)) {
+      if (mOnErrorCb) {
+        mOnErrorCb->HandleEvent(NS_LITERAL_STRING("FAILURE"));
+      }
+    } else {
+      if (mOnSuccessCb) {
+        mOnSuccessCb->HandleEvent(mDOMCameraControl);
+      }
+    }
+    DOM_CAMERA_LOGI("%s:%d : this=%p -- AFTER CALLBACK\n", __func__, __LINE__, this);
+    return NS_OK;
+  }
+
+protected:
+  nsCOMPtr<nsICameraControl> mDOMCameraControl;
+  nsRefPtr<CameraControl> mCameraControl;
+  nsresult mResult;
+  nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
+  nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
+};
+
 // Return the resulting preview stream to JS.  Runs on the main thread.
 class GetPreviewStreamResult : public nsRunnable
 {
@@ -164,16 +211,7 @@ public:
     DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
   }
 
-  NS_IMETHOD Run()
-  {
-    MOZ_ASSERT(NS_IsMainThread());
-
-    if (mOnSuccessCb) {
-      nsCOMPtr<nsIDOMMediaStream> stream = new DOMCameraPreview(mCameraControl, mWidth, mHeight, mFramesPerSecond);
-      mOnSuccessCb->HandleEvent(stream);
-    }
-    return NS_OK;
-  }
+  NS_IMETHOD Run();
 
 protected:
   nsRefPtr<CameraControl> mCameraControl;
