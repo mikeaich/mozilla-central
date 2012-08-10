@@ -205,18 +205,6 @@ CameraControlImpl::StopRecording()
 }
 
 nsresult
-CameraControlImpl::PushParameters()
-{
-  return NS_ERROR_NOT_IMPLEMENTED; // TODO
-}
-
-nsresult
-CameraControlImpl::PullParameters()
-{
-  return NS_ERROR_NOT_IMPLEMENTED; // TODO
-}
-
-nsresult
 CameraControlImpl::StartPreview(DOMCameraPreview* aDOMPreview)
 {
   NS_ENSURE_TRUE(aDOMPreview, NS_ERROR_INVALID_ARG);

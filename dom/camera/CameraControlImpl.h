@@ -72,8 +72,6 @@ public:
   nsresult TakePicture(CameraSize aSize, PRInt32 aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback* onSuccess, nsICameraErrorCallback* onError);
   nsresult StartRecording(CameraSize aSize, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError);
   nsresult StopRecording();
-  nsresult PushParameters();
-  nsresult PullParameters();
 
   nsresult Set(PRUint32 aKey, const nsAString& aValue);
   nsresult Get(PRUint32 aKey, nsAString& aValue);
@@ -100,6 +98,7 @@ public:
   virtual void SetParameter(PRUint32 aKey, const char* aValue) = 0;
   virtual void SetParameter(PRUint32 aKey, double aValue) = 0;
   virtual void SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& aRegions) = 0;
+  virtual nsresult PushParameters() = 0;
 
 protected:
   virtual ~CameraControlImpl() { }
@@ -113,8 +112,8 @@ protected:
   virtual nsresult TakePictureImpl(TakePictureTask* aTakePicture) = 0;
   virtual nsresult StartRecordingImpl(StartRecordingTask* aStartRecording) = 0;
   virtual nsresult StopRecordingImpl(StopRecordingTask* aStopRecording) = 0;
-  virtual nsresult PushParametersImpl(PushParametersTask* aPushParameters) = 0;
-  virtual nsresult PullParametersImpl(PullParametersTask* aPullParameters) = 0;
+  virtual nsresult PushParametersImpl() = 0;
+  virtual nsresult PullParametersImpl() = 0;
 
   PRUint32            mCameraId;
   nsCOMPtr<nsIThread> mCameraThread;
@@ -425,62 +424,6 @@ public:
   {
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
     nsresult rv = mCameraControl->StopRecordingImpl(this);
-    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-
-    NS_ENSURE_SUCCESS(rv, rv);
-    return NS_OK;
-  }
-
-  nsRefPtr<CameraControlImpl> mCameraControl;
-};
-
-// Pushes all camera parameters to the camera.
-class PushParametersTask : public nsRunnable
-{
-public:
-  PushParametersTask(CameraControlImpl* aCameraControl)
-    : mCameraControl(aCameraControl)
-  {
-    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
-  }
-
-  ~PushParametersTask()
-  {
-    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
-  }
-
-  NS_IMETHOD Run()
-  {
-    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->PushParametersImpl(this);
-    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-
-    NS_ENSURE_SUCCESS(rv, rv);
-    return NS_OK;
-  }
-
-  nsRefPtr<CameraControlImpl> mCameraControl;
-};
-
-// Get all camera parameters from the camera.
-class PullParametersTask : public nsRunnable
-{
-public:
-  PullParametersTask(CameraControlImpl* aCameraControl)
-    : mCameraControl(aCameraControl)
-  {
-    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
-  }
-
-  ~PullParametersTask()
-  {
-    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
-  }
-
-  NS_IMETHOD Run()
-  {
-    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    nsresult rv = mCameraControl->PullParametersImpl(this);
     DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
     NS_ENSURE_SUCCESS(rv, rv);

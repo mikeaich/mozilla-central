@@ -42,6 +42,7 @@ public:
   void SetParameter(PRUint32 aKey, const char* aValue);
   void SetParameter(PRUint32 aKey, double aValue);
   void SetParameter(PRUint32 aKey, const nsTArray<dom::CameraRegion>& aRegions);
+  nsresult PushParameters();
 
   void ReceiveFrame(PRUint8 *aData, PRUint32 aLength);
   void AutoFocusComplete(bool aSuccess);
@@ -57,8 +58,10 @@ protected:
   nsresult TakePictureImpl(TakePictureTask* aTakePicture);
   nsresult StartRecordingImpl(StartRecordingTask* aStartRecording);
   nsresult StopRecordingImpl(StopRecordingTask* aStopRecording);
-  nsresult PushParametersImpl(PushParametersTask* aPushParameters);
-  nsresult PullParametersImpl(PullParametersTask* aPullParameters);
+  nsresult PushParametersImpl();
+  nsresult PullParametersImpl();
+
+  void SetPreviewSize(PRUint32 aWidth, PRUint32 aHeight);
 
   PRUint32                  mHwHandle;
   double                    mExposureCompensationMin;
@@ -68,7 +71,15 @@ protected:
   android::CameraParameters mParams;
   PRUint32                  mWidth;
   PRUint32                  mHeight;
+  
+  enum {
+    PREVIEW_FORMAT_UNKNOWN,
+    PREVIEW_FORMAT_YUV420P,
+    PREVIEW_FORMAT_YUV420SP
+  };
   PRUint32                  mFormat;
+
+  PRUint32                  mFps;
   PRUint32                  mDiscardedFrameCount;
 
 private:

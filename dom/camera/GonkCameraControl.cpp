@@ -34,6 +34,7 @@
 #include "CameraCommon.h"
 
 using namespace mozilla;
+using namespace android;
 
 static const char* getKeyText(PRUint32 aKey)
 {
@@ -164,7 +165,7 @@ nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraT
   , mDeferConfigUpdate(false)
   , mWidth(0)
   , mHeight(0)
-  , mFormat(GonkCameraHardware::PREVIEW_FORMAT_UNKNOWN)
+  , mFormat(PREVIEW_FORMAT_UNKNOWN)
   , mDiscardedFrameCount(0)
 {
   // Constructor runs on the main thread...
@@ -183,13 +184,40 @@ nsGonkCameraControl::Init()
   DOM_CAMERA_LOGI("Initializing camera %d (this = %p, mHwHandle = %d)\n", mCameraId, this, mHwHandle);
 
   // Initialize our camera configuration database.
-  PullParametersImpl(nullptr);
+  PullParametersImpl();
 
-  // Grab any settings we'll need later.
-  mExposureCompensationMin = mParams.getFloat(CameraParameters::KEY_MIN_EXPOSURE_COMPENSATION);
-  mExposureCompensationStep = mParams.getFloat(CameraParameters::KEY_EXPOSURE_COMPENSATION_STEP);
-  mMaxMeteringAreas = mParams.getInt(CameraParameters::KEY_MAX_NUM_METERING_AREAS);
-  mMaxFocusAreas = mParams.getInt(CameraParameters::KEY_MAX_NUM_FOCUS_AREAS);
+  // Try to set preferred image format and frame rate
+  DOM_CAMERA_LOGI("Camera preview formats: %s\n", mParams.get(mParams.KEY_SUPPORTED_PREVIEW_FORMATS));
+  const char* const PREVIEW_FORMAT = "yuv420p";
+  const char* const BAD_PREVIEW_FORMAT = "yuv420sp";
+  mParams.setPreviewFormat(PREVIEW_FORMAT);
+  mParams.setPreviewFrameRate(mFps);
+
+  // Check that our settings stuck
+  PullParametersImpl();
+  const char* format = mParams.getPreviewFormat();
+  if (strcmp(format, PREVIEW_FORMAT) == 0) {
+    mFormat = PREVIEW_FORMAT_YUV420P;  /* \o/ */
+  } else if (strcmp(format, BAD_PREVIEW_FORMAT) == 0) {
+    mFormat = PREVIEW_FORMAT_YUV420SP;
+    DOM_CAMERA_LOGA("Camera ignored our request for '%s' preview, will have to convert (from %d)\n", PREVIEW_FORMAT, mFormat);
+  } else {
+    mFormat = PREVIEW_FORMAT_UNKNOWN;
+    DOM_CAMERA_LOGE("Camera ignored our request for '%s' preview, returned UNSUPPORTED format '%s'\n", PREVIEW_FORMAT, format);
+  }
+
+  // Check the frame rate and log if the camera ignored our setting
+  PRUint32 fps = mParams.getPreviewFrameRate();
+  if (fps != mFps) {
+    DOM_CAMERA_LOGA("We asked for %d fps but camera returned %d fps, using that", mFps, fps);
+    mFps = fps;
+  }
+
+  // Grab any other settings we'll need later.
+  mExposureCompensationMin = mParams.getFloat(mParams.KEY_MIN_EXPOSURE_COMPENSATION);
+  mExposureCompensationStep = mParams.getFloat(mParams.KEY_EXPOSURE_COMPENSATION_STEP);
+  mMaxMeteringAreas = mParams.getInt(mParams.KEY_MAX_NUM_METERING_AREAS);
+  mMaxFocusAreas = mParams.getInt(mParams.KEY_MAX_NUM_FOCUS_AREAS);
 
   DOM_CAMERA_LOGI(" - minimum exposure compensation: %f\n", mExposureCompensationMin);
   DOM_CAMERA_LOGI(" - exposure compensation step:    %f\n", mExposureCompensationStep);
@@ -368,28 +396,27 @@ GetParameter_error:
   aRegions.Clear();
 }
 
-#if 0
-// TODO: nsGonkCameraControl::PushParameters()
-void
+nsresult
 nsGonkCameraControl::PushParameters()
 {
-  if (!mDeferConfigUpdate) {
-    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    /**
-     * If we're already on the camera thread, call PushParametersImpl()
-     * directly, so that it executes synchronously.  Some callers
-     * require this so that changes take effect immediately before
-     * we can proceed.
-     */
-    if (NS_IsMainThread()) {
-      nsCOMPtr<nsIRunnable> pushParametersTask = new PushParametersTask(this);
-      mCameraThread->Dispatch(pushParametersTask, NS_DISPATCH_NORMAL);
-    } else {
-      PushParametersImpl(nullptr);
-    }
+  if (mDeferConfigUpdate) {
+    return NS_OK;
   }
+
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  /**
+   * If we're already on the camera thread, call PushParametersImpl()
+   * directly, so that it executes synchronously.  Some callers
+   * require this so that changes take effect immediately before
+   * we can proceed.
+   */
+  if (NS_IsMainThread()) {
+    nsCOMPtr<nsIRunnable> pushParametersTask = NS_NewRunnableMethod(this, &nsGonkCameraControl::PushParametersImpl);
+    return mCameraThread->Dispatch(pushParametersTask, NS_DISPATCH_NORMAL);
+  }
+
+  return PushParametersImpl();
 }
-#endif
 
 void
 nsGonkCameraControl::SetParameter(const char* aKey, const char* aValue)
@@ -587,8 +614,9 @@ nsGonkCameraControl::TakePictureImpl(TakePictureTask* aTakePicture)
 }
 
 nsresult
-nsGonkCameraControl::PushParametersImpl(PushParametersTask* aPushParameters)
+nsGonkCameraControl::PushParametersImpl()
 {
+  DOM_CAMERA_LOGI("Pushing camera parameters\n");
   RwAutoLockRead lock(mRwLock);
   if (GonkCameraHardware::PushParameters(mHwHandle, mParams) != OK) {
     return NS_ERROR_FAILURE;
@@ -598,8 +626,9 @@ nsGonkCameraControl::PushParametersImpl(PushParametersTask* aPushParameters)
 }
 
 nsresult
-nsGonkCameraControl::PullParametersImpl(PullParametersTask* aPullParameters)
+nsGonkCameraControl::PullParametersImpl()
 {
+  DOM_CAMERA_LOGI("Pulling camera parameters\n");
   RwAutoLockWrite lock(mRwLock);
   GonkCameraHardware::PullParameters(mHwHandle, mParams);
   return NS_OK;
@@ -620,24 +649,11 @@ nsGonkCameraControl::StopRecordingImpl(StopRecordingTask* aStopRecording)
 nsresult
 nsGonkCameraControl::GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStream)
 {
-  DOM_CAMERA_LOGI("%s: configuring preview\n", __func__);
+  SetPreviewSize(aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height);
 
-  /**
-   * We set and then immediately get the preview size in case the camera
-   * driver has decided to ignore our desired dimensions and substitute its
-   * own.  We need to know the dimensions the driver is using so that, if
-   * needed, we can properly de-interlace the yuv420sp format in
-   * ReceiveFrame().
-   */
-  GonkCameraHardware::SetPreviewSize(mHwHandle, aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height);
-  GonkCameraHardware::GetPreviewSize(mHwHandle, &mWidth, &mHeight);
+  DOM_CAMERA_LOGI("config preview: wated %d x %d, got %d x %d (%d fps, format %d)\n", aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height, mWidth, mHeight, mFps, mFormat);
 
-  PRUint32 fps = GonkCameraHardware::GetFps(mHwHandle);
-  mFormat = GonkCameraHardware::GetPreviewFormat(mHwHandle);
-
-  DOM_CAMERA_LOGI("wanted preview %d x %d, got %d x %d (%d fps, format %d)\n", aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height, mWidth, mHeight, fps, mFormat);
-
-  nsCOMPtr<GetPreviewStreamResult> getPreviewStreamResult = new GetPreviewStreamResult(this, mWidth, mHeight, fps, aGetPreviewStream->mOnSuccessCb);
+  nsCOMPtr<GetPreviewStreamResult> getPreviewStreamResult = new GetPreviewStreamResult(this, mWidth, mHeight, mFps, aGetPreviewStream->mOnSuccessCb);
   return NS_DispatchToMainThread(getPreviewStreamResult);
 }
 
@@ -716,7 +732,7 @@ nsGonkCameraControl::ReceiveFrame(PRUint8* aData, PRUint32 aLength)
   }
 
   switch (mFormat) {
-    case GonkCameraHardware::PREVIEW_FORMAT_YUV420SP:
+    case PREVIEW_FORMAT_YUV420SP:
       {
         // de-interlace the u and v planes
         uint8_t* y = aData;
@@ -761,7 +777,7 @@ nsGonkCameraControl::ReceiveFrame(PRUint8* aData, PRUint32 aLength)
       }
       break;
 
-    case GonkCameraHardware::PREVIEW_FORMAT_YUV420P:
+    case PREVIEW_FORMAT_YUV420P:
       // no transformation required
       break;
 
@@ -781,7 +797,7 @@ nsGonkCameraControl::AutoFocusComplete(bool aSuccess)
    * we need to pull a new set before sending the result to the
    * main thread.
    */
-  PullParametersImpl(nullptr);
+  PullParametersImpl();
 
   nsCOMPtr<nsIRunnable> autoFocusResult = new AutoFocusResult(aSuccess, mAutoFocusOnSuccessCb);
 
@@ -809,6 +825,63 @@ nsGonkCameraControl::TakePictureComplete(PRUint8* aData, PRUint32 aLength)
   if (NS_FAILED(rv)) {
     NS_WARNING("Failed to dispatch takePicture() onSuccess callback to main thread!");
   }
+}
+
+void
+nsGonkCameraControl::SetPreviewSize(PRUint32 aWidth, PRUint32 aHeight)
+{
+  Vector<Size> previewSizes;
+  PRUint32 bestWidth = aWidth;
+  PRUint32 bestHeight = aHeight;
+  PRUint32 minSizeDelta = PR_UINT32_MAX;
+  PRUint32 delta;
+  Size size;
+
+  mParams.getSupportedPreviewSizes(previewSizes);
+
+  if (!aWidth && !aHeight) {
+    // no size specified, take the first supported size
+    size = previewSizes[0];
+    bestWidth = size.width;
+    bestHeight = size.height;
+  } else if (aWidth && aHeight) {
+    // both height and width specified, find the supported size closest to requested size
+    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
+      Size size = previewSizes[i];
+      PRUint32 delta = abs((long int)(size.width * size.height - aWidth * aHeight));
+      if (delta < minSizeDelta) {
+        minSizeDelta = delta;
+        bestWidth = size.width;
+        bestHeight = size.height;
+      }
+    }
+  } else if (!aWidth) {
+    // width not specified, find closest height match
+    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
+      size = previewSizes[i];
+      delta = abs((long int)(size.height - aHeight));
+      if (delta < minSizeDelta) {
+        minSizeDelta = delta;
+        bestWidth = size.width;
+        bestHeight = size.height;
+      }
+    }
+  } else if (!aHeight) {
+    // height not specified, find closest width match
+    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
+      size = previewSizes[i];
+      delta = abs((long int)(size.width - aWidth));
+      if (delta < minSizeDelta) {
+        minSizeDelta = delta;
+        bestWidth = size.width;
+        bestHeight = size.height;
+      }
+    }
+  }
+
+  mWidth = bestWidth;
+  mHeight = bestHeight;
+  mParams.setPreviewSize(mWidth, mHeight);
 }
 
 // Gonk callback handlers.

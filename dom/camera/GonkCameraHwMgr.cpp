@@ -48,8 +48,6 @@ static __inline void timespecSubtract(struct timespec* a, struct timespec* b)
 
 GonkCameraHardware::GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera)
   : mCamera(aCamera)
-  , mFps(30)
-  , mPreviewFormat(PREVIEW_FORMAT_UNKNOWN)
   , mClosing(false)
   , mMonitor("GonkCameraHardware.Monitor")
   , mNumFrames(0)
@@ -156,41 +154,7 @@ GonkCameraHardware::Init()
     sHwHandle = 1;  // don't use 0
   }
   mHardware->setCallbacks(GonkCameraHardware::NotifyCallback, GonkCameraHardware::DataCallback, NULL, (void*)sHwHandle);
-
-  // initialize the local camera parameter database
-  mParams = mHardware->getParameters();
-
   mHardware->setPreviewWindow(mWindow);
-
-  DOM_CAMERA_LOGI("Preview formats: %s\n", mParams.get(mParams.KEY_SUPPORTED_PREVIEW_FORMATS));
-
-  // try to set preferred image format and frame rate
-  const char* const PREVIEW_FORMAT = "yuv420p";
-  const char* const BAD_PREVIEW_FORMAT = "yuv420sp";
-  mParams.setPreviewFormat(PREVIEW_FORMAT);
-  mParams.setPreviewFrameRate(mFps);
-  mHardware->setParameters(mParams);
-
-  // check that our settings stuck
-  mParams = mHardware->getParameters();
-  const char* format = mParams.getPreviewFormat();
-  if (strcmp(format, PREVIEW_FORMAT) == 0) {
-    mPreviewFormat = PREVIEW_FORMAT_YUV420P;  /* \o/ */
-  } else if (strcmp(format, BAD_PREVIEW_FORMAT) == 0) {
-    mPreviewFormat = PREVIEW_FORMAT_YUV420SP;
-    DOM_CAMERA_LOGA("Camera ignored our request for '%s' preview, will have to convert (from %d)\n", PREVIEW_FORMAT, mPreviewFormat);
-  } else {
-    mPreviewFormat = PREVIEW_FORMAT_UNKNOWN;
-    DOM_CAMERA_LOGE("Camera ignored our request for '%s' preview, returned UNSUPPORTED format '%s'\n", PREVIEW_FORMAT, format);
-  }
-
-  // Check the frame rate and log if the camera ignored our setting
-  PRUint32 fps = mParams.getPreviewFrameRate();
-  if (fps != mFps) {
-    DOM_CAMERA_LOGA("We asked for %d fps but camera returned %d fps, using that", mFps, fps);
-    mFps = fps;
-  }
-
   mInitialized = true;
 }
 
@@ -237,96 +201,6 @@ GonkCameraHardware::GetHandle(GonkCamera* aTarget, PRUint32 aCamera)
   delete sHw;
   sHw = nullptr;
   return 0;
-}
-
-PRUint32
-GonkCameraHardware::GetFps(PRUint32 aHwHandle)
-{
-  GonkCameraHardware* hw = GetHardware(aHwHandle);
-  if (!hw) {
-    return 0;
-  }
-
-  return hw->mFps;
-}
-
-void
-GonkCameraHardware::GetPreviewSize(PRUint32 aHwHandle, PRUint32* aWidth, PRUint32* aHeight)
-{
-  GonkCameraHardware* hw = GetHardware(aHwHandle);
-  if (hw) {
-    *aWidth = hw->mWidth;
-    *aHeight = hw->mHeight;
-  } else {
-    *aWidth = 0;
-    *aHeight = 0;
-  }
-}
-
-void
-GonkCameraHardware::SetPreviewSize(PRUint32 aWidth, PRUint32 aHeight)
-{
-  Vector<Size> previewSizes;
-  PRUint32 bestWidth = aWidth;
-  PRUint32 bestHeight = aHeight;
-  PRUint32 minSizeDelta = PR_UINT32_MAX;
-  PRUint32 delta;
-  Size size;
-
-  mParams.getSupportedPreviewSizes(previewSizes);
-
-  if (!aWidth && !aHeight) {
-    // no size specified, take the first supported size
-    size = previewSizes[0];
-    bestWidth = size.width;
-    bestHeight = size.height;
-  } else if (aWidth && aHeight) {
-    // both height and width specified, find the supported size closest to requested size
-    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
-      Size size = previewSizes[i];
-      PRUint32 delta = abs((long int)(size.width * size.height - aWidth * aHeight));
-      if (delta < minSizeDelta) {
-        minSizeDelta = delta;
-        bestWidth = size.width;
-        bestHeight = size.height;
-      }
-    }
-  } else if (!aWidth) {
-    // width not specified, find closest height match
-    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
-      size = previewSizes[i];
-      delta = abs((long int)(size.height - aHeight));
-      if (delta < minSizeDelta) {
-        minSizeDelta = delta;
-        bestWidth = size.width;
-        bestHeight = size.height;
-      }
-    }
-  } else if (!aHeight) {
-    // height not specified, find closest width match
-    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
-      size = previewSizes[i];
-      delta = abs((long int)(size.width - aWidth));
-      if (delta < minSizeDelta) {
-        minSizeDelta = delta;
-        bestWidth = size.width;
-        bestHeight = size.height;
-      }
-    }
-  }
-
-  mWidth = bestWidth;
-  mHeight = bestHeight;
-  mParams.setPreviewSize(mWidth, mHeight);
-}
-
-void
-GonkCameraHardware::SetPreviewSize(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight)
-{
-  GonkCameraHardware* hw = GetHardware(aHwHandle);
-  if (hw) {
-    hw->SetPreviewSize(aWidth, aHeight);
-  }
 }
 
 int
@@ -419,15 +293,4 @@ GonkCameraHardware::StopPreview(PRUint32 aHwHandle)
   if (hw) {
     hw->mHardware->stopPreview();
   }
-}
-
-PRUint32
-GonkCameraHardware::GetPreviewFormat(PRUint32 aHwHandle)
-{
-  GonkCameraHardware* hw = GetHardware(aHwHandle);
-  if (!hw) {
-    return PREVIEW_FORMAT_UNKNOWN;
-  }
-
-  return hw->mPreviewFormat;
 }

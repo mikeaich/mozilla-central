@@ -10,7 +10,6 @@
 #include "nsIDOMCameraManager.h"
 #include "DictionaryHelpers.h"
 
-#define DOM_CAMERA_DEBUG_REFS 1
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
@@ -32,8 +31,6 @@ public:
   virtual nsresult TakePicture(CameraSize aSize, PRInt32 aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback* onSuccess, nsICameraErrorCallback* onError) = 0;
   virtual nsresult StartRecording(CameraSize aSize, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError) = 0;
   virtual nsresult StopRecording() = 0;
-  virtual nsresult PushParameters() = 0;
-  virtual nsresult PullParameters() = 0;
 
   virtual nsresult Set(PRUint32 aKey, const nsAString& aValue) = 0;
   virtual nsresult Get(PRUint32 aKey, nsAString& aValue) = 0;
