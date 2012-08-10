@@ -6,7 +6,6 @@
 #include "nsDOMClassInfo.h"
 #include "jsapi.h"
 #include "nsThread.h"
-#include "CameraControl.h"
 #include "DOMCameraManager.h"
 #include "DOMCameraCapabilities.h"
 #include "DOMCameraControl.h"
@@ -317,6 +316,7 @@ public:
      * NS_ADDREF_THIS().
      */
     NS_RELEASE(mDOMCameraControl);
+    return NS_OK;
   }
 
 protected:

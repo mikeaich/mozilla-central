@@ -37,9 +37,17 @@ public:
   virtual nsresult Get(PRUint32 aKey, double* aValue) = 0;
   virtual nsresult Set(JSContext* aCx, PRUint32 aKey, const JS::Value& aValue, PRUint32 aLimit) = 0;
   virtual nsresult Get(JSContext* aCx, PRUint32 aKey, JS::Value* aValue) = 0;
-
   virtual nsresult SetFocusAreas(JSContext* aCx, const JS::Value& aValue) = 0;
   virtual nsresult SetMeteringAreas(JSContext* aCx, const JS::Value& aValue) = 0;
+
+  virtual const char* GetParameter(const char* aKey) = 0;
+  virtual const char* GetParameterConstChar(PRUint32 aKey) = 0;
+  virtual double GetParameterDouble(PRUint32 aKey) = 0;
+  virtual void GetParameter(PRUint32 aKey, nsTArray<CameraRegion>& aRegions) = 0;
+  virtual void SetParameter(const char* aKey, const char* aValue) = 0;
+  virtual void SetParameter(PRUint32 aKey, const char* aValue) = 0;
+  virtual void SetParameter(PRUint32 aKey, double aValue) = 0;
+  virtual void SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& aRegions) = 0;
 };
 
 } // namespace mozilla

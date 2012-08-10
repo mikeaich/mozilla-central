@@ -113,8 +113,8 @@ nsDOMCameraControl::nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThr
    * not threadsafe--so we need to bump up its reference count here to make
    * sure that it exists long enough to be initialized.
    *
-   * Once it is initialized, the main thread result runnable will decrement
-   * it again to make sure it can be cleaned up.
+   * Once it is initialized, the GetCameraResult main-thread runnable will
+   * decrement it again to make sure it can be cleaned up.
    *
    * nsGonkCameraControl MUST NOT hold a strong reference to this
    * nsDOMCameraControl or memory will leak!
@@ -150,7 +150,7 @@ public:
 
 // Construct nsGonkCameraControl on the main thread.
 nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
-  : CameraControl(aCameraId, aCameraThread)
+  : CameraControlImpl(aCameraId, aCameraThread)
   , mHwHandle(0)
   , mExposureCompensationMin(0.0)
   , mExposureCompensationStep(0.0)
@@ -763,7 +763,7 @@ nsGonkCameraControl::ReceiveFrame(PRUint8* aData, PRUint32 aLength)
       return;
   }
 
-  CameraControl::ReceiveFrame(aData);
+  CameraControlImpl::ReceiveFrame(aData);
 }
 
 void

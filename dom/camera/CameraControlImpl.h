@@ -9,7 +9,6 @@
 #include "nsDOMFile.h"
 #include "DictionaryHelpers.h"
 #include "nsIDOMCameraManager.h"
-#include "DOMCameraControl.h"
 #include "ICameraControl.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
@@ -33,7 +32,7 @@ class PullParametersTask;
   
 class DOMCameraPreview;
 
-class CameraControl : public ICameraControl
+class CameraControlImpl : public ICameraControl
 {
   friend class GetPreviewStreamTask;
   friend class StartPreviewTask;
@@ -48,9 +47,9 @@ class CameraControl : public ICameraControl
   friend class PullParametersTask;
 
 public:
-  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(CameraControl)
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(CameraControlImpl)
 
-  CameraControl(PRUint32 aCameraId, nsIThread* aCameraThread)
+  CameraControlImpl(PRUint32 aCameraId, nsIThread* aCameraThread)
     : mCameraId(aCameraId)
     , mCameraThread(aCameraThread)
     , mFileFormat()
@@ -105,7 +104,7 @@ public:
   virtual void SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& aRegions) = 0;
 
 protected:
-  virtual ~CameraControl() { }
+  virtual ~CameraControlImpl() { }
 
   void ReceiveFrame(PRUint8* aData);
 
@@ -144,15 +143,15 @@ protected:
   nsCOMPtr<nsICameraShutterCallback>        mOnShutterCb;
 
 private:
-  CameraControl(const CameraControl&) MOZ_DELETE;
-  CameraControl& operator=(const CameraControl&) MOZ_DELETE;
+  CameraControlImpl(const CameraControlImpl&) MOZ_DELETE;
+  CameraControlImpl& operator=(const CameraControlImpl&) MOZ_DELETE;
 };
 
 // Return the resulting preview stream to JS.  Runs on the main thread.
 class GetPreviewStreamResult : public nsRunnable
 {
 public:
-  GetPreviewStreamResult(CameraControl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFramesPerSecond, nsICameraPreviewStreamCallback* onSuccess)
+  GetPreviewStreamResult(CameraControlImpl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFramesPerSecond, nsICameraPreviewStreamCallback* onSuccess)
     : mCameraControl(aCameraControl)
     , mWidth(aWidth)
     , mHeight(aHeight)
@@ -170,7 +169,7 @@ public:
   NS_IMETHOD Run();
 
 protected:
-  nsRefPtr<CameraControl> mCameraControl;
+  nsRefPtr<CameraControlImpl> mCameraControl;
   PRUint32 mWidth;
   PRUint32 mHeight;
   PRUint32 mFramesPerSecond;
@@ -181,7 +180,7 @@ protected:
 class GetPreviewStreamTask : public nsRunnable
 {
 public:
-  GetPreviewStreamTask(CameraControl* aCameraControl, CameraSize aSize, nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError)
+  GetPreviewStreamTask(CameraControlImpl* aCameraControl, CameraSize aSize, nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError)
     : mSize(aSize)
     , mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
@@ -207,7 +206,7 @@ public:
   }
 
   CameraSize mSize;
-  nsRefPtr<CameraControl> mCameraControl;
+  nsRefPtr<CameraControlImpl> mCameraControl;
   nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
@@ -240,7 +239,7 @@ protected:
 class AutoFocusTask : public nsRunnable
 {
 public:
-  AutoFocusTask(CameraControl* aCameraControl, nsICameraAutoFocusCallback* onSuccess, nsICameraErrorCallback* onError)
+  AutoFocusTask(CameraControlImpl* aCameraControl, nsICameraAutoFocusCallback* onSuccess, nsICameraErrorCallback* onError)
     : mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
@@ -259,7 +258,7 @@ public:
     return rv;
   }
 
-  nsRefPtr<CameraControl> mCameraControl;
+  nsRefPtr<CameraControlImpl> mCameraControl;
   nsCOMPtr<nsICameraAutoFocusCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
@@ -301,7 +300,7 @@ protected:
 class TakePictureTask : public nsRunnable
 {
 public:
-  TakePictureTask(CameraControl* aCameraControl, CameraSize aSize, PRInt32 aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback* onSuccess, nsICameraErrorCallback* onError)
+  TakePictureTask(CameraControlImpl* aCameraControl, CameraSize aSize, PRInt32 aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback* onSuccess, nsICameraErrorCallback* onError)
     : mCameraControl(aCameraControl)
     , mSize(aSize)
     , mRotation(aRotation)
@@ -324,7 +323,7 @@ public:
     return rv;
   }
 
-  nsRefPtr<CameraControl> mCameraControl;
+  nsRefPtr<CameraControlImpl> mCameraControl;
   CameraSize mSize;
   PRInt32 mRotation;
   nsString mFileFormat;
@@ -361,7 +360,7 @@ protected:
 class StartRecordingTask : public nsRunnable
 {
 public:
-  StartRecordingTask(CameraControl* aCameraControl, CameraSize aSize, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError)
+  StartRecordingTask(CameraControlImpl* aCameraControl, CameraSize aSize, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError)
     : mSize(aSize)
     , mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
@@ -382,7 +381,7 @@ public:
   }
 
   CameraSize mSize;
-  nsRefPtr<CameraControl> mCameraControl;
+  nsRefPtr<CameraControlImpl> mCameraControl;
   nsCOMPtr<nsICameraStartRecordingCallback> mOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
@@ -391,7 +390,7 @@ public:
 class StopRecordingTask : public nsRunnable
 {
 public:
-  StopRecordingTask(CameraControl* aCameraControl)
+  StopRecordingTask(CameraControlImpl* aCameraControl)
     : mCameraControl(aCameraControl)
   { }
 
@@ -405,14 +404,14 @@ public:
     return NS_OK;
   }
 
-  nsRefPtr<CameraControl> mCameraControl;
+  nsRefPtr<CameraControlImpl> mCameraControl;
 };
 
 // Pushes all camera parameters to the camera.
 class PushParametersTask : public nsRunnable
 {
 public:
-  PushParametersTask(CameraControl* aCameraControl)
+  PushParametersTask(CameraControlImpl* aCameraControl)
     : mCameraControl(aCameraControl)
   { }
 
@@ -426,14 +425,14 @@ public:
     return NS_OK;
   }
 
-  nsRefPtr<CameraControl> mCameraControl;
+  nsRefPtr<CameraControlImpl> mCameraControl;
 };
 
 // Get all camera parameters from the camera.
 class PullParametersTask : public nsRunnable
 {
 public:
-  PullParametersTask(CameraControl* aCameraControl)
+  PullParametersTask(CameraControlImpl* aCameraControl)
     : mCameraControl(aCameraControl)
   { }
 
@@ -447,14 +446,14 @@ public:
     return NS_OK;
   }
 
-  nsRefPtr<CameraControl> mCameraControl;
+  nsRefPtr<CameraControlImpl> mCameraControl;
 };
 
 // Start the preview.
 class StartPreviewTask : public nsRunnable
 {
 public:
-  StartPreviewTask(CameraControl* aCameraControl, DOMCameraPreview* aDOMPreview)
+  StartPreviewTask(CameraControlImpl* aCameraControl, DOMCameraPreview* aDOMPreview)
     : mCameraControl(aCameraControl)
     , mDOMPreview(aDOMPreview)
   { }
@@ -469,7 +468,7 @@ public:
     return NS_OK;
   }
 
-  nsRefPtr<CameraControl> mCameraControl;
+  nsRefPtr<CameraControlImpl> mCameraControl;
   DOMCameraPreview* mDOMPreview; // DOMCameraPreview NS_ADDREFs itself for us
 };
 
@@ -477,7 +476,7 @@ public:
 class StopPreviewTask : public nsRunnable
 {
 public:
-  StopPreviewTask(CameraControl* aCameraControl)
+  StopPreviewTask(CameraControlImpl* aCameraControl)
     : mCameraControl(aCameraControl)
   { }
 
@@ -490,7 +489,7 @@ public:
     return NS_OK;
   }
 
-  nsRefPtr<CameraControl> mCameraControl;
+  nsRefPtr<CameraControlImpl> mCameraControl;
 };
 
 } // namespace mozilla

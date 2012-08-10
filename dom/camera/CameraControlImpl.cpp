@@ -3,7 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "DOMCameraPreview.h"
-#include "CameraControl.h"
+#include "CameraControlImpl.h"
 
 #define DOM_CAMERA_DEBUG_REFS 1
 #define DOM_CAMERA_LOG_LEVEL  3
@@ -13,14 +13,14 @@ using namespace mozilla;
 
 // Helpers for string properties.
 nsresult
-CameraControl::Set(PRUint32 aKey, const nsAString& aValue)
+CameraControlImpl::Set(PRUint32 aKey, const nsAString& aValue)
 {
   SetParameter(aKey, NS_ConvertUTF16toUTF8(aValue).get());
   return NS_OK;
 }
 
 nsresult
-CameraControl::Get(PRUint32 aKey, nsAString& aValue)
+CameraControlImpl::Get(PRUint32 aKey, nsAString& aValue)
 {
   const char* value = GetParameterConstChar(aKey);
   if (!value) {
@@ -33,14 +33,14 @@ CameraControl::Get(PRUint32 aKey, nsAString& aValue)
 
 // Helpers for doubles.
 nsresult
-CameraControl::Set(PRUint32 aKey, double aValue)
+CameraControlImpl::Set(PRUint32 aKey, double aValue)
 {
   SetParameter(aKey, aValue);
   return NS_OK;
 }
 
 nsresult
-CameraControl::Get(PRUint32 aKey, double* aValue)
+CameraControlImpl::Get(PRUint32 aKey, double* aValue)
 {
   MOZ_ASSERT(aValue);
   *aValue = GetParameterDouble(aKey);
@@ -49,7 +49,7 @@ CameraControl::Get(PRUint32 aKey, double* aValue)
 
 // Helper for weighted regions.
 nsresult
-CameraControl::Set(JSContext* aCx, PRUint32 aKey, const JS::Value& aValue, PRUint32 aLimit)
+CameraControlImpl::Set(JSContext* aCx, PRUint32 aKey, const JS::Value& aValue, PRUint32 aLimit)
 {
   if (aLimit == 0) {
     DOM_CAMERA_LOGI("%s:%d : aLimit = 0, nothing to do\n", __func__, __LINE__);
@@ -110,7 +110,7 @@ CameraControl::Set(JSContext* aCx, PRUint32 aKey, const JS::Value& aValue, PRUin
 }
 
 nsresult
-CameraControl::Get(JSContext* aCx, PRUint32 aKey, JS::Value* aValue)
+CameraControlImpl::Get(JSContext* aCx, PRUint32 aKey, JS::Value* aValue)
 {
   nsTArray<CameraRegion> regionArray;
 
@@ -170,54 +170,54 @@ CameraControl::Get(JSContext* aCx, PRUint32 aKey, JS::Value* aValue)
 }
 
 nsresult
-CameraControl::GetPreviewStream(CameraSize aSize, nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError)
+CameraControlImpl::GetPreviewStream(CameraSize aSize, nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError)
 {
   nsCOMPtr<nsIRunnable> getPreviewStreamTask = new GetPreviewStreamTask(this, aSize, onSuccess, onError);
   return NS_DispatchToMainThread(getPreviewStreamTask);
 }
 
 nsresult
-CameraControl::AutoFocus(nsICameraAutoFocusCallback* onSuccess, nsICameraErrorCallback* onError)
+CameraControlImpl::AutoFocus(nsICameraAutoFocusCallback* onSuccess, nsICameraErrorCallback* onError)
 {
   nsCOMPtr<nsIRunnable> autoFocusTask = new AutoFocusTask(this, onSuccess, onError);
   return mCameraThread->Dispatch(autoFocusTask, NS_DISPATCH_NORMAL);
 }
 
 nsresult
-CameraControl::TakePicture(CameraSize aSize, PRInt32 aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback* onSuccess, nsICameraErrorCallback* onError)
+CameraControlImpl::TakePicture(CameraSize aSize, PRInt32 aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback* onSuccess, nsICameraErrorCallback* onError)
 {
   nsCOMPtr<nsIRunnable> takePictureTask = new TakePictureTask(this, aSize, aRotation, aFileFormat, aPosition, onSuccess, onError);
   return mCameraThread->Dispatch(takePictureTask, NS_DISPATCH_NORMAL);
 }
 
 nsresult
-CameraControl::StartRecording(CameraSize aSize, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError)
+CameraControlImpl::StartRecording(CameraSize aSize, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError)
 {
   nsCOMPtr<nsIRunnable> startRecordingTask = new StartRecordingTask(this, aSize, onSuccess, onError);
   return mCameraThread->Dispatch(startRecordingTask, NS_DISPATCH_NORMAL);
 }
 
 nsresult
-CameraControl::StopRecording()
+CameraControlImpl::StopRecording()
 {
   nsCOMPtr<nsIRunnable> stopRecordingTask = new StopRecordingTask(this);
   return mCameraThread->Dispatch(stopRecordingTask, NS_DISPATCH_NORMAL);
 }
 
 nsresult
-CameraControl::PushParameters()
+CameraControlImpl::PushParameters()
 {
   return NS_ERROR_NOT_IMPLEMENTED; // TODO
 }
 
 nsresult
-CameraControl::PullParameters()
+CameraControlImpl::PullParameters()
 {
   return NS_ERROR_NOT_IMPLEMENTED; // TODO
 }
 
 nsresult
-CameraControl::StartPreview(DOMCameraPreview* aDOMPreview)
+CameraControlImpl::StartPreview(DOMCameraPreview* aDOMPreview)
 {
   NS_ENSURE_TRUE(aDOMPreview, NS_ERROR_INVALID_ARG);
 
@@ -226,14 +226,14 @@ CameraControl::StartPreview(DOMCameraPreview* aDOMPreview)
 }
 
 void
-CameraControl::StopPreview()
+CameraControlImpl::StopPreview()
 {
   nsCOMPtr<nsIRunnable> stopPreviewTask = new StopPreviewTask(this);
   mCameraThread->Dispatch(stopPreviewTask, NS_DISPATCH_NORMAL);
 }
 
 void
-CameraControl::ReceiveFrame(PRUint8* aData)
+CameraControlImpl::ReceiveFrame(PRUint8* aData)
 {
   if (mDOMPreview) {
     mDOMPreview->ReceiveFrame(aData);

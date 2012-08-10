@@ -21,14 +21,14 @@
 #include "prrwlock.h"
 #include "nsIDOMCameraManager.h"
 #include "DOMCameraControl.h"
-#include "CameraControl.h"
+#include "CameraControlImpl.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
 namespace mozilla {
 
-class nsGonkCameraControl : public CameraControl
+class nsGonkCameraControl : public CameraControlImpl
 {
 public:
   nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError);

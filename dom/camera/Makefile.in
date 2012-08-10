@@ -21,7 +21,7 @@ CPPSRCS = \
   DOMCameraManager.cpp \
   DOMCameraControl.cpp \
   DOMCameraPreview.cpp \
-  CameraControl.cpp \
+  CameraControlImpl.cpp \
   $(NULL)
 
 ifeq ($(MOZ_B2G_CAMERA),1)

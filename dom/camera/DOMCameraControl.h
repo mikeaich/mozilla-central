@@ -19,6 +19,7 @@
 
 namespace mozilla {
 
+using namespace mozilla;
 using namespace dom;
 
 // Main camera control.

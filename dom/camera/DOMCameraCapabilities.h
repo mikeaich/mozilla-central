@@ -9,6 +9,9 @@
 #include "ICameraControl.h"
 #include "nsAutoPtr.h"
 
+#define DOM_CAMERA_LOG_LEVEL  3
+#include "CameraCommon.h"
+
 namespace mozilla {
 
 typedef nsresult (*ParseItemAndAddFunc)(JSContext* aCx, JSObject* aArray, PRUint32 aIndex, const char* aStart, char** aEnd);

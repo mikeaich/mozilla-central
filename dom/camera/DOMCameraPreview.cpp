@@ -135,7 +135,7 @@ protected:
   nsCOMPtr<DOMCameraPreview> mDOMPreview;
 };
 
-DOMCameraPreview::DOMCameraPreview(CameraControl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFrameRate)
+DOMCameraPreview::DOMCameraPreview(ICameraControl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFrameRate)
   : nsDOMMediaStream()
   , mState(STOPPED)
   , mWidth(aWidth)
@@ -222,7 +222,7 @@ DOMCameraPreview::Start()
   
   /**
    * Add a reference to ourselves to make sure we stay alive while
-   * the preview is running, as the CameraControl object holds a
+   * the preview is running, as the CameraControlImpl object holds a
    * weak reference to us.
    *
    * This reference is removed in SetStateStopped().
