@@ -64,6 +64,9 @@ protected:
   PRUint32 mFrameCount;
   nsRefPtr<ICameraControl> mCameraControl;
 
+  // Raw pointer; AddListener() keeps the reference for us
+  MediaStreamListener* mListener;
+
 private:
   DOMCameraPreview(const DOMCameraPreview&) MOZ_DELETE;
   DOMCameraPreview& operator=(const DOMCameraPreview&) MOZ_DELETE;

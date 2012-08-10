@@ -47,8 +47,6 @@ class CameraControlImpl : public ICameraControl
   friend class PullParametersTask;
 
 public:
-  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(CameraControlImpl)
-
   CameraControlImpl(PRUint32 aCameraId, nsIThread* aCameraThread)
     : mCameraId(aCameraId)
     , mCameraThread(aCameraThread)
@@ -166,6 +164,7 @@ public:
     DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
   }
 
+  // Run() method is implementation specific.
   NS_IMETHOD Run();
 
 protected:
@@ -243,7 +242,14 @@ public:
     : mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~AutoFocusTask()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
@@ -308,7 +314,14 @@ public:
     , mPosition(aPosition)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~TakePictureTask()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
@@ -365,7 +378,14 @@ public:
     , mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~StartRecordingTask()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
@@ -392,7 +412,14 @@ class StopRecordingTask : public nsRunnable
 public:
   StopRecordingTask(CameraControlImpl* aCameraControl)
     : mCameraControl(aCameraControl)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~StopRecordingTask()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
@@ -413,7 +440,14 @@ class PushParametersTask : public nsRunnable
 public:
   PushParametersTask(CameraControlImpl* aCameraControl)
     : mCameraControl(aCameraControl)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~PushParametersTask()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
@@ -434,7 +468,14 @@ class PullParametersTask : public nsRunnable
 public:
   PullParametersTask(CameraControlImpl* aCameraControl)
     : mCameraControl(aCameraControl)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~PullParametersTask()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
@@ -456,7 +497,14 @@ public:
   StartPreviewTask(CameraControlImpl* aCameraControl, DOMCameraPreview* aDOMPreview)
     : mCameraControl(aCameraControl)
     , mDOMPreview(aDOMPreview)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~StartPreviewTask()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {
@@ -478,7 +526,14 @@ class StopPreviewTask : public nsRunnable
 public:
   StopPreviewTask(CameraControlImpl* aCameraControl)
     : mCameraControl(aCameraControl)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~StopPreviewTask()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {

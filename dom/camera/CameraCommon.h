@@ -101,6 +101,7 @@ protected:
 #endif // DOM_CAMERA_CAMERACOMMON_H
 
 #if DOM_CAMERA_DEBUG_REFS
+
 #ifdef NS_LOG_ADDREF
 #undef NS_LOG_ADDREF
 #endif
@@ -108,6 +109,8 @@ protected:
 #undef NS_LOG_RELEASE
 #endif
 
+#ifndef DOM_CAMERA_DEBUG_REFS_GUARDS
+#define DOM_CAMERA_DEBUG_REFS_GUARDS
 static inline void nsLogAddRefCamera(const char *file, PRUint32 line, void* p, PRUint32 count, const char *clazz, PRUint32 size)
 {
   if (count == 1) {
@@ -127,6 +130,7 @@ static inline void nsLogReleaseCamera(const char *file, PRUint32 line, void* p, 
     }
   }
 }
+#endif // DOM_CAMERA_DEBUG_REFS_GUARDS
 
 #define NS_LOG_ADDREF( p, n, c, s ) nsLogAddRefCamera(__FILE__, __LINE__, (p), (n), (c), (s))
 #ifdef DOM_CAMERA_DEBUG_REFS_ABORT_ON_DELETE
@@ -134,4 +138,5 @@ static inline void nsLogReleaseCamera(const char *file, PRUint32 line, void* p, 
 #else
 #define NS_LOG_RELEASE( p, n, c )   nsLogReleaseCamera(__FILE__, __LINE__, (p), (n), (c), false)
 #endif
+
 #endif

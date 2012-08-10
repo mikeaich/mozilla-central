@@ -133,7 +133,14 @@ public:
     , mDOMCameraControl(aDOMCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
-  { }
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~InitGonkCameraControl()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
 
   NS_IMETHOD Run()
   {

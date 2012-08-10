@@ -132,7 +132,8 @@ public:
   }
 
 protected:
-  nsCOMPtr<DOMCameraPreview> mDOMPreview;
+  // Raw pointer; if we exist, 'mDOMPreview' exists as well
+  DOMCameraPreview* mDOMPreview;
 };
 
 DOMCameraPreview::DOMCameraPreview(ICameraControl* aCameraControl, PRUint32 aWidth, PRUint32 aHeight, PRUint32 aFrameRate)
@@ -150,7 +151,9 @@ DOMCameraPreview::DOMCameraPreview(ICameraControl* aCameraControl, PRUint32 aWid
   MediaStreamGraph* gm = MediaStreamGraph::GetInstance();
   mStream = gm->CreateInputStream(this);
   mInput = GetStream()->AsSourceStream();
-  mInput->AddListener(new DOMCameraPreviewListener(this));
+
+  mListener = new DOMCameraPreviewListener(this);
+  mInput->AddListener(mListener);
 
   mInput->AddTrack(TRACK_VIDEO, mFramesPerSecond, 0, new VideoSegment());
   mInput->AdvanceKnownTracksTime(MEDIA_TIME_MAX);
@@ -158,7 +161,8 @@ DOMCameraPreview::DOMCameraPreview(ICameraControl* aCameraControl, PRUint32 aWid
 
 DOMCameraPreview::~DOMCameraPreview()
 {
-  DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  DOM_CAMERA_LOGI("%s:%d : this=%p, mListener=%p\n", __func__, __LINE__, this, mListener);
+  mInput->RemoveListener(mListener);
 }
 
 bool
