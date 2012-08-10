@@ -52,6 +52,9 @@ public:
   virtual void SetParameter(PRUint32 aKey, const char* aValue) = 0;
   virtual void SetParameter(PRUint32 aKey, double aValue) = 0;
   virtual void SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& aRegions) = 0;
+
+protected:
+  virtual ~ICameraControl() { }
 };
 
 } // namespace mozilla
