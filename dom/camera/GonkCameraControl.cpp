@@ -882,6 +882,7 @@ nsGonkCameraControl::SetPreviewSize(PRUint32 aWidth, PRUint32 aHeight)
   mWidth = bestWidth;
   mHeight = bestHeight;
   mParams.setPreviewSize(mWidth, mHeight);
+  PushParameters();
 }
 
 // Gonk callback handlers.
