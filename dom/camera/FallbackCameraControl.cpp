@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "DOMCameraControl.h"
 #include "CameraControlImpl.h"
 
 using namespace mozilla;
@@ -13,7 +14,7 @@ using namespace mozilla;
 class nsFallbackCameraControl : public CameraControlImpl
 {
 public:
-  nsFallbackCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread);
+  nsFallbackCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError);
 
   const char* GetParameter(const char* aKey);
   const char* GetParameterConstChar(PRUint32 aKey);
@@ -52,7 +53,6 @@ private:
  * defined here).
  */
 nsDOMCameraControl::nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
-  : mDOMCapabilities(nullptr)
 {
 }
 
@@ -62,8 +62,8 @@ nsDOMCameraControl::nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThr
  * None of these should ever get called--they exist to keep the linker happy,
  * and may be used as templates for new camera support classes.
  */
-nsFallbackCameraControl::nsFallbackCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread)
-  : nsCameraControl(aCameraId, aCameraThread)
+nsFallbackCameraControl::nsFallbackCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+  : CameraControlImpl(aCameraId, aCameraThread)
 {
 }
 
@@ -117,6 +117,7 @@ nsFallbackCameraControl::SetParameter(PRUint32 aKey, const nsTArray<dom::CameraR
 nsresult
 nsFallbackCameraControl::PushParameters()
 {
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsresult
