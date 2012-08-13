@@ -507,6 +507,49 @@ nsGonkCameraControl::SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& a
 }
 
 nsresult
+nsGonkCameraControl::GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStream)
+{
+  SetPreviewSize(aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height);
+
+  DOM_CAMERA_LOGI("config preview: wated %d x %d, got %d x %d (%d fps, format %d)\n", aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height, mWidth, mHeight, mFps, mFormat);
+
+  nsCOMPtr<GetPreviewStreamResult> getPreviewStreamResult = new GetPreviewStreamResult(this, mWidth, mHeight, mFps, aGetPreviewStream->mOnSuccessCb);
+  return NS_DispatchToMainThread(getPreviewStreamResult);
+}
+
+nsresult
+nsGonkCameraControl::StartPreviewImpl(StartPreviewTask* aStartPreview)
+{
+  if (mDOMPreview) {
+    mDOMPreview->Stopped(true);
+  }
+  mDOMPreview = aStartPreview->mDOMPreview;
+
+  DOM_CAMERA_LOGI("%s: starting preview (mDOMPreview=%p)\n", __func__, mDOMPreview);
+  if (GonkCameraHardware::StartPreview(mHwHandle) != OK) {
+    DOM_CAMERA_LOGE("%s: failed to start preview\n", __func__);
+    return NS_ERROR_FAILURE;
+  }
+
+  mDOMPreview->Started();
+  return NS_OK;
+}
+
+nsresult
+nsGonkCameraControl::StopPreviewImpl(StopPreviewTask* aStopPreview)
+{
+  DOM_CAMERA_LOGI("%s: stopping preview\n", __func__);
+
+  // StopPreview() is a synchronous call--it doesn't return
+  // until the camera preview thread exits.
+  GonkCameraHardware::StopPreview(mHwHandle);
+  mDOMPreview->Stopped();
+  mDOMPreview = nullptr;
+
+  return NS_OK;
+}
+
+nsresult
 nsGonkCameraControl::AutoFocusImpl(AutoFocusTask* aAutoFocus)
 {
   nsCOMPtr<nsICameraAutoFocusCallback> cb = mAutoFocusOnSuccessCb;
@@ -644,49 +687,6 @@ nsresult
 nsGonkCameraControl::StopRecordingImpl(StopRecordingTask* aStopRecording)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-nsresult
-nsGonkCameraControl::GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStream)
-{
-  SetPreviewSize(aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height);
-
-  DOM_CAMERA_LOGI("config preview: wated %d x %d, got %d x %d (%d fps, format %d)\n", aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height, mWidth, mHeight, mFps, mFormat);
-
-  nsCOMPtr<GetPreviewStreamResult> getPreviewStreamResult = new GetPreviewStreamResult(this, mWidth, mHeight, mFps, aGetPreviewStream->mOnSuccessCb);
-  return NS_DispatchToMainThread(getPreviewStreamResult);
-}
-
-nsresult
-nsGonkCameraControl::StartPreviewImpl(StartPreviewTask* aStartPreview)
-{
-  if (mDOMPreview) {
-    mDOMPreview->Stopped(true);
-  }
-  mDOMPreview = aStartPreview->mDOMPreview;
-
-  DOM_CAMERA_LOGI("%s: starting preview (mDOMPreview=%p)\n", __func__, mDOMPreview);
-  if (GonkCameraHardware::StartPreview(mHwHandle) != OK) {
-    DOM_CAMERA_LOGE("%s: failed to start preview\n", __func__);
-    return NS_ERROR_FAILURE;
-  }
-
-  mDOMPreview->Started();
-  return NS_OK;
-}
-
-nsresult
-nsGonkCameraControl::StopPreviewImpl(StopPreviewTask* aStopPreview)
-{
-  DOM_CAMERA_LOGI("%s: stopping preview\n", __func__);
-
-  // StopPreview() is a synchronous call--it doesn't return
-  // until the camera preview thread exits.
-  GonkCameraHardware::StopPreview(mHwHandle);
-  mDOMPreview->Stopped();
-  mDOMPreview = nullptr;
-
-  return NS_OK;
 }
 
 /**
