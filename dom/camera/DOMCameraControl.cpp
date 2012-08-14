@@ -203,14 +203,12 @@ nsDOMCameraControl::GetExposureCompensation(double* aExposureCompensation)
 NS_IMETHODIMP
 nsDOMCameraControl::GetOnShutter(nsICameraShutterCallback** aOnShutter)
 {
-  // TODO: *aOnShutter = mOnShutterCb;
-  return NS_OK;
+  return mCameraControl->Get(aOnShutter);
 }
 NS_IMETHODIMP
 nsDOMCameraControl::SetOnShutter(nsICameraShutterCallback* aOnShutter)
 {
-  // TODO: mOnShutterCb = aOnShutter;
-  return NS_OK;
+  return mCameraControl->Set(aOnShutter);
 }
 
 /* void startRecording (in jsval aOptions, in nsICameraStartRecordingCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
@@ -320,7 +318,11 @@ public:
   }
 
 protected:
-  // 'mDOMCameraControl' is a raw pointer; see TODO
+  /**
+   * 'mDOMCameraControl' is a raw pointer which must be AddRef()ed before
+   * passing it to this class.  See the Run() method for the call to
+   * NS_RELEASE().
+   */
   nsDOMCameraControl* mDOMCameraControl;
   nsresult mResult;
   nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;

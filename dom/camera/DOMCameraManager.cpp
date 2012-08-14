@@ -46,14 +46,14 @@ nsDOMCameraManager::~nsDOMCameraManager()
 void
 nsDOMCameraManager::OnNavigation(PRUint64 aWindowId)
 {
-  // TODO: implement -- see getUserMedia() implementation
+  // TODO: bug 779145: implement -- see getUserMedia() implementation
 }
 
 // static creator
 already_AddRefed<nsDOMCameraManager>
 nsDOMCameraManager::Create(PRUint64 aWindowId)
 {
-  // TODO: check for permissions here to access cameras
+  // TODO: bug 776934: check for permissions here to access cameras
 
   nsRefPtr<nsDOMCameraManager> cameraManager = new nsDOMCameraManager(aWindowId);
   return cameraManager.forget();

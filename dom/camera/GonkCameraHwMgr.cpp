@@ -123,7 +123,7 @@ GonkCameraHardware::NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2,
       break;
 
     case CAMERA_MSG_SHUTTER:
-      DOM_CAMERA_LOGW("Shutter event not handled yet\n");
+      OnShutter(camera);
       break;
 
     default:

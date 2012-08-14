@@ -815,8 +815,8 @@ nsGonkCameraControl::TakePictureComplete(PRUint8* aData, PRUint32 aLength)
   memcpy(data, aData, aLength);
 
   /**
-   * TODO: pick up the actual specified picture format for the MIME type;
-   * for now, assume we'll be using JPEGs.
+   * TODO: bug 779144: pick up the actual specified picture format
+   * for the MIME type; for now, assume we'll be using JPEGs.
    */
   nsIDOMBlob* blob = new nsDOMMemoryFile(static_cast<void*>(data), static_cast<PRUint64>(aLength), NS_LITERAL_STRING("image/jpeg"));
   nsCOMPtr<nsIRunnable> takePictureResult = new TakePictureResult(blob, mTakePictureOnSuccessCb);
@@ -904,6 +904,12 @@ void
 ReceiveFrame(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength)
 {
   gc->ReceiveFrame(aData, aLength);
+}
+
+void
+OnShutter(nsGonkCameraControl* gc)
+{
+  gc->OnShutter();
 }
 
 } // namespace mozilla
