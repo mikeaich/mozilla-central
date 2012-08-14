@@ -79,6 +79,8 @@ public:
   nsresult Get(PRUint32 aKey, double* aValue);
   nsresult Set(JSContext* aCx, PRUint32 aKey, const JS::Value& aValue, PRUint32 aLimit);
   nsresult Get(JSContext* aCx, PRUint32 aKey, JS::Value* aValue);
+  nsresult Set(nsICameraShutterCallback* aOnShutter);
+  nsresult Get(nsICameraShutterCallback** aOnShutter);
 
   nsresult SetFocusAreas(JSContext* aCx, const JS::Value& aValue)
   {
@@ -100,10 +102,13 @@ public:
   virtual void SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& aRegions) = 0;
   virtual nsresult PushParameters() = 0;
 
+  void OnShutter();
+
 protected:
   virtual ~CameraControlImpl() { }
 
   void ReceiveFrame(PRUint8* aData);
+  void OnShutterInternal();
 
   virtual nsresult GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStream) = 0;
   virtual nsresult StartPreviewImpl(StartPreviewTask* aStartPreview) = 0;

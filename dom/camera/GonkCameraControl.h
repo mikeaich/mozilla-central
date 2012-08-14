@@ -91,6 +91,7 @@ private:
 void ReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
 void AutoFocusComplete(nsGonkCameraControl* gc, bool success);
 void ReceiveFrame(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength);
+void OnShutter(nsGonkCameraControl* gc);
 
 } // namespace mozilla
 

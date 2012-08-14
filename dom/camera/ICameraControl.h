@@ -38,6 +38,8 @@ public:
   virtual nsresult Get(PRUint32 aKey, double* aValue) = 0;
   virtual nsresult Set(JSContext* aCx, PRUint32 aKey, const JS::Value& aValue, PRUint32 aLimit) = 0;
   virtual nsresult Get(JSContext* aCx, PRUint32 aKey, JS::Value* aValue) = 0;
+  virtual nsresult Set(nsICameraShutterCallback* aOnShutter) = 0;
+  virtual nsresult Get(nsICameraShutterCallback** aOnShutter) = 0;
   virtual nsresult SetFocusAreas(JSContext* aCx, const JS::Value& aValue) = 0;
   virtual nsresult SetMeteringAreas(JSContext* aCx, const JS::Value& aValue) = 0;
 

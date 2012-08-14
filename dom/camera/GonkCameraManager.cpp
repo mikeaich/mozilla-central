@@ -68,7 +68,7 @@ nsDOMCameraManager::GetListOfCameras(JSContext* cx, JS::Value* _retval)
         break;
 
       default:
-        // TODO: handle extra cameras in getCamera().
+        // TODO: bug 779143: handle extra cameras in getCamera().
         {
           static PRUint32 extraIndex = 2;
           nsCString s;

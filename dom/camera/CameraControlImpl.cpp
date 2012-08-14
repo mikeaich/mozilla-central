@@ -225,6 +225,43 @@ CameraControlImpl::ReceiveFrame(PRUint8* aData)
 {
   if (mDOMPreview) {
     mDOMPreview->ReceiveFrame(aData);
+  } else {
+    DOM_CAMERA_LOGW("%s: got frame, but mDOMPreview is null\n", __func__);
+  }
+}
+
+nsresult
+CameraControlImpl::Set(nsICameraShutterCallback* aOnShutter)
+{
+  mOnShutterCb = aOnShutter;
+  return NS_OK;
+}
+
+nsresult
+CameraControlImpl::Get(nsICameraShutterCallback** aOnShutter)
+{
+  *aOnShutter = mOnShutterCb;
+  return NS_OK;
+}
+
+void
+CameraControlImpl::OnShutterInternal()
+{
+  DOM_CAMERA_LOGI("** SNAP **\n");
+
+  nsCOMPtr<nsICameraShutterCallback> onShutter;
+  if (mOnShutterCb) {
+    mOnShutterCb->HandleEvent();
+  }
+}
+
+void
+CameraControlImpl::OnShutter()
+{
+  nsCOMPtr<nsIRunnable> onShutter = NS_NewRunnableMethod(this, &CameraControlImpl::OnShutterInternal);
+  nsresult rv = NS_DispatchToMainThread(onShutter);
+  if (NS_FAILED(rv)) {
+    DOM_CAMERA_LOGW("Failed to dispatch onShutter event to main thread (%d)\n", rv);
   }
 }
 
