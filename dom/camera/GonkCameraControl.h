@@ -31,7 +31,7 @@ namespace mozilla {
 class nsGonkCameraControl : public CameraControlImpl
 {
 public:
-  nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError);
+  nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError, PRUint64 aWindowId);
   nsresult Init();
 
   const char* GetParameter(const char* aKey);

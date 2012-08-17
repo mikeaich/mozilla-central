@@ -1333,14 +1333,7 @@ NS_IMETHODIMP
 Navigator::GetMozCameras(nsIDOMCameraManager** aCameraManager)
 {
   if (!mCameraManager) {
-    nsCOMPtr<nsPIDOMWindow> win = do_QueryReferent(mWindow);
-    NS_ENSURE_TRUE(win, NS_ERROR_FAILURE);
-
-    if (!win->GetOuterWindow() || win->GetOuterWindow()->GetCurrentInnerWindow() != win) {
-      return NS_ERROR_NOT_AVAILABLE;
-    }
-
-    mCameraManager = nsDOMCameraManager::Create(win->WindowID());
+    mCameraManager = nsDOMCameraManager::Get();
   }
 
   nsRefPtr<nsDOMCameraManager> cameraManager = mCameraManager;

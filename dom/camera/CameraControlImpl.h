@@ -47,9 +47,10 @@ class CameraControlImpl : public ICameraControl
   friend class PullParametersTask;
 
 public:
-  CameraControlImpl(PRUint32 aCameraId, nsIThread* aCameraThread)
+  CameraControlImpl(PRUint32 aCameraId, nsIThread* aCameraThread, PRUint64 aWindowId)
     : mCameraId(aCameraId)
     , mCameraThread(aCameraThread)
+    , mWindowId(aWindowId)
     , mFileFormat()
     , mMaxMeteringAreas(0)
     , mMaxFocusAreas(0)
@@ -81,6 +82,8 @@ public:
   nsresult Get(JSContext* aCx, PRUint32 aKey, JS::Value* aValue);
   nsresult Set(nsICameraShutterCallback* aOnShutter);
   nsresult Get(nsICameraShutterCallback** aOnShutter);
+  nsresult Set(nsICameraClosedCallback* aOnClosed);
+  nsresult Get(nsICameraClosedCallback** aOnClosed);
 
   nsresult SetFocusAreas(JSContext* aCx, const JS::Value& aValue)
   {
@@ -102,6 +105,8 @@ public:
   virtual void SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& aRegions) = 0;
   virtual nsresult PushParameters() = 0;
 
+  virtual void Shutdown();
+
   void OnShutter();
 
 protected:
@@ -122,6 +127,7 @@ protected:
 
   PRUint32            mCameraId;
   nsCOMPtr<nsIThread> mCameraThread;
+  PRUint64            mWindowId;
   nsString            mFileFormat;
   PRUint32            mMaxMeteringAreas;
   PRUint32            mMaxFocusAreas;
@@ -143,6 +149,7 @@ protected:
   nsCOMPtr<nsICameraStartRecordingCallback> mStartRecordingOnSuccessCb;
   nsCOMPtr<nsICameraErrorCallback>          mStartRecordingOnErrorCb;
   nsCOMPtr<nsICameraShutterCallback>        mOnShutterCb;
+  nsCOMPtr<nsICameraClosedCallback>         mOnClosedCb;
 
 private:
   CameraControlImpl(const CameraControlImpl&) MOZ_DELETE;

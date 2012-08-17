@@ -11,28 +11,33 @@
 #include "nsAutoPtr.h"
 #include "nsIThread.h"
 #include "nsThreadUtils.h"
+#include "nsCycleCollectionParticipant.h"
 #include "nsIDOMCameraManager.h"
 
 class nsDOMCameraManager : public nsIDOMCameraManager
 {
 public:
-  NS_DECL_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTION_CLASS(nsDOMCameraManager)
   NS_DECL_NSIDOMCAMERAMANAGER
 
-  static already_AddRefed<nsDOMCameraManager> Create(PRUint64 aWindowId);
+  static already_AddRefed<nsDOMCameraManager> Get();
 
-  void OnNavigation(PRUint64 aWindowId);
-
-private:
-  nsDOMCameraManager();
-  nsDOMCameraManager(PRUint64 aWindowId);
-  nsDOMCameraManager(const nsDOMCameraManager&) MOZ_DELETE;
-  nsDOMCameraManager& operator=(const nsDOMCameraManager&) MOZ_DELETE;
-  ~nsDOMCameraManager();
+  virtual void Register(PRUint64 aWindowId, nsICameraControl* aDOMCameraControl) = 0;
+  virtual void OnNavigation(PRUint64 aWindowId) = 0;
+  virtual bool IsWindowStillActive(PRUint64 aWindowId) = 0;
 
 protected:
-  PRUint64 mWindowId;
+  nsDOMCameraManager();
+  virtual ~nsDOMCameraManager();
+
+private:
+  nsDOMCameraManager(const nsDOMCameraManager&) MOZ_DELETE;
+  nsDOMCameraManager& operator=(const nsDOMCameraManager&) MOZ_DELETE;
+
+protected:
   nsCOMPtr<nsIThread> mCameraThread;
+  static nsRefPtr<nsDOMCameraManager> sCameraManager;
 };
 
 #endif // DOM_CAMERA_DOMCAMERAMANAGER_H

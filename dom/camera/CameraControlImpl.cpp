@@ -244,6 +244,34 @@ CameraControlImpl::Get(nsICameraShutterCallback** aOnShutter)
   return NS_OK;
 }
 
+nsresult
+CameraControlImpl::Set(nsICameraClosedCallback* aOnClosed)
+{
+  mOnClosedCb = aOnClosed;
+  return NS_OK;
+}
+
+nsresult
+CameraControlImpl::Get(nsICameraClosedCallback** aOnClosed)
+{
+  *aOnClosed = mOnClosedCb;
+  return NS_OK;
+}
+
+void
+CameraControlImpl::Shutdown()
+{
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  mAutoFocusOnSuccessCb = nullptr;
+  mAutoFocusOnErrorCb = nullptr;
+  mTakePictureOnSuccessCb = nullptr;
+  mTakePictureOnErrorCb = nullptr;
+  mStartRecordingOnSuccessCb = nullptr;
+  mStartRecordingOnErrorCb = nullptr;
+  mOnShutterCb = nullptr;
+  mOnClosedCb = nullptr;
+}
+
 void
 CameraControlImpl::OnShutterInternal()
 {

@@ -40,6 +40,8 @@ public:
   virtual nsresult Get(JSContext* aCx, PRUint32 aKey, JS::Value* aValue) = 0;
   virtual nsresult Set(nsICameraShutterCallback* aOnShutter) = 0;
   virtual nsresult Get(nsICameraShutterCallback** aOnShutter) = 0;
+  virtual nsresult Set(nsICameraClosedCallback* aOnClosed) = 0;
+  virtual nsresult Get(nsICameraClosedCallback** aOnClosed) = 0;
   virtual nsresult SetFocusAreas(JSContext* aCx, const JS::Value& aValue) = 0;
   virtual nsresult SetMeteringAreas(JSContext* aCx, const JS::Value& aValue) = 0;
 
@@ -51,6 +53,8 @@ public:
   virtual void SetParameter(PRUint32 aKey, const char* aValue) = 0;
   virtual void SetParameter(PRUint32 aKey, double aValue) = 0;
   virtual void SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& aRegions) = 0;
+
+  virtual void Shutdown() = 0;
 
 protected:
   virtual ~ICameraControl() { }

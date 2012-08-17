@@ -103,11 +103,11 @@ static const char* getKeyText(PRUint32 aKey)
 }
 
 // nsDOMCameraControl implementation-specific constructor
-nsDOMCameraControl::nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+nsDOMCameraControl::nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError, PRUint64 aWindowId)
   : mDOMCapabilities(nullptr)
 {
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
-  mCameraControl = new nsGonkCameraControl(aCameraId, aCameraThread, this, onSuccess, onError);
+  mCameraControl = new nsGonkCameraControl(aCameraId, aCameraThread, this, onSuccess, onError, aWindowId);
 
   /**
    * nsDOMCameraControl is a cycle-collection participant, which means it is
@@ -157,8 +157,8 @@ public:
 };
 
 // Construct nsGonkCameraControl on the main thread.
-nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
-  : CameraControlImpl(aCameraId, aCameraThread)
+nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError, PRUint64 aWindowId)
+  : CameraControlImpl(aCameraId, aCameraThread, aWindowId)
   , mHwHandle(0)
   , mExposureCompensationMin(0.0)
   , mExposureCompensationStep(0.0)

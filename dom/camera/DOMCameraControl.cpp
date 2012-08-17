@@ -211,6 +211,18 @@ nsDOMCameraControl::SetOnShutter(nsICameraShutterCallback* aOnShutter)
   return mCameraControl->Set(aOnShutter);
 }
 
+/* attribute nsICameraClosedCallback onClosed; */
+NS_IMETHODIMP
+nsDOMCameraControl::GetOnClosed(nsICameraClosedCallback** aOnClosed)
+{
+  return mCameraControl->Get(aOnClosed);
+}
+NS_IMETHODIMP
+nsDOMCameraControl::SetOnClosed(nsICameraClosedCallback* aOnClosed)
+{
+  return mCameraControl->Set(aOnClosed);
+}
+
 /* void startRecording (in jsval aOptions, in nsICameraStartRecordingCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
 NS_IMETHODIMP
 nsDOMCameraControl::StartRecording(const JS::Value& aOptions, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError, JSContext* cx)
@@ -334,4 +346,11 @@ nsDOMCameraControl::Result(nsresult aResult, nsICameraGetCameraCallback* onSucce
 {
   nsCOMPtr<GetCameraResult> getCameraResult = new GetCameraResult(this, aResult, onSuccess, onError);
   return NS_DispatchToMainThread(getCameraResult);
+}
+
+void
+nsDOMCameraControl::Shutdown()
+{
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  mCameraControl->Shutdown();
 }

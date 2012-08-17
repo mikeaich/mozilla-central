@@ -21,6 +21,7 @@ CPPSRCS = \
   DOMCameraManager.cpp \
   DOMCameraControl.cpp \
   DOMCameraPreview.cpp \
+  DOMCameraManagerObserver.cpp \
   CameraControlImpl.cpp \
   $(NULL)
 

@@ -2,9 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "DOMCameraControl.h"
-#include "DOMCameraManager.h"
+#include "nsJSUtils.h"
 #include "nsDOMClassInfo.h"
+#include "DOMCameraManager.h"
+#include "DOMCameraControl.h"
 #include "DictionaryHelpers.h"
 
 #define DOM_CAMERA_DEBUG_REFS 1
@@ -12,51 +13,46 @@
 #include "CameraCommon.h"
 
 using namespace mozilla;
+using namespace dom;
 
 DOMCI_DATA(CameraManager, nsIDOMCameraManager)
 
-NS_INTERFACE_MAP_BEGIN(nsDOMCameraManager)
+NS_IMPL_CYCLE_COLLECTION_CLASS(nsDOMCameraManager)
+
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(nsDOMCameraManager)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mCameraThread)
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
+
+NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(nsDOMCameraManager)
+  NS_IMPL_CYCLE_COLLECTION_UNLINK_NSCOMPTR(mCameraThread)
+NS_IMPL_CYCLE_COLLECTION_UNLINK_END
+
+NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsDOMCameraManager)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
   NS_INTERFACE_MAP_ENTRY(nsIDOMCameraManager)
   NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(CameraManager)
 NS_INTERFACE_MAP_END
 
-NS_IMPL_ADDREF(nsDOMCameraManager)
-NS_IMPL_RELEASE(nsDOMCameraManager)
+NS_IMPL_CYCLE_COLLECTING_ADDREF(nsDOMCameraManager)
+NS_IMPL_CYCLE_COLLECTING_RELEASE(nsDOMCameraManager)
 
 /**
  * nsDOMCameraManager::GetListOfCameras
  * is implementation-specific, and can be found in (e.g.)
  * GonkCameraManager.cpp and FallbackCameraManager.cpp.
  */
-
-nsDOMCameraManager::nsDOMCameraManager(PRUint64 aWindowId)
-  : mWindowId(aWindowId)
+ 
+nsRefPtr<nsDOMCameraManager> nsDOMCameraManager::sCameraManager;
+ 
+nsDOMCameraManager::nsDOMCameraManager()
+  : mCameraThread(nullptr)
 {
-  /* member initializers and constructor code */
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 }
 
 nsDOMCameraManager::~nsDOMCameraManager()
 {
-  /* destructor code */
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-}
-
-void
-nsDOMCameraManager::OnNavigation(PRUint64 aWindowId)
-{
-  // TODO: bug 779145: implement -- see getUserMedia() implementation
-}
-
-// static creator
-already_AddRefed<nsDOMCameraManager>
-nsDOMCameraManager::Create(PRUint64 aWindowId)
-{
-  // TODO: bug 776934: check for permissions here to access cameras
-
-  nsRefPtr<nsDOMCameraManager> cameraManager = new nsDOMCameraManager(aWindowId);
-  return cameraManager.forget();
 }
 
 /* [implicit_jscontext] void getCamera ([optional] in jsval aOptions, in nsICameraGetCameraCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
@@ -82,9 +78,11 @@ nsDOMCameraManager::GetCamera(const JS::Value& aOptions, nsICameraGetCameraCallb
   }
 
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  PRUint64 windowId = nsJSUtils::GetCurrentlyRunningCodeInnerWindowID(cx);
 
   // Creating this object will trigger the onSuccess handler
-  nsCOMPtr<nsICameraControl> cameraControl = new nsDOMCameraControl(cameraId, mCameraThread, onSuccess, onError);
-  
+  nsCOMPtr<nsICameraControl> cameraControl = new nsDOMCameraControl(cameraId, mCameraThread, onSuccess, onError, windowId);
+
+  Register(windowId, cameraControl);
   return NS_OK;
 }

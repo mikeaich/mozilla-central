@@ -30,8 +30,10 @@ public:
   NS_DECL_CYCLE_COLLECTION_CLASS(nsDOMCameraControl)
   NS_DECL_NSICAMERACONTROL
 
-  nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError);
+  nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError, PRUint64 aWindowId);
   nsresult Result(nsresult aResult, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError);
+
+  void Shutdown();
 
 protected:
   virtual ~nsDOMCameraControl() { }
