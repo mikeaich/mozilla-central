@@ -48,7 +48,7 @@ DOMCameraManagerObserver::~DOMCameraManagerObserver()
 void
 DOMCameraManagerObserver::Register(PRUint64 aWindowId, nsICameraControl* aDOMCameraControl)
 {
-  DOM_CAMERA_LOGI(">>> Register( aWindowId =0x%llx, aDOMCameraControl = %p )\n", aWindowId, aDOMCameraControl);
+  DOM_CAMERA_LOGI(">>> Register( aWindowId = 0x%llx, aDOMCameraControl = %p )\n", aWindowId, aDOMCameraControl);
 
   nsRefPtr<nsDOMCameraControl> cameraControl = static_cast<nsDOMCameraControl*>(aDOMCameraControl);
 
