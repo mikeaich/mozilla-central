@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include "base/basictypes.h"
 #include "nsDOMClassInfo.h"
 #include "jsapi.h"
 #include "camera/CameraParameters.h"

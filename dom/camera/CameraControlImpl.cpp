@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "base/basictypes.h"
 #include "DOMCameraPreview.h"
 #include "CameraControlImpl.h"
 
@@ -224,7 +225,7 @@ void
 CameraControlImpl::ReceiveFrame(layers::GraphicBufferLocked* aBuffer, ImageFormat aFormat)
 {
   if (mDOMPreview) {
-    mDOMPreview->ReceiveFrame(aData, aFormat);
+    mDOMPreview->ReceiveFrame(aBuffer, aFormat);
   }
 }
 

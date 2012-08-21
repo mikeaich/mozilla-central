@@ -9,6 +9,7 @@
 #include "MediaStreamGraph.h"
 #include "StreamBuffer.h"
 #include "ICameraControl.h"
+#include "GonkIOSurfaceImage.h"
 #include "nsDOMMediaStream.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3

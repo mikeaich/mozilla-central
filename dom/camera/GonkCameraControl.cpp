@@ -804,7 +804,7 @@ AutoFocusComplete(nsGonkCameraControl* gc, bool aSuccess)
 void
 ReceiveFrame(nsGonkCameraControl* gc, layers::GraphicBufferLocked *aBuffer)
 {
-  gc->ReceiveFrame(aBuffer, Image::GONK_IO_SURFACE);
+  gc->ReceiveFrame(aBuffer, ImageFormat::GONK_IO_SURFACE);
 }
 
 } // namespace mozilla

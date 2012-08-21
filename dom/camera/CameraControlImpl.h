@@ -100,10 +100,10 @@ public:
   virtual void SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& aRegions) = 0;
   virtual nsresult PushParameters() = 0;
 
+  void ReceiveFrame(layers::GraphicBufferLocked* aBuffer, ImageFormat aFormat);
+
 protected:
   virtual ~CameraControlImpl() { }
-
-  void ReceiveFrame(layers::GraphicBufferLocked* aBuffer, ImageFormat aFormat);
 
   virtual nsresult GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStream) = 0;
   virtual nsresult StartPreviewImpl(StartPreviewTask* aStartPreview) = 0;
