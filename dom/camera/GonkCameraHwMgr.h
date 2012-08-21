@@ -44,7 +44,7 @@ class GonkCameraHardware : GonkNativeWindowNewFrameCallback
 protected:
   GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera);
   ~GonkCameraHardware();
-  void init();
+  void Init();
 
   static void                   DataCallback(int32_t aMsgType, const sp<IMemory> &aDataPtr, camera_frame_metadata_t* aMetadata, void* aUser);
   static void                   NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2, void* aUser);
@@ -54,9 +54,6 @@ public:
 
   static void                   ReleaseHandle(PRUint32 aHwHandle);
   static PRUint32               GetHandle(GonkCamera* aTarget, PRUint32 aCamera);
-  static PRUint32               GetFps(PRUint32 aHwHandle);
-  static void                   GetPreviewSize(PRUint32 aHwHandle, PRUint32* aWidth, PRUint32* aHeight);
-  static void                   SetPreviewSize(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight);
   static int                    AutoFocus(PRUint32 aHwHandle);
   static void                   CancelAutoFocus(PRUint32 aHwHandle);
   static int                    TakePicture(PRUint32 aHwHandle);
@@ -65,14 +62,6 @@ public:
   static void                   StopPreview(PRUint32 aHwHandle);
   static int                    PushParameters(PRUint32 aHwHandle, const CameraParameters& aParams);
   static void                   PullParameters(PRUint32 aHwHandle, CameraParameters& aParams);
-
-  enum {
-    PREVIEW_FORMAT_UNKNOWN,
-    PREVIEW_FORMAT_YUV420P,
-    PREVIEW_FORMAT_YUV420SP
-  };
-  // GetPreviewFormat() MUST be called only after StartPreview().
-  static PRUint32               GetPreviewFormat(PRUint32 aHwHandle);
 
 protected:
   static GonkCameraHardware*    sHw;
@@ -91,15 +80,10 @@ protected:
     return nullptr;
   }
 
-  // Instance wrappers to make member function access easier.
-  void SetPreviewSize(PRUint32 aWidth, PRUint32 aHeight);
+  // Instance wrapper to make member function access easier.
   int StartPreview();
 
   PRUint32                      mCamera;
-  PRUint32                      mWidth;
-  PRUint32                      mHeight;
-  PRUint32                      mFps;
-  PRUint32                      mPreviewFormat;
   bool                          mClosing;
   mozilla::ReentrantMonitor     mMonitor;
   PRUint32                      mNumFrames;
@@ -107,7 +91,6 @@ protected:
   GonkCamera*                   mTarget;
   camera_module_t*              mModule;
   sp<ANativeWindow>             mWindow;
-  CameraParameters              mParams;
 #if GIHM_TIMING_OVERALL
   struct timespec               mStart;
   struct timespec               mAutoFocusStart;

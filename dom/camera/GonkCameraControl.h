@@ -19,7 +19,9 @@
 
 #include "prtypes.h"
 #include "prrwlock.h"
-#include "CameraControl.h"
+#include "nsIDOMCameraManager.h"
+#include "DOMCameraControl.h"
+#include "CameraControlImpl.h"
 
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
@@ -30,10 +32,11 @@ namespace layers {
 class GraphicBufferLocked;
 }
 
-class nsGonkCameraControl : public nsCameraControl
+class nsGonkCameraControl : public CameraControlImpl
 {
 public:
-  nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread);
+  nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError);
+  nsresult Init();
 
   const char* GetParameter(const char* aKey);
   const char* GetParameterConstChar(PRUint32 aKey);
@@ -43,20 +46,25 @@ public:
   void SetParameter(PRUint32 aKey, const char* aValue);
   void SetParameter(PRUint32 aKey, double aValue);
   void SetParameter(PRUint32 aKey, const nsTArray<dom::CameraRegion>& aRegions);
-  void PushParameters();
+  nsresult PushParameters();
 
-  void ReceiveFrame(layers::GraphicBufferLocked* aBuffer);
+  void AutoFocusComplete(bool aSuccess);
+  void TakePictureComplete(PRUint8* aData, PRUint32 aLength);
 
 protected:
   ~nsGonkCameraControl();
 
   nsresult GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStream);
+  nsresult StartPreviewImpl(StartPreviewTask* aStartPreview);
+  nsresult StopPreviewImpl(StopPreviewTask* aStopPreview);
   nsresult AutoFocusImpl(AutoFocusTask* aAutoFocus);
   nsresult TakePictureImpl(TakePictureTask* aTakePicture);
   nsresult StartRecordingImpl(StartRecordingTask* aStartRecording);
   nsresult StopRecordingImpl(StopRecordingTask* aStopRecording);
-  nsresult PushParametersImpl(PushParametersTask* aPushParameters);
-  nsresult PullParametersImpl(PullParametersTask* aPullParameters);
+  nsresult PushParametersImpl();
+  nsresult PullParametersImpl();
+
+  void SetPreviewSize(PRUint32 aWidth, PRUint32 aHeight);
 
   PRUint32                  mHwHandle;
   double                    mExposureCompensationMin;
@@ -64,6 +72,18 @@ protected:
   bool                      mDeferConfigUpdate;
   PRRWLock*                 mRwLock;
   android::CameraParameters mParams;
+  PRUint32                  mWidth;
+  PRUint32                  mHeight;
+  
+  enum {
+    PREVIEW_FORMAT_UNKNOWN,
+    PREVIEW_FORMAT_YUV420P,
+    PREVIEW_FORMAT_YUV420SP
+  };
+  PRUint32                  mFormat;
+
+  PRUint32                  mFps;
+  PRUint32                  mDiscardedFrameCount;
 
 private:
   nsGonkCameraControl(const nsGonkCameraControl&) MOZ_DELETE;

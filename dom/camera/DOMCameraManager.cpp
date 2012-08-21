@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "CameraControl.h"
+#include "DOMCameraControl.h"
 #include "DOMCameraManager.h"
 #include "nsDOMClassInfo.h"
 #include "DictionaryHelpers.h"
@@ -82,8 +82,8 @@ nsDOMCameraManager::GetCamera(const JS::Value& aOptions, nsICameraGetCameraCallb
 
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
 
-  nsCOMPtr<nsIRunnable> getCameraTask = new GetCameraTask(cameraId, onSuccess, onError, mCameraThread);
-  mCameraThread->Dispatch(getCameraTask, NS_DISPATCH_NORMAL);
-
+  // Creating this object will trigger the onSuccess handler
+  nsCOMPtr<nsICameraControl> cameraControl = new nsDOMCameraControl(cameraId, mCameraThread, onSuccess, onError);
+  
   return NS_OK;
 }

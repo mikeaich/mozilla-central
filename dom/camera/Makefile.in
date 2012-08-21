@@ -19,8 +19,9 @@ include $(topsrcdir)/dom/dom-config.mk
 
 CPPSRCS = \
   DOMCameraManager.cpp \
-  CameraControl.cpp \
-  CameraPreview.cpp \
+  DOMCameraControl.cpp \
+  DOMCameraPreview.cpp \
+  CameraControlImpl.cpp \
   $(NULL)
 
 ifeq ($(MOZ_B2G_CAMERA),1)
@@ -28,7 +29,6 @@ CPPSRCS += \
   GonkCameraManager.cpp \
   GonkCameraControl.cpp \
   GonkCameraHwMgr.cpp \
-  GonkCameraPreview.cpp \
   GonkNativeWindow.cpp \
   GonkCameraCapabilities.cpp \
   $(NULL)

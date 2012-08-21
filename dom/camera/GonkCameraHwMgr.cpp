@@ -19,22 +19,13 @@
 #include "GonkCameraHwMgr.h"
 #include "GonkNativeWindow.h"
 
+#define DOM_CAMERA_DEBUG_REFS 1
 #define DOM_CAMERA_LOG_LEVEL        3
 #include "CameraCommon.h"
 
 using namespace mozilla;
 using namespace mozilla::layers;
 using namespace android;
-
-/**
- * See bug 783682.  Most camera implementations, despite claiming they
- * support 'yuv420p' as a preview format, actually ignore this setting
- * and return 'yuv420sp' data anyway.  We have come across a new implementation
- * that, while reporting that 'yuv420p' is supported *and* has been accepted,
- * still returns the frame data in 'yuv420sp' anyway.  So for now, since
- * everyone seems to return this format, we just force it.
- */
-#define FORCE_PREVIEW_FORMAT_YUV420SP   1
 
 #if GIHM_TIMING_RECEIVEFRAME
 #define INCLUDE_TIME_H                  1
@@ -60,12 +51,6 @@ static __inline void timespecSubtract(struct timespec* a, struct timespec* b)
 
 GonkCameraHardware::GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera)
   : mCamera(aCamera)
-  , mFps(30)
-#if !FORCE_PREVIEW_FORMAT_YUV420SP
-  , mPreviewFormat(PREVIEW_FORMAT_UNKNOWN)
-#else
-  , mPreviewFormat(PREVIEW_FORMAT_YUV420SP)
-#endif
   , mClosing(false)
   , mMonitor("GonkCameraHardware.Monitor")
   , mNumFrames(0)
@@ -73,7 +58,7 @@ GonkCameraHardware::GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera)
   , mInitialized(false)
 {
   DOM_CAMERA_LOGI( "%s: this = %p (aTarget = %p)\n", __func__, (void*)this, (void*)aTarget );
-  init();
+  Init();
 }
 
 void
@@ -162,7 +147,7 @@ GonkCameraHardware::NotifyCallback(int32_t aMsgType, int32_t ext1, int32_t ext2,
 }
 
 void
-GonkCameraHardware::init()
+GonkCameraHardware::Init()
 {
   DOM_CAMERA_LOGI("%s: this = %p\n", __func__, (void* )this);
 
@@ -183,12 +168,7 @@ GonkCameraHardware::init()
     sHwHandle = 1;  // don't use 0
   }
   mHardware->setCallbacks(GonkCameraHardware::NotifyCallback, GonkCameraHardware::DataCallback, NULL, (void*)sHwHandle);
-
-  // initialize the local camera parameter database
-  mParams = mHardware->getParameters();
-
   mHardware->setPreviewWindow(mWindow);
-
   mInitialized = true;
 }
 
@@ -237,96 +217,6 @@ GonkCameraHardware::GetHandle(GonkCamera* aTarget, PRUint32 aCamera)
   delete sHw;
   sHw = nullptr;
   return 0;
-}
-
-PRUint32
-GonkCameraHardware::GetFps(PRUint32 aHwHandle)
-{
-  GonkCameraHardware* hw = GetHardware(aHwHandle);
-  if (!hw) {
-    return 0;
-  }
-
-  return hw->mFps;
-}
-
-void
-GonkCameraHardware::GetPreviewSize(PRUint32 aHwHandle, PRUint32* aWidth, PRUint32* aHeight)
-{
-  GonkCameraHardware* hw = GetHardware(aHwHandle);
-  if (hw) {
-    *aWidth = hw->mWidth;
-    *aHeight = hw->mHeight;
-  } else {
-    *aWidth = 0;
-    *aHeight = 0;
-  }
-}
-
-void
-GonkCameraHardware::SetPreviewSize(PRUint32 aWidth, PRUint32 aHeight)
-{
-  Vector<Size> previewSizes;
-  PRUint32 bestWidth = aWidth;
-  PRUint32 bestHeight = aHeight;
-  PRUint32 minSizeDelta = PR_UINT32_MAX;
-  PRUint32 delta;
-  Size size;
-
-  mParams.getSupportedPreviewSizes(previewSizes);
-
-  if (!aWidth && !aHeight) {
-    // no size specified, take the first supported size
-    size = previewSizes[0];
-    bestWidth = size.width;
-    bestHeight = size.height;
-  } else if (aWidth && aHeight) {
-    // both height and width specified, find the supported size closest to requested size
-    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
-      Size size = previewSizes[i];
-      PRUint32 delta = abs((long int)(size.width * size.height - aWidth * aHeight));
-      if (delta < minSizeDelta) {
-        minSizeDelta = delta;
-        bestWidth = size.width;
-        bestHeight = size.height;
-      }
-    }
-  } else if (!aWidth) {
-    // width not specified, find closest height match
-    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
-      size = previewSizes[i];
-      delta = abs((long int)(size.height - aHeight));
-      if (delta < minSizeDelta) {
-        minSizeDelta = delta;
-        bestWidth = size.width;
-        bestHeight = size.height;
-      }
-    }
-  } else if (!aHeight) {
-    // height not specified, find closest width match
-    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
-      size = previewSizes[i];
-      delta = abs((long int)(size.width - aWidth));
-      if (delta < minSizeDelta) {
-        minSizeDelta = delta;
-        bestWidth = size.width;
-        bestHeight = size.height;
-      }
-    }
-  }
-
-  mWidth = bestWidth;
-  mHeight = bestHeight;
-  mParams.setPreviewSize(mWidth, mHeight);
-}
-
-void
-GonkCameraHardware::SetPreviewSize(PRUint32 aHwHandle, PRUint32 aWidth, PRUint32 aHeight)
-{
-  GonkCameraHardware* hw = GetHardware(aHwHandle);
-  if (hw) {
-    hw->SetPreviewSize(aWidth, aHeight);
-  }
 }
 
 int
@@ -396,43 +286,7 @@ GonkCameraHardware::PullParameters(PRUint32 aHwHandle, CameraParameters& aParams
 int
 GonkCameraHardware::StartPreview()
 {
-  const char* format;
-
-#if !FORCE_PREVIEW_FORMAT_YUV420SP
-  DOM_CAMERA_LOGI("Preview formats: %s\n", mParams.get(mParams.KEY_SUPPORTED_PREVIEW_FORMATS));
-
-  // try to set preferred image format and frame rate
-  const char* const PREVIEW_FORMAT = "yuv420p";
-  const char* const BAD_PREVIEW_FORMAT = "yuv420sp";
-  mParams.setPreviewFormat(PREVIEW_FORMAT);
-  mParams.setPreviewFrameRate(mFps);
-  mHardware->setParameters(mParams);
-
-  // check that our settings stuck
-  mParams = mHardware->getParameters();
-  format = mParams.getPreviewFormat();
-  if (strcmp(format, PREVIEW_FORMAT) == 0) {
-    mPreviewFormat = PREVIEW_FORMAT_YUV420P;  /* \o/ */
-  } else if (strcmp(format, BAD_PREVIEW_FORMAT) == 0) {
-    mPreviewFormat = PREVIEW_FORMAT_YUV420SP;
-    DOM_CAMERA_LOGA("Camera ignored our request for '%s' preview, will have to convert (from %d)\n", PREVIEW_FORMAT, mPreviewFormat);
-  } else {
-    mPreviewFormat = PREVIEW_FORMAT_UNKNOWN;
-    DOM_CAMERA_LOGE("Camera ignored our request for '%s' preview, returned UNSUPPORTED format '%s'\n", PREVIEW_FORMAT, format);
-  }
-#else
-  mParams.setPreviewFormat("yuv420sp");
-  mParams.setPreviewFrameRate(mFps);
-  mHardware->setParameters(mParams);
-#endif
-
-  // Check the frame rate and log if the camera ignored our setting
-  PRUint32 fps = mParams.getPreviewFrameRate();
-  if (fps != mFps) {
-    DOM_CAMERA_LOGA("We asked for %d fps but camera returned %d fps, using it", mFps, fps);
-    mFps = fps;
-  }
-
+  mHardware->enableMsgType(CAMERA_MSG_PREVIEW_FRAME);
   return mHardware->startPreview();
 }
 
@@ -455,15 +309,4 @@ GonkCameraHardware::StopPreview(PRUint32 aHwHandle)
   if (hw) {
     hw->mHardware->stopPreview();
   }
-}
-
-PRUint32
-GonkCameraHardware::GetPreviewFormat(PRUint32 aHwHandle)
-{
-  GonkCameraHardware* hw = GetHardware(aHwHandle);
-  if (!hw) {
-    return PREVIEW_FORMAT_UNKNOWN;
-  }
-
-  return hw->mPreviewFormat;
 }

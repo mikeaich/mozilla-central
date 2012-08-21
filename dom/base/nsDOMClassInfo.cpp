@@ -526,8 +526,8 @@ using mozilla::dom::indexedDB::IDBWrapperCache;
 #include "mozilla/dom/Activity.h"
 
 #include "DOMCameraManager.h"
-#include "CameraControl.h"
-#include "CameraCapabilities.h"
+#include "DOMCameraControl.h"
+#include "DOMCameraCapabilities.h"
 
 #include "DOMError.h"
 #include "DOMRequest.h"

@@ -26,109 +26,206 @@
 #include "nsPrintfCString.h"
 #include "DOMCameraManager.h"
 #include "GonkCameraHwMgr.h"
-#include "CameraCapabilities.h"
+#include "DOMCameraCapabilities.h"
+#include "DOMCameraControl.h"
 #include "GonkCameraControl.h"
-#include "GonkCameraPreview.h"
 
+#define DOM_CAMERA_DEBUG_REFS 1
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 
 using namespace mozilla;
+using namespace android;
 
 static const char* getKeyText(PRUint32 aKey)
 {
   switch (aKey) {
-    case nsCameraControl::CAMERA_PARAM_EFFECT:
+    case CAMERA_PARAM_EFFECT:
       return CameraParameters::KEY_EFFECT;
-    case nsCameraControl::CAMERA_PARAM_WHITEBALANCE:
+    case CAMERA_PARAM_WHITEBALANCE:
       return CameraParameters::KEY_WHITE_BALANCE;
-    case nsCameraControl::CAMERA_PARAM_SCENEMODE:
+    case CAMERA_PARAM_SCENEMODE:
       return CameraParameters::KEY_SCENE_MODE;
-    case nsCameraControl::CAMERA_PARAM_FLASHMODE:
+    case CAMERA_PARAM_FLASHMODE:
       return CameraParameters::KEY_FLASH_MODE;
-    case nsCameraControl::CAMERA_PARAM_FOCUSMODE:
+    case CAMERA_PARAM_FOCUSMODE:
       return CameraParameters::KEY_FOCUS_MODE;
-    case nsCameraControl::CAMERA_PARAM_ZOOM:
+    case CAMERA_PARAM_ZOOM:
       return CameraParameters::KEY_ZOOM;
-    case nsCameraControl::CAMERA_PARAM_METERINGAREAS:
+    case CAMERA_PARAM_METERINGAREAS:
       return CameraParameters::KEY_METERING_AREAS;
-    case nsCameraControl::CAMERA_PARAM_FOCUSAREAS:
+    case CAMERA_PARAM_FOCUSAREAS:
       return CameraParameters::KEY_FOCUS_AREAS;
-    case nsCameraControl::CAMERA_PARAM_FOCALLENGTH:
+    case CAMERA_PARAM_FOCALLENGTH:
       return CameraParameters::KEY_FOCAL_LENGTH;
-    case nsCameraControl::CAMERA_PARAM_FOCUSDISTANCENEAR:
+    case CAMERA_PARAM_FOCUSDISTANCENEAR:
       return CameraParameters::KEY_FOCUS_DISTANCES;
-    case nsCameraControl::CAMERA_PARAM_FOCUSDISTANCEOPTIMUM:
+    case CAMERA_PARAM_FOCUSDISTANCEOPTIMUM:
       return CameraParameters::KEY_FOCUS_DISTANCES;
-    case nsCameraControl::CAMERA_PARAM_FOCUSDISTANCEFAR:
+    case CAMERA_PARAM_FOCUSDISTANCEFAR:
       return CameraParameters::KEY_FOCUS_DISTANCES;
-    case nsCameraControl::CAMERA_PARAM_EXPOSURECOMPENSATION:
+    case CAMERA_PARAM_EXPOSURECOMPENSATION:
       return CameraParameters::KEY_EXPOSURE_COMPENSATION;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_PREVIEWSIZES:
+    case CAMERA_PARAM_SUPPORTED_PREVIEWSIZES:
       return CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_VIDEOSIZES:
+    case CAMERA_PARAM_SUPPORTED_VIDEOSIZES:
       return CameraParameters::KEY_SUPPORTED_VIDEO_SIZES;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_PICTURESIZES:
+    case CAMERA_PARAM_SUPPORTED_PICTURESIZES:
       return CameraParameters::KEY_SUPPORTED_PICTURE_SIZES;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_PICTUREFORMATS:
+    case CAMERA_PARAM_SUPPORTED_PICTUREFORMATS:
       return CameraParameters::KEY_SUPPORTED_PICTURE_FORMATS;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_WHITEBALANCES:
+    case CAMERA_PARAM_SUPPORTED_WHITEBALANCES:
       return CameraParameters::KEY_SUPPORTED_WHITE_BALANCE;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_SCENEMODES:
+    case CAMERA_PARAM_SUPPORTED_SCENEMODES:
       return CameraParameters::KEY_SUPPORTED_SCENE_MODES;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_EFFECTS:
+    case CAMERA_PARAM_SUPPORTED_EFFECTS:
       return CameraParameters::KEY_SUPPORTED_EFFECTS;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_FLASHMODES:
+    case CAMERA_PARAM_SUPPORTED_FLASHMODES:
       return CameraParameters::KEY_SUPPORTED_FLASH_MODES;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_FOCUSMODES:
+    case CAMERA_PARAM_SUPPORTED_FOCUSMODES:
       return CameraParameters::KEY_SUPPORTED_FOCUS_MODES;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_MAXFOCUSAREAS:
+    case CAMERA_PARAM_SUPPORTED_MAXFOCUSAREAS:
       return CameraParameters::KEY_MAX_NUM_FOCUS_AREAS;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_MAXMETERINGAREAS:
+    case CAMERA_PARAM_SUPPORTED_MAXMETERINGAREAS:
       return CameraParameters::KEY_MAX_NUM_METERING_AREAS;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_MINEXPOSURECOMPENSATION:
+    case CAMERA_PARAM_SUPPORTED_MINEXPOSURECOMPENSATION:
       return CameraParameters::KEY_MIN_EXPOSURE_COMPENSATION;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_MAXEXPOSURECOMPENSATION:
+    case CAMERA_PARAM_SUPPORTED_MAXEXPOSURECOMPENSATION:
       return CameraParameters::KEY_MAX_EXPOSURE_COMPENSATION;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_EXPOSURECOMPENSATIONSTEP:
+    case CAMERA_PARAM_SUPPORTED_EXPOSURECOMPENSATIONSTEP:
       return CameraParameters::KEY_EXPOSURE_COMPENSATION_STEP;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_ZOOM:
+    case CAMERA_PARAM_SUPPORTED_ZOOM:
       return CameraParameters::KEY_ZOOM_SUPPORTED;
-    case nsCameraControl::CAMERA_PARAM_SUPPORTED_ZOOMRATIOS:
+    case CAMERA_PARAM_SUPPORTED_ZOOMRATIOS:
       return CameraParameters::KEY_ZOOM_RATIOS;
     default:
       return nullptr;
   }
 }
 
+// nsDOMCameraControl implementation-specific constructor
+nsDOMCameraControl::nsDOMCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+  : mDOMCapabilities(nullptr)
+{
+  DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  mCameraControl = new nsGonkCameraControl(aCameraId, aCameraThread, this, onSuccess, onError);
+
+  /**
+   * nsDOMCameraControl is a cycle-collection participant, which means it is
+   * not threadsafe--so we need to bump up its reference count here to make
+   * sure that it exists long enough to be initialized.
+   *
+   * Once it is initialized, the GetCameraResult main-thread runnable will
+   * decrement it again to make sure it can be cleaned up.
+   *
+   * nsGonkCameraControl MUST NOT hold a strong reference to this
+   * nsDOMCameraControl or memory will leak!
+   */
+  NS_ADDREF_THIS();
+}
+
 // Gonk-specific CameraControl implementation.
 
-nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread)
-  : nsCameraControl(aCameraId, aCameraThread)
+// Initialize nsGonkCameraControl instance--runs on camera thread.
+class InitGonkCameraControl : public nsRunnable
+{
+public:
+  InitGonkCameraControl(nsGonkCameraControl* aCameraControl, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+    : mCameraControl(aCameraControl)
+    , mDOMCameraControl(aDOMCameraControl)
+    , mOnSuccessCb(onSuccess)
+    , mOnErrorCb(onError)
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  ~InitGonkCameraControl()
+  {
+    DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  NS_IMETHOD Run()
+  {
+    nsresult rv = mCameraControl->Init();
+    return mDOMCameraControl->Result(rv, mOnSuccessCb, mOnErrorCb);
+  }
+
+  nsRefPtr<nsGonkCameraControl> mCameraControl;
+  // Raw pointer to DOM-facing camera control--it must NS_ADDREF itself for us
+  nsDOMCameraControl* mDOMCameraControl;
+  nsCOMPtr<nsICameraGetCameraCallback> mOnSuccessCb;
+  nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
+};
+
+// Construct nsGonkCameraControl on the main thread.
+nsGonkCameraControl::nsGonkCameraControl(PRUint32 aCameraId, nsIThread* aCameraThread, nsDOMCameraControl* aDOMCameraControl, nsICameraGetCameraCallback* onSuccess, nsICameraErrorCallback* onError)
+  : CameraControlImpl(aCameraId, aCameraThread)
   , mHwHandle(0)
   , mExposureCompensationMin(0.0)
   , mExposureCompensationStep(0.0)
   , mDeferConfigUpdate(false)
+  , mWidth(0)
+  , mHeight(0)
+  , mFormat(PREVIEW_FORMAT_UNKNOWN)
+  , mDiscardedFrameCount(0)
 {
-  // Constructor runs on the camera thread--see DOMCameraManager.cpp::GetCameraImpl().
+  // Constructor runs on the main thread...
   DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  mRwLock = PR_NewRWLock(PR_RWLOCK_RANK_NONE, "GonkCameraControl.Parameters.Lock");
+
+  // ...but initialization is carried out on the camera thread.
+  nsCOMPtr<nsIRunnable> init = new InitGonkCameraControl(this, aDOMCameraControl, onSuccess, onError);
+  mCameraThread->Dispatch(init, NS_DISPATCH_NORMAL);
+}
+
+nsresult
+nsGonkCameraControl::Init()
+{
   mHwHandle = GonkCameraHardware::GetHandle(this, mCameraId);
-  DOM_CAMERA_LOGI("%s:%d : this = %p, mHwHandle = %d\n", __func__, __LINE__, this, mHwHandle);
+  DOM_CAMERA_LOGI("Initializing camera %d (this = %p, mHwHandle = %d)\n", mCameraId, this, mHwHandle);
 
   // Initialize our camera configuration database.
-  mRwLock = PR_NewRWLock(PR_RWLOCK_RANK_NONE, "GonkCameraControl.Parameters.Lock");
-  PullParametersImpl(nullptr);
+  PullParametersImpl();
 
-  // Grab any settings we'll need later.
-  mExposureCompensationMin = mParams.getFloat(CameraParameters::KEY_MIN_EXPOSURE_COMPENSATION);
-  mExposureCompensationStep = mParams.getFloat(CameraParameters::KEY_EXPOSURE_COMPENSATION_STEP);
-  mMaxMeteringAreas = mParams.getInt(CameraParameters::KEY_MAX_NUM_METERING_AREAS);
-  mMaxFocusAreas = mParams.getInt(CameraParameters::KEY_MAX_NUM_FOCUS_AREAS);
+  // Try to set preferred image format and frame rate
+  DOM_CAMERA_LOGI("Camera preview formats: %s\n", mParams.get(mParams.KEY_SUPPORTED_PREVIEW_FORMATS));
+  const char* const PREVIEW_FORMAT = "yuv420p";
+  const char* const BAD_PREVIEW_FORMAT = "yuv420sp";
+  mParams.setPreviewFormat(PREVIEW_FORMAT);
+  mParams.setPreviewFrameRate(mFps);
 
-  DOM_CAMERA_LOGI("minimum exposure compensation = %f\n", mExposureCompensationMin);
-  DOM_CAMERA_LOGI("exposure compensation step = %f\n", mExposureCompensationStep);
-  DOM_CAMERA_LOGI("maximum metering areas = %d\n", mMaxMeteringAreas);
-  DOM_CAMERA_LOGI("maximum focus areas = %d\n", mMaxFocusAreas);
+  // Check that our settings stuck
+  PullParametersImpl();
+  const char* format = mParams.getPreviewFormat();
+  if (strcmp(format, PREVIEW_FORMAT) == 0) {
+    mFormat = PREVIEW_FORMAT_YUV420P;  /* \o/ */
+  } else if (strcmp(format, BAD_PREVIEW_FORMAT) == 0) {
+    mFormat = PREVIEW_FORMAT_YUV420SP;
+    DOM_CAMERA_LOGA("Camera ignored our request for '%s' preview, will have to convert (from %d)\n", PREVIEW_FORMAT, mFormat);
+  } else {
+    mFormat = PREVIEW_FORMAT_UNKNOWN;
+    DOM_CAMERA_LOGE("Camera ignored our request for '%s' preview, returned UNSUPPORTED format '%s'\n", PREVIEW_FORMAT, format);
+  }
+
+  // Check the frame rate and log if the camera ignored our setting
+  PRUint32 fps = mParams.getPreviewFrameRate();
+  if (fps != mFps) {
+    DOM_CAMERA_LOGA("We asked for %d fps but camera returned %d fps, using that", mFps, fps);
+    mFps = fps;
+  }
+
+  // Grab any other settings we'll need later.
+  mExposureCompensationMin = mParams.getFloat(mParams.KEY_MIN_EXPOSURE_COMPENSATION);
+  mExposureCompensationStep = mParams.getFloat(mParams.KEY_EXPOSURE_COMPENSATION_STEP);
+  mMaxMeteringAreas = mParams.getInt(mParams.KEY_MAX_NUM_METERING_AREAS);
+  mMaxFocusAreas = mParams.getInt(mParams.KEY_MAX_NUM_FOCUS_AREAS);
+
+  DOM_CAMERA_LOGI(" - minimum exposure compensation: %f\n", mExposureCompensationMin);
+  DOM_CAMERA_LOGI(" - exposure compensation step:    %f\n", mExposureCompensationStep);
+  DOM_CAMERA_LOGI(" - maximum metering areas:        %d\n", mMaxMeteringAreas);
+  DOM_CAMERA_LOGI(" - maximum focus areas:           %d\n", mMaxFocusAreas);
+
+  return mHwHandle != 0 ? NS_OK : NS_ERROR_FAILURE;
 }
 
 nsGonkCameraControl::~nsGonkCameraControl()
@@ -300,24 +397,26 @@ GetParameter_error:
   aRegions.Clear();
 }
 
-void
+nsresult
 nsGonkCameraControl::PushParameters()
 {
-  if (!mDeferConfigUpdate) {
-    DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
-    /**
-     * If we're already on the camera thread, call PushParametersImpl()
-     * directly, so that it executes synchronously.  Some callers
-     * require this so that changes take effect immediately before
-     * we can proceed.
-     */
-    if (NS_IsMainThread()) {
-      nsCOMPtr<nsIRunnable> pushParametersTask = new PushParametersTask(this);
-      mCameraThread->Dispatch(pushParametersTask, NS_DISPATCH_NORMAL);
-    } else {
-      PushParametersImpl(nullptr);
-    }
+  if (mDeferConfigUpdate) {
+    return NS_OK;
   }
+
+  DOM_CAMERA_LOGI("%s:%d\n", __func__, __LINE__);
+  /**
+   * If we're already on the camera thread, call PushParametersImpl()
+   * directly, so that it executes synchronously.  Some callers
+   * require this so that changes take effect immediately before
+   * we can proceed.
+   */
+  if (NS_IsMainThread()) {
+    nsCOMPtr<nsIRunnable> pushParametersTask = NS_NewRunnableMethod(this, &nsGonkCameraControl::PushParametersImpl);
+    return mCameraThread->Dispatch(pushParametersTask, NS_DISPATCH_NORMAL);
+  }
+
+  return PushParametersImpl();
 }
 
 void
@@ -411,22 +510,44 @@ nsGonkCameraControl::SetParameter(PRUint32 aKey, const nsTArray<CameraRegion>& a
 nsresult
 nsGonkCameraControl::GetPreviewStreamImpl(GetPreviewStreamTask* aGetPreviewStream)
 {
-  nsCOMPtr<CameraPreview> preview = mPreview;
-  nsresult rv;
+  SetPreviewSize(aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height);
 
-  if (!preview) {
-    preview = new GonkCameraPreview(mCameraThread, mHwHandle, aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height);
-    if (!preview) {
-      if (aGetPreviewStream->mOnErrorCb) {
-        rv = NS_DispatchToMainThread(new CameraErrorResult(aGetPreviewStream->mOnErrorCb, NS_LITERAL_STRING("OUT_OF_MEMORY")));
-        NS_ENSURE_SUCCESS(rv, rv);
-      }
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
+  DOM_CAMERA_LOGI("config preview: wated %d x %d, got %d x %d (%d fps, format %d)\n", aGetPreviewStream->mSize.width, aGetPreviewStream->mSize.height, mWidth, mHeight, mFps, mFormat);
+
+  nsCOMPtr<GetPreviewStreamResult> getPreviewStreamResult = new GetPreviewStreamResult(this, mWidth, mHeight, mFps, aGetPreviewStream->mOnSuccessCb);
+  return NS_DispatchToMainThread(getPreviewStreamResult);
+}
+
+nsresult
+nsGonkCameraControl::StartPreviewImpl(StartPreviewTask* aStartPreview)
+{
+  if (mDOMPreview) {
+    mDOMPreview->Stopped(true);
   }
+  mDOMPreview = aStartPreview->mDOMPreview;
 
-  mPreview = preview;
-  return NS_DispatchToMainThread(new GetPreviewStreamResult(preview.get(), aGetPreviewStream->mOnSuccessCb));
+  DOM_CAMERA_LOGI("%s: starting preview (mDOMPreview=%p)\n", __func__, mDOMPreview);
+  if (GonkCameraHardware::StartPreview(mHwHandle) != OK) {
+    DOM_CAMERA_LOGE("%s: failed to start preview\n", __func__);
+    return NS_ERROR_FAILURE;
+   }
+
+  mDOMPreview->Started();
+  return NS_OK;
+}
+
+nsresult
+nsGonkCameraControl::StopPreviewImpl(StopPreviewTask* aStopPreview)
+{
+  DOM_CAMERA_LOGI("%s: stopping preview\n", __func__);
+
+  // StopPreview() is a synchronous call--it doesn't return
+  // until the camera preview thread exits.
+  GonkCameraHardware::StopPreview(mHwHandle);
+  mDOMPreview->Stopped();
+  mDOMPreview = nullptr;
+
+  return NS_OK;
 }
 
 nsresult
@@ -537,8 +658,9 @@ nsGonkCameraControl::TakePictureImpl(TakePictureTask* aTakePicture)
 }
 
 nsresult
-nsGonkCameraControl::PushParametersImpl(PushParametersTask* aPushParameters)
+nsGonkCameraControl::PushParametersImpl()
 {
+  DOM_CAMERA_LOGI("Pushing camera parameters\n");
   RwAutoLockRead lock(mRwLock);
   if (GonkCameraHardware::PushParameters(mHwHandle, mParams) != OK) {
     return NS_ERROR_FAILURE;
@@ -548,8 +670,9 @@ nsGonkCameraControl::PushParametersImpl(PushParametersTask* aPushParameters)
 }
 
 nsresult
-nsGonkCameraControl::PullParametersImpl(PullParametersTask* aPullParameters)
+nsGonkCameraControl::PullParametersImpl()
 {
+  DOM_CAMERA_LOGI("Pulling camera parameters\n");
   RwAutoLockWrite lock(mRwLock);
   GonkCameraHardware::PullParameters(mHwHandle, mParams);
   return NS_OK;
@@ -568,15 +691,99 @@ nsGonkCameraControl::StopRecordingImpl(StopRecordingTask* aStopRecording)
 }
 
 void
-nsGonkCameraControl::ReceiveFrame(layers::GraphicBufferLocked *aBuffer)
+nsGonkCameraControl::AutoFocusComplete(bool aSuccess)
 {
-  nsCOMPtr<CameraPreview> preview = mPreview;
+  /**
+   * Auto focusing can change some of the camera's parameters, so
+   * we need to pull a new set before sending the result to the
+   * main thread.
+   */
+  PullParametersImpl();
 
-  if (preview) {
-    GonkCameraPreview* p = static_cast<GonkCameraPreview* >(preview.get());
-    MOZ_ASSERT(p);
-    p->ReceiveFrame(aBuffer);
+  nsCOMPtr<nsIRunnable> autoFocusResult = new AutoFocusResult(aSuccess, mAutoFocusOnSuccessCb);
+ 
+  nsresult rv = NS_DispatchToMainThread(autoFocusResult);
+  if (NS_FAILED(rv)) {
+    NS_WARNING("Failed to dispatch autoFocus() onSuccess callback to main thread!");
   }
+}
+ 
+void
+nsGonkCameraControl::TakePictureComplete(PRUint8* aData, PRUint32 aLength)
+{
+  PRUint8* data = new PRUint8[aLength];
+
+  memcpy(data, aData, aLength);
+
+  /**
+   * TODO: pick up the actual specified picture format for the MIME type;
+   * for now, assume we'll be using JPEGs.
+   */
+  nsIDOMBlob* blob = new nsDOMMemoryFile(static_cast<void*>(data), static_cast<PRUint64>(aLength), NS_LITERAL_STRING("image/jpeg"));
+  nsCOMPtr<nsIRunnable> takePictureResult = new TakePictureResult(blob, mTakePictureOnSuccessCb);
+
+  nsresult rv = NS_DispatchToMainThread(takePictureResult);
+  if (NS_FAILED(rv)) {
+    NS_WARNING("Failed to dispatch takePicture() onSuccess callback to main thread!");
+  }
+}
+
+void
+nsGonkCameraControl::SetPreviewSize(PRUint32 aWidth, PRUint32 aHeight)
+{
+  Vector<Size> previewSizes;
+  PRUint32 bestWidth = aWidth;
+  PRUint32 bestHeight = aHeight;
+  PRUint32 minSizeDelta = PR_UINT32_MAX;
+  PRUint32 delta;
+  Size size;
+
+  mParams.getSupportedPreviewSizes(previewSizes);
+
+  if (!aWidth && !aHeight) {
+    // no size specified, take the first supported size
+    size = previewSizes[0];
+    bestWidth = size.width;
+    bestHeight = size.height;
+  } else if (aWidth && aHeight) {
+    // both height and width specified, find the supported size closest to requested size
+    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
+      Size size = previewSizes[i];
+      PRUint32 delta = abs((long int)(size.width * size.height - aWidth * aHeight));
+      if (delta < minSizeDelta) {
+        minSizeDelta = delta;
+        bestWidth = size.width;
+        bestHeight = size.height;
+      }
+    }
+  } else if (!aWidth) {
+    // width not specified, find closest height match
+    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
+      size = previewSizes[i];
+      delta = abs((long int)(size.height - aHeight));
+      if (delta < minSizeDelta) {
+        minSizeDelta = delta;
+        bestWidth = size.width;
+        bestHeight = size.height;
+      }
+    }
+  } else if (!aHeight) {
+    // height not specified, find closest width match
+    for (PRUint32 i = 0; i < previewSizes.size(); i++) {
+      size = previewSizes[i];
+      delta = abs((long int)(size.width - aWidth));
+      if (delta < minSizeDelta) {
+        minSizeDelta = delta;
+        bestWidth = size.width;
+        bestHeight = size.height;
+      }
+    }
+  }
+
+  mWidth = bestWidth;
+  mHeight = bestHeight;
+  mParams.setPreviewSize(mWidth, mHeight);
+  PushParameters();
 }
 
 // Gonk callback handlers.
@@ -589,15 +796,15 @@ ReceiveImage(nsGonkCameraControl* gc, PRUint8* aData, PRUint32 aLength)
 }
 
 void
-AutoFocusComplete(nsGonkCameraControl* gc, bool success)
+AutoFocusComplete(nsGonkCameraControl* gc, bool aSuccess)
 {
-  gc->AutoFocusComplete(success);
+  gc->AutoFocusComplete(aSuccess);
 }
 
 void
 ReceiveFrame(nsGonkCameraControl* gc, layers::GraphicBufferLocked *aBuffer)
 {
-  gc->ReceiveFrame(aBuffer);
+  gc->ReceiveFrame(aBuffer, Image::GONK_IO_SURFACE);
 }
 
 } // namespace mozilla
