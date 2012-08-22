@@ -177,10 +177,11 @@ void
 DOMCameraPreview::ReceiveFrame(layers::GraphicBufferLocked* aBuffer, ImageFormat aFormat)
 {
   DOM_CAMERA_LOGI("%s:%d : this=%p\n", __func__, __LINE__, this);
-  if (mState != STARTED) {
+  if (!aBuffer) {
     return;
   }
-  if (!aBuffer) {
+  if (mState != STARTED) {
+    aBuffer->Unlock();
     return;
   }
 
