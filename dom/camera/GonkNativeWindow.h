@@ -236,28 +236,38 @@ public:
           , mNativeWindow(aNativeWindow)
           , mIndex(aIndex)
           , mLocked(true)
-    {}
+    {
+        printf_stderr("===== CameraGraphicBuffer : this=%p, aNativeWindow=%p =====", this, aNativeWindow);
+    }
 
-    virtual ~CameraGraphicBuffer() {}
+    virtual ~CameraGraphicBuffer()
+    {
+        printf_stderr("===== CameraGraphicBuffer : this=%p =====", this);
+    }
 
     // Unlock either returns the buffer to the native window or
     // destroys the buffer if the window is already released.
     virtual void Unlock()  MOZ_OVERRIDE
     {
+        printf_stderr("===== CameraGraphicBuffer::Unlock() E - this=%p, slot=%d", this, mIndex);
         if (mLocked) {
+            printf_stderr("===== CameraGraphicBuffer::Unlock() if (mLocked)");
             // The window might has been destroyed. The buffer is no longer
             // valid at that point.
             sp<GonkNativeWindow> window = mNativeWindow.promote();
             if (window.get()) {
+                printf_stderr("===== CameraGraphicBuffer::Unlock() if (window.get() = %p)", window.get());
                 window->returnBuffer(mIndex);
                 mLocked = false;
             } else {
                 // If the window doesn't exist any more, release the buffer by
                 // ourself.
+                printf_stderr("===== CameraGraphicBuffer::Unlock() else");
                 ImageBridgeChild *ibc = ImageBridgeChild::GetSingleton();
                 ibc->DeallocSurfaceDescriptorGralloc(mSurfaceDescriptor);
             }
         }
+        printf_stderr("===== CameraGraphicBuffer::Unlock() X");
     }
 
 protected:

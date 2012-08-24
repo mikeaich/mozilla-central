@@ -12,6 +12,7 @@
 #include "GonkIOSurfaceImage.h"
 #include "nsDOMMediaStream.h"
 
+#define DOM_CAMERA_DEBUG_REFS 1
 #define DOM_CAMERA_LOG_LEVEL  3
 #include "CameraCommon.h"
 

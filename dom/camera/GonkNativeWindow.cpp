@@ -25,11 +25,21 @@
 #include "nsDebug.h"
 
 // enable debug logging by setting to 1
-#define CNW_DEBUG 0
+#define CNW_DEBUG 1
 #if CNW_DEBUG
 #define CNW_LOGD(...) {(void)printf_stderr(__VA_ARGS__);}
+#define CNW_DUMP() \
+    for (int i = 0; i < mBufferCount; i++) {                                   \
+      CNW_LOGD("Buffer [%i]: state %s", i,                                     \
+               mSlots[i].mBufferState == BufferSlot::FREE ? "FREE" :           \
+               mSlots[i].mBufferState == BufferSlot::DEQUEUED ? "DEQUEUED" :   \
+               mSlots[i].mBufferState == BufferSlot::QUEUED ? "QUEUED" :       \
+               mSlots[i].mBufferState == BufferSlot::RENDERING ? "RENDERING" : \
+               "UNKNOWN");                                                     \
+    }
 #else
 #define CNW_LOGD(...) ((void)0)
+#define CNW_DUMP()
 #endif
 
 #define CNW_LOGE(...) {(void)printf_stderr(__VA_ARGS__);}
@@ -41,16 +51,19 @@ GonkNativeWindow::GonkNativeWindow(GonkNativeWindowNewFrameCallback* aCallback)
   : mNewFrameCallback(aCallback)
 {
     GonkNativeWindow::init();
+    CNW_LOGD("===== %s:%d : this=%p =====", __func__, __LINE__, this);
 }
 
 GonkNativeWindow::GonkNativeWindow()
   : mNewFrameCallback(nullptr)
 {
     GonkNativeWindow::init();
+    CNW_LOGD("===== %s:%d : this=%p =====", __func__, __LINE__, this);
 }
 
 GonkNativeWindow::~GonkNativeWindow()
 {
+    CNW_LOGD("===== %s:%d : this=%p =====", __func__, __LINE__, this);
     freeAllBuffersLocked();
 }
 
@@ -63,6 +76,8 @@ void GonkNativeWindow::abandon()
 
 void GonkNativeWindow::init()
 {
+    CNW_LOGD("===== %s:%d : this=%p =====", __func__, __LINE__, this);
+
     // Initialize the ANativeWindow function pointers.
     ANativeWindow::setSwapInterval  = hook_setSwapInterval;
     ANativeWindow::dequeueBuffer    = hook_dequeueBuffer;
@@ -133,6 +148,8 @@ int GonkNativeWindow::hook_perform(ANativeWindow* window, int operation, ...)
 
 void GonkNativeWindow::freeBufferLocked(int i)
 {
+    CNW_DUMP();
+
     ImageBridgeChild *ibc = ImageBridgeChild::GetSingleton();
     if (mSlots[i].mGraphicBuffer != NULL) {
         // Don't destroy the gralloc buffer if it is still in the
@@ -207,6 +224,7 @@ int GonkNativeWindow::dequeueBuffer(android_native_buffer_t** buffer)
     int dequeuedCount = 0;
     bool tryAgain = true;
 
+    CNW_DUMP();
     CNW_LOGD("dequeueBuffer: E");
     while (tryAgain) {
         // look for a free buffer to give to the client
@@ -257,13 +275,16 @@ int GonkNativeWindow::dequeueBuffer(android_native_buffer_t** buffer)
         status_t error;
         SurfaceDescriptor buffer;
         ImageBridgeChild *ibc = ImageBridgeChild::GetSingleton();
+        CNW_LOGE("dequeueBuffer: AllocSurfaceDescriptorGralloc E");
         ibc->AllocSurfaceDescriptorGralloc(gfxIntSize(mDefaultWidth, mDefaultHeight),
                                            mPixelFormat,
                                            mUsage,
                                            &buffer);
+        CNW_LOGE("dequeueBuffer: AllocSurfaceDescriptorGralloc X");
         sp<GraphicBuffer> graphicBuffer =
           GrallocBufferActor::GetFrom(buffer.get_SurfaceDescriptorGralloc());
         if (!graphicBuffer.get()) {
+            CNW_LOGE("dequeueBuffer: createGraphicBuffer failed");
             return -ENOMEM;
         }
         error = graphicBuffer->initCheck();
@@ -281,6 +302,7 @@ int GonkNativeWindow::dequeueBuffer(android_native_buffer_t** buffer)
             mSlots[buf].mGraphicBuffer->handle );
 
     CNW_LOGD("dequeueBuffer: X");
+    CNW_DUMP();
     return NO_ERROR;
 }
 
@@ -346,7 +368,7 @@ int GonkNativeWindow::queueBuffer(ANativeWindowBuffer* buffer)
 already_AddRefed<GraphicBufferLocked>
 GonkNativeWindow::getCurrentBuffer()
 {
-  CNW_LOGD("GonkNativeWindow::lockCurrentBuffer");
+  CNW_LOGD("GonkNativeWindow::getCurrentBuffer");
   Mutex::Autolock lock(mMutex);
 
   int found = -1;
@@ -369,6 +391,9 @@ GonkNativeWindow::getCurrentBuffer()
 
   nsRefPtr<GraphicBufferLocked> ret =
     new CameraGraphicBuffer(this, found, mSlots[found].mSurfaceDescriptor);
+
+  CNW_DUMP();
+
   mDequeueCondition.signal();
   return ret.forget();
 }
@@ -376,8 +401,9 @@ GonkNativeWindow::getCurrentBuffer()
 void
 GonkNativeWindow::returnBuffer(uint32_t aIndex)
 {
-  CNW_LOGD("GonkNativeWindow::freeBuffer");
+  CNW_LOGD("GonkNativeWindow::returnBuffer E");
   Mutex::Autolock lock(mMutex);
+  CNW_LOGD("GonkNativeWindow::returnBuffer L");
 
   if (aIndex < 0 || aIndex >= mBufferCount) {
     CNW_LOGE("cancelBuffer: slot index out of range [0, %d]: %d",
@@ -390,7 +416,13 @@ GonkNativeWindow::returnBuffer(uint32_t aIndex)
   }
 
   mSlots[aIndex].mBufferState = BufferSlot::FREE;
+
+  CNW_DUMP();
+
   mDequeueCondition.signal();
+
+  CNW_LOGD("GonkNativeWindow::returnBuffer X");
+
   return;
 }
 
@@ -418,6 +450,7 @@ int GonkNativeWindow::cancelBuffer(ANativeWindowBuffer* buffer)
     }
     mSlots[buf].mBufferState = BufferSlot::FREE;
     mSlots[buf].mFrameNumber = 0;
+    CNW_DUMP();
     mDequeueCondition.signal();
     return OK;
 }

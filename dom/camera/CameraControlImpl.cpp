@@ -218,7 +218,10 @@ void
 CameraControlImpl::StopPreview()
 {
   nsCOMPtr<nsIRunnable> stopPreviewTask = new StopPreviewTask(this);
-  mCameraThread->Dispatch(stopPreviewTask, NS_DISPATCH_NORMAL);
+  nsresult rv = mCameraThread->Dispatch(stopPreviewTask, NS_DISPATCH_NORMAL);
+  if (NS_FAILED(rv)) {
+    DOM_CAMERA_LOGE("Failed to dispatch stop preview task (%d)\n", rv);
+  }
 }
 
 void

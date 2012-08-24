@@ -64,12 +64,13 @@ GonkCameraHardware::GonkCameraHardware(GonkCamera* aTarget, PRUint32 aCamera)
 void
 GonkCameraHardware::OnNewFrame()
 {
-  if (mClosing) {
-    return;
-  }
   GonkNativeWindow* window = static_cast<GonkNativeWindow*>(mWindow.get());
   nsRefPtr<GraphicBufferLocked> buffer = window->getCurrentBuffer();
-  ReceiveFrame(mTarget, buffer);
+  if (!mClosing) {
+    ReceiveFrame(mTarget, buffer);
+  } else {
+    buffer->Unlock();
+  }
 }
 
 // Android data callback
@@ -306,6 +307,7 @@ void
 GonkCameraHardware::StopPreview(PRUint32 aHwHandle)
 {
   GonkCameraHardware* hw = GetHardware(aHwHandle);
+  DOM_CAMERA_LOGI("%s:%d : aHwHandle = %d, hw = %p\n", __func__, __LINE__, aHwHandle, hw);
   if (hw) {
     hw->mHardware->stopPreview();
   }

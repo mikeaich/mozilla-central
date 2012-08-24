@@ -130,6 +130,7 @@ Thread* ImageBridgeChild::GetThread() const
 
 ImageBridgeChild* ImageBridgeChild::GetSingleton()
 {
+  printf_stderr("ImageBridgeChild::GetSingleton() = 0x%x", sImageBridgeChildSingleton);
   return sImageBridgeChildSingleton;
 }
 
