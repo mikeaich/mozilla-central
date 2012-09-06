@@ -25,6 +25,7 @@ class StartRecordingTask;
 class StopRecordingTask;
 class SetParameterTask;
 class GetParameterTask;
+class GetPreviewStreamVideoModeTask;
 
 class DOMCameraPreview;
 
@@ -39,6 +40,7 @@ class CameraControlImpl : public ICameraControl
   friend class StopRecordingTask;
   friend class SetParameterTask;
   friend class GetParameterTask;
+  friend class GetPreviewStreamVideoModeTask;
 
 public:
   CameraControlImpl(uint32_t aCameraId, nsIThread* aCameraThread)
@@ -64,8 +66,9 @@ public:
   void StopPreview();
   nsresult AutoFocus(nsICameraAutoFocusCallback* onSuccess, nsICameraErrorCallback* onError);
   nsresult TakePicture(CameraSize aSize, int32_t aRotation, const nsAString& aFileFormat, CameraPosition aPosition, nsICameraTakePictureCallback* onSuccess, nsICameraErrorCallback* onError);
-  nsresult StartRecording(CameraSize aSize, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError);
+  nsresult StartRecording(nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError);
   nsresult StopRecording();
+  nsresult GetPreviewStreamVideoMode(CameraRecordingOptions* aOptions, nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError);
 
   nsresult Set(uint32_t aKey, const nsAString& aValue);
   nsresult Get(uint32_t aKey, nsAString& aValue);
@@ -111,6 +114,7 @@ protected:
   virtual nsresult StopRecordingImpl(StopRecordingTask* aStopRecording) = 0;
   virtual nsresult PushParametersImpl() = 0;
   virtual nsresult PullParametersImpl() = 0;
+  virtual nsresult GetPreviewStreamVideoModeImpl(GetPreviewStreamVideoModeTask* aGetPreviewStreamVideoMode) = 0;
 
   uint32_t            mCameraId;
   nsCOMPtr<nsIThread> mCameraThread;
@@ -347,8 +351,8 @@ public:
 class StartRecordingResult : public nsRunnable
 {
 public:
-  StartRecordingResult(nsIDOMMediaStream* aStream, nsICameraStartRecordingCallback* onSuccess)
-    : mStream(aStream)
+  StartRecordingResult(const nsAString& aVideoFile, nsICameraStartRecordingCallback* onSuccess)
+    : mVideoFile(aVideoFile)
     , mOnSuccessCb(onSuccess)
   { }
 
@@ -359,13 +363,13 @@ public:
     MOZ_ASSERT(NS_IsMainThread());
 
     if (mOnSuccessCb) {
-      mOnSuccessCb->HandleEvent(mStream);
+      mOnSuccessCb->HandleEvent(mVideoFile);
     }
     return NS_OK;
   }
 
 protected:
-  nsCOMPtr<nsIDOMMediaStream> mStream;
+  nsString mVideoFile;
   nsCOMPtr<nsICameraStartRecordingCallback> mOnSuccessCb;
 };
 
@@ -373,9 +377,8 @@ protected:
 class StartRecordingTask : public nsRunnable
 {
 public:
-  StartRecordingTask(CameraControlImpl* aCameraControl, CameraSize aSize, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError)
-    : mSize(aSize)
-    , mCameraControl(aCameraControl)
+  StartRecordingTask(CameraControlImpl* aCameraControl, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError)
+    : mCameraControl(aCameraControl)
     , mOnSuccessCb(onSuccess)
     , mOnErrorCb(onError)
   {
@@ -391,7 +394,7 @@ public:
   {
     DOM_CAMERA_LOGT("%s:%d\n", __func__, __LINE__);
     nsresult rv = mCameraControl->StartRecordingImpl(this);
-    DOM_CAMERA_LOGT("%s:%d\n", __func__, __LINE__);
+    DOM_CAMERA_LOGT("%s:%d : result %d\n", __func__, __LINE__, rv);
 
     if (NS_FAILED(rv) && mOnErrorCb) {
       rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
@@ -489,6 +492,65 @@ public:
   }
 
   nsRefPtr<CameraControlImpl> mCameraControl;
+};
+
+// Return the resulting preview stream to JS.  Runs on the main thread.
+class GetPreviewStreamVideoModeResult : public nsRunnable
+{
+public:
+  GetPreviewStreamVideoModeResult(nsIDOMMediaStream* aStream, nsICameraPreviewStreamCallback* onSuccess)
+     : mStream(aStream)
+     , mOnSuccessCb(onSuccess)
+  {
+    DOM_CAMERA_LOGT("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  virtual ~GetPreviewStreamVideoModeResult()
+  {
+    DOM_CAMERA_LOGT("%s:%d : this=%p\n", __func__, __LINE__, this);
+  }
+
+  NS_IMETHOD Run()
+  {
+    MOZ_ASSERT(NS_IsMainThread());
+
+    if (mOnSuccessCb) {
+      mOnSuccessCb->HandleEvent(mStream);
+    }
+    return NS_OK;
+  }
+
+protected:
+  nsCOMPtr<nsIDOMMediaStream> mStream;
+  nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
+};
+
+// Get the video mode preview stream.
+class GetPreviewStreamVideoModeTask : public nsRunnable
+{
+public:
+  GetPreviewStreamVideoModeTask(CameraControlImpl* aCameraControl, CameraRecordingOptions aOptions,  nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError)
+    : mCameraControl(aCameraControl)
+    , mOptions(aOptions)
+    , mOnSuccessCb(onSuccess)
+    , mOnErrorCb(onError)
+  { }
+
+  NS_IMETHOD Run()
+  {
+    nsresult rv = mCameraControl->GetPreviewStreamVideoModeImpl(this);
+
+    if (NS_FAILED(rv) && mOnErrorCb) {
+      rv = NS_DispatchToMainThread(new CameraErrorResult(mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+    return NS_OK;
+  }
+
+  nsRefPtr<CameraControlImpl> mCameraControl;
+  CameraRecordingOptions mOptions;
+  nsCOMPtr<nsICameraPreviewStreamCallback> mOnSuccessCb;
+  nsCOMPtr<nsICameraErrorCallback> mOnErrorCb;
 };
 
 } // namespace mozilla

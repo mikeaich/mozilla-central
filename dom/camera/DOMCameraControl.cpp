@@ -218,15 +218,11 @@ nsDOMCameraControl::SetOnShutter(nsICameraShutterCallback* aOnShutter)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* void startRecording (in jsval aOptions, in nsICameraStartRecordingCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
+/* void startRecording (in nsICameraStartRecordingCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
 NS_IMETHODIMP
-nsDOMCameraControl::StartRecording(const JS::Value& aOptions, nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError, JSContext* cx)
+nsDOMCameraControl::StartRecording(nsICameraStartRecordingCallback* onSuccess, nsICameraErrorCallback* onError, JSContext* cx)
 {
   NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
-
-  CameraSize size;
-  nsresult rv = size.Init(cx, &aOptions);
-  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIObserverService> obs = mozilla::services::GetObserverService();
   if (!obs) {
@@ -238,7 +234,7 @@ nsDOMCameraControl::StartRecording(const JS::Value& aOptions, nsICameraStartReco
                        "recording-device-events",
                        NS_LITERAL_STRING("starting").get());
 
-  return mCameraControl->StartRecording(size, onSuccess, onError);
+  return mCameraControl->StartRecording(onSuccess, onError);
 }
 
 /* void stopRecording (); */
@@ -314,6 +310,19 @@ nsDOMCameraControl::TakePicture(const JS::Value& aOptions, nsICameraTakePictureC
   NS_ENSURE_SUCCESS(rv, rv);
 
   return mCameraControl->TakePicture(size, options.rotation, options.fileFormat, pos, onSuccess, onError);
+}
+
+/* [implicit_jscontext] void GetPreviewStreamVideoMode (in jsval aOptions, in nsICameraPreviewStreamCallback onSuccess, [optional] in nsICameraErrorCallback onError); */
+NS_IMETHODIMP
+nsDOMCameraControl::GetPreviewStreamVideoMode(const JS::Value& aOptions, nsICameraPreviewStreamCallback* onSuccess, nsICameraErrorCallback* onError, JSContext* cx)
+{
+  NS_ENSURE_TRUE(onSuccess, NS_ERROR_INVALID_ARG);
+
+  CameraRecordingOptions options;
+  nsresult rv = options.Init(cx, &aOptions);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return mCameraControl->GetPreviewStreamVideoMode(&options, onSuccess, onError);
 }
 
 class GetCameraResult : public nsRunnable

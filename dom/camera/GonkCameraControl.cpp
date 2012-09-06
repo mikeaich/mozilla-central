@@ -15,6 +15,9 @@
  */
 
 #include <string.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 #include "base/basictypes.h"
 #include "libcameraservice/CameraHardwareInterface.h"
 #include "camera/CameraParameters.h"
@@ -23,6 +26,8 @@
 #include "nsMemory.h"
 #include "jsapi.h"
 #include "nsThread.h"
+#include <media/MediaProfiles.h>
+#include "nsDirectoryServiceDefs.h" // for NS_GetSpecialDirectory
 #include "nsPrintfCString.h"
 #include "DOMCameraManager.h"
 #include "GonkCameraHwMgr.h"
@@ -691,13 +696,35 @@ nsGonkCameraControl::PullParametersImpl()
 nsresult
 nsGonkCameraControl::StartRecordingImpl(StartRecordingTask* aStartRecording)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  mStartRecordingOnSuccessCb = aStartRecording->mOnSuccessCb;
+  mStartRecordingOnErrorCb = aStartRecording->mOnErrorCb;
+
+  if (SetupRecording() != NS_OK) {
+    DOM_CAMERA_LOGE("SetupRecording() failed\n");
+    return NS_ERROR_FAILURE;
+  }
+  if (mRecorder->start() != OK) {
+    DOM_CAMERA_LOGE("mRecorder->start() failed\n");
+    return NS_ERROR_FAILURE;
+  }
+
+  return NS_OK;
 }
 
 nsresult
 nsGonkCameraControl::StopRecordingImpl(StopRecordingTask* aStopRecording)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  mRecorder->stop();
+
+  // dispatch the callbacks
+  nsCOMPtr<nsIRunnable> resultRunnable = new StartRecordingResult(mVideoFile, mStartRecordingOnSuccessCb);
+  if (NS_FAILED(NS_DispatchToMainThread(resultRunnable))) {
+    NS_WARNING("Failed to dispatch to main thread!");
+  }
+
+  delete mRecorder;
+  mRecorder = nullptr;
+  return NS_OK;
 }
 
 void
@@ -807,6 +834,239 @@ nsGonkCameraControl::SetPreviewSize(uint32_t aWidth, uint32_t aHeight)
   mHeight = bestHeight;
   mParams.setPreviewSize(mWidth, mHeight);
   PushParameters();
+}
+
+#define DEFAULT_VIDEO_STORAGE_TO_TEMP_DIR   1
+#define MAX_VIDEO_FILE_NAME_LEN             256
+#define VIDEO_STORAGE_DIR                   "/sdcard/Movies"
+#define DEFAULT_VIDEO_FILE_NAME             "video"
+#define DEFAULT_VIDEO_QUALITY               3 // cif:352x288
+
+nsresult
+nsGonkCameraControl::SetupVideoMode()
+{
+  // read perferences for video mode
+  mMediaProfiles = MediaProfiles::getInstance();
+  // we should probably get this from somewhere, right now just #define
+  int quality = DEFAULT_VIDEO_QUALITY;
+  camcorder_quality q = static_cast<camcorder_quality>(quality);
+  mDuration         = mMediaProfiles->getCamcorderProfileParamByName("duration",    (int)mCameraId, q);
+  mVideoFileFormat  = mMediaProfiles->getCamcorderProfileParamByName("file.format", (int)mCameraId, q);
+  mVideoCodec       = mMediaProfiles->getCamcorderProfileParamByName("vid.codec",   (int)mCameraId, q);
+  mVideoBitRate     = mMediaProfiles->getCamcorderProfileParamByName("vid.bps",     (int)mCameraId, q);
+  mVideoFrameRate   = mMediaProfiles->getCamcorderProfileParamByName("vid.fps",     (int)mCameraId, q);
+  mVideoFrameWidth  = mMediaProfiles->getCamcorderProfileParamByName("vid.width",   (int)mCameraId, q);
+  mVideoFrameHeight = mMediaProfiles->getCamcorderProfileParamByName("vid.height",  (int)mCameraId, q);
+  mAudioCodec       = mMediaProfiles->getCamcorderProfileParamByName("aud.codec",   (int)mCameraId, q);
+  mAudioBitRate     = mMediaProfiles->getCamcorderProfileParamByName("aud.bps",     (int)mCameraId, q);
+  mAudioSampleRate  = mMediaProfiles->getCamcorderProfileParamByName("aud.hz",      (int)mCameraId, q);
+  mAudioChannels    = mMediaProfiles->getCamcorderProfileParamByName("aud.ch",      (int)mCameraId, q);
+
+  if (mVideoFrameRate == -1) {
+    DOM_CAMERA_LOGE("Failed to get a valid frame rate!\n");
+    DOM_CAMERA_LOGE("Also got width=%d, height=%d\n", mVideoFrameWidth, mVideoFrameHeight);
+    return NS_ERROR_FAILURE;
+  }
+
+  PullParametersImpl();
+
+  // set params with new values
+  const size_t SIZE = 256;
+  char buffer[SIZE];
+  // TODO: Ignore the width and height settings from app, just use the one in profile
+  // eventually, will try to choose a profile which respects the settings from app
+  mParams.setPreviewSize(mVideoFrameWidth, mVideoFrameHeight);
+  mParams.setPreviewFrameRate(mVideoFrameRate);
+  snprintf(buffer, SIZE, "%dx%d", mVideoFrameWidth, mVideoFrameHeight);
+  // TODO: "record-size" is probably deprecated in later ICS
+  // might need to set "video-size" instead of "record-size"
+  mParams.set("record-size", buffer);
+  // this is picture during video, for now set the picture size same as video dimensions
+  // ideally we should make sure it matches the supported picture sizes
+  mParams.setPictureSize(mVideoFrameWidth, mVideoFrameHeight);
+
+  PushParametersImpl();
+  return NS_OK;
+}
+
+static int
+GetFileNameWithDate(char* outstr, int maxlen)
+{
+  time_t t;
+  struct tm* tmp;
+  int actualLen;
+
+  t = time(NULL);
+  tmp = localtime(&t);
+  if (tmp == NULL) {
+    DOM_CAMERA_LOGE("localtime() failed\n");
+    return 0;
+  }
+
+  if ((actualLen = strftime(outstr, maxlen, "video_%F__%H-%M-%S", tmp)) == 0) {
+    DOM_CAMERA_LOGE("strftime() failed\n");
+    return 0;
+  }
+
+  return actualLen;
+}
+
+static const char*
+GetFileExtension(int nVideoFileFormat)
+{
+  if (nVideoFileFormat == OUTPUT_FORMAT_MPEG_4) {
+    return ".mp4";
+  }
+  return ".3gp";
+}
+
+static int
+CreateVideoFile(nsAString& aVideoFile, int nVideoFileFormat)
+{
+  nsCOMPtr<nsIFile> f;
+  nsCOMPtr<nsIDOMFile> tempFile;
+  char fileName[MAX_VIDEO_FILE_NAME_LEN];
+  char fileName2[MAX_VIDEO_FILE_NAME_LEN];
+  char* videoFileAbsPath;
+  struct stat buffer;
+  int result;
+
+  if (GetFileNameWithDate(fileName, MAX_VIDEO_FILE_NAME_LEN) == 0) {
+    DOM_CAMERA_LOGW("Failed to get file name based to date, using default name: %s\n", DEFAULT_VIDEO_FILE_NAME);
+    strncpy(fileName, DEFAULT_VIDEO_FILE_NAME, MAX_VIDEO_FILE_NAME_LEN);
+  }
+
+  // add the extension
+  strncat(fileName, GetFileExtension(nVideoFileFormat), MAX_VIDEO_FILE_NAME_LEN);
+
+  DOM_CAMERA_LOGI("Video File Name: \"%s\" \n", fileName);
+
+  // check if the video storage dir exists
+  result = stat(VIDEO_STORAGE_DIR, &buffer);
+  if (0 == result) {
+    snprintf(fileName2, MAX_VIDEO_FILE_NAME_LEN, VIDEO_STORAGE_DIR"/%s", fileName);
+    videoFileAbsPath = fileName2;
+  } else {
+    DOM_CAMERA_LOGW("%s stat failed with error: %d:%s\n", VIDEO_STORAGE_DIR, errno, strerror(errno));
+#if DEFAULT_VIDEO_STORAGE_TO_TEMP_DIR
+    nsAutoCString filePath;
+    DOM_CAMERA_LOGI("Attempting to use temp dir to store recorded file\n");
+    // default to temp dir
+    NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(f));
+    if (!f) {
+      DOM_CAMERA_LOGE("Failed to get temp directory path\n");
+      return -1;
+    }
+    if (NS_FAILED(f->AppendNative(nsDependentCString(fileName)))) {
+      DOM_CAMERA_LOGE("Failed to append file name to temp directory\n");
+      return -1;
+    }
+    f->GetNativePath(filePath);
+    videoFileAbsPath = (char*)filePath.get();
+#else
+    return -1;
+#endif
+  }
+
+  DOM_CAMERA_LOGI("Opening video file: %s\n", videoFileAbsPath);
+  int fd = open(videoFileAbsPath, O_RDWR | O_CREAT, 0744);
+  if (fd < 0) {
+    DOM_CAMERA_LOGE("Couldn't create file %s with error %d:%s\n", videoFileAbsPath, errno, strerror(errno));
+  }
+
+  aVideoFile.AssignASCII(fileName);
+  return fd;
+}
+
+#ifndef CHECK_SETARG
+#define CHECK_SETARG(x)                 \
+  {                                     \
+    if (x) {                            \
+      DOM_CAMERA_LOGE(#x " failed\n");  \
+      return NS_ERROR_INVALID_ARG;      \
+    }                                   \
+  }
+#endif
+
+nsresult
+nsGonkCameraControl::SetupRecording()
+{
+  const size_t SIZE = 256;
+  char buffer[SIZE];
+
+  mRecorder = new GonkRecorder();
+  CHECK_SETARG(mRecorder->init());
+
+  // set all the params
+  CHECK_SETARG(mRecorder->setCameraHandle((int32_t)mHwHandle));
+  CHECK_SETARG(mRecorder->setAudioSource(AUDIO_SOURCE_CAMCORDER));
+  CHECK_SETARG(mRecorder->setVideoSource(VIDEO_SOURCE_CAMERA));
+  CHECK_SETARG(mRecorder->setOutputFormat((output_format)mVideoFileFormat));
+  CHECK_SETARG(mRecorder->setVideoFrameRate(mVideoFrameRate));
+  CHECK_SETARG(mRecorder->setVideoSize(mVideoFrameWidth, mVideoFrameHeight));
+  snprintf(buffer, SIZE, "video-param-encoding-bitrate=%d", mVideoBitRate);
+  CHECK_SETARG(mRecorder->setParameters(String8(buffer)));
+  CHECK_SETARG(mRecorder->setVideoEncoder((video_encoder)mVideoCodec));
+  snprintf(buffer, SIZE, "audio-param-encoding-bitrate=%d", mAudioBitRate);
+  CHECK_SETARG(mRecorder->setParameters(String8(buffer)));
+  snprintf(buffer, SIZE, "audio-param-number-of-channels=%d", mAudioChannels);
+  CHECK_SETARG(mRecorder->setParameters(String8(buffer)));
+  snprintf(buffer, SIZE, "audio-param-sampling-rate=%d", mAudioSampleRate);
+  CHECK_SETARG(mRecorder->setParameters(String8(buffer)));
+  CHECK_SETARG(mRecorder->setAudioEncoder((audio_encoder)mAudioCodec));
+  // TODO: For now there is no limit on recording duration
+  CHECK_SETARG(mRecorder->setParameters(String8("max-duration=-1")));
+  // TODO: For now there is no limit on file size
+  CHECK_SETARG(mRecorder->setParameters(String8("max-filesize=-1")));
+  snprintf(buffer, SIZE, "video-param-rotation-angle-degrees=%d", mVideoRotation);
+  CHECK_SETARG(mRecorder->setParameters(String8(buffer)));
+
+  // create video file
+  int fd = CreateVideoFile(mVideoFile, mVideoFileFormat);
+  if (fd < 0) {
+    return NS_ERROR_FAILURE;
+  }
+  CHECK_SETARG(mRecorder->setOutputFile(fd, 0, 0));
+  CHECK_SETARG(mRecorder->prepare());
+  return NS_OK;
+}
+
+nsresult
+nsGonkCameraControl::GetPreviewStreamVideoModeImpl(GetPreviewStreamVideoModeTask* aGetPreviewStreamVideoMode)
+{
+  nsCOMPtr<GetPreviewStreamResult> getPreviewStreamResult = nullptr;
+
+  // stop any currently running preview
+  GonkCameraHardware::StopPreview(mHwHandle);
+
+  // copy the recording preview options
+  mVideoRotation = aGetPreviewStreamVideoMode->mOptions.rotation;
+  mVideoWidth = aGetPreviewStreamVideoMode->mOptions.width;
+  mVideoHeight = aGetPreviewStreamVideoMode->mOptions.height;
+  DOM_CAMERA_LOGI("recording preview format: %d x %d (w x h) (rotated %d degrees)\n", mVideoWidth, mVideoHeight, mVideoRotation);
+
+  // setup the video mode
+  nsresult rv = SetupVideoMode();
+  if (NS_FAILED(rv)) {
+    goto GetPreviewStreamVideoModeImpl_fail;
+  }
+
+  // create and return new preview stream object
+  getPreviewStreamResult = new GetPreviewStreamResult(this, mVideoWidth, mVideoHeight, mVideoFrameRate, aGetPreviewStreamVideoMode->mOnSuccessCb);
+  rv = NS_DispatchToMainThread(getPreviewStreamResult);
+  if (NS_FAILED(rv)) {
+    NS_WARNING("Failed to dispatch GetPreviewStreamVideoMode() onSuccess callback to main thread!");
+    goto GetPreviewStreamVideoModeImpl_fail;
+  }
+
+  return NS_OK;
+
+GetPreviewStreamVideoModeImpl_fail:
+  nsresult rv2 = NS_DispatchToMainThread(new CameraErrorResult(aGetPreviewStreamVideoMode->mOnErrorCb, NS_LITERAL_STRING("FAILURE")));
+  if (NS_FAILED(rv2)) {
+    NS_WARNING("Failed to dispatch GetPreviewStreamVideoMode() onError callback to main thread!");
+  }
+  return rv;
 }
 
 // Gonk callback handlers.
